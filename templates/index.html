@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoffest Planer  |  © Tobias Auer </title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        #page {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            grid-column-gap: 0px;
+            grid-row-gap: 0px;
+            height: 100vh;
+            }
+
+            #f-selector { grid-area: 1 / 5 / 6 / 7; background-color: green;}
+            #schulhof-selector { grid-area: 1 / 1 / 2 / 5; background-color: red;}
+            #c-selector { grid-area: 2 / 1 / 5 / 5; background-color: blue;}
+            #information { grid-area: 5 / 1 / 6 / 5; background-color: yellow;} 
+    </style>
+</head>
+<body>
+    <div id="page">
+        <div id="f-selector">
+s
+        </div>
+        <div id="schulhof-selector">
+w
+        </div>
+        <div id="c-selector">
+se
+        </div>
+        <div id="information">
+f
+        </div>
+    </div>
+</body>
+</html>
