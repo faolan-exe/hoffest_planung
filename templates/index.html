@@ -113,15 +113,16 @@
                 imageContainer.classList.remove('screenRes2');
                 imageContainer.classList.add('screenRes1');
 
-            } else if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
+            }  if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
                 imageContainer.classList.remove('screenRes2');
                 imageContainer.classList.add('screenRes1');
             }
-            if (imageContainer.clientHeight > window.innerHeight && imageContainer.classList.contains('screenRes1')) {
+            if (imageContainer.clientHeight >= window.innerHeight && imageContainer.classList.contains('screenRes1')) {
                 imageContainer.classList.remove('screenRes1');
                 imageContainer.classList.add('screenRes2');
-            }
-
+                console.log('changed to screenRes2');
+            }console.log(imageContainer.clientHeight+":"+window.innerHeight);
+            
 
         }
         getScreenRatio();
