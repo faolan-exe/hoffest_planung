@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hoffest Planer  |  © Tobias Auer </title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoffest Planer | © Tobias Auer</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            /* overflow: hidden; */
         }
+
         #page {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -17,28 +20,128 @@
             grid-column-gap: 0px;
             grid-row-gap: 0px;
             height: 100vh;
-            }
+        }
 
-            #f-selector { grid-area: 1 / 5 / 6 / 7; background-color: green;}
-            #schulhof-selector { grid-area: 1 / 1 / 2 / 5; background-color: red;}
-            #c-selector { grid-area: 2 / 1 / 5 / 5; background-color: blue;}
-            #information { grid-area: 5 / 1 / 6 / 5; background-color: yellow;} 
+        #information {
+            grid-area: 1 / 5 / 6 / 7;
+            background-color: rgb(0, 255, 0, 0.3);
+        }
+
+        #schulhof-selector {
+            grid-area: 1 / 1 / 6 / 5;
+            background-color: white;
+            width: 100%;
+            
+            display: flex;
+            flex-direction: column; 	
+            flex-wrap: wrap;        	
+            justify-content: center;	
+            align-items: center;
+        }
+
+        #schulhof-selector {
+            position: relative;
+        }
+
+        #schulhof-selector h1 {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #image-container {
+    position: relative;
+    
+    /* overflow: hidden; */
+}
+.screenRes1 {
+    width: 100%;
+    height: fit-content;
+}
+
+.screenRes2 {
+    width: fit-content;
+    height: 100%;
+}
+
+#image-container svg {
+    /* position: absolute;
+    top: 0;
+    left: 0; */
+    max-width: 100%;
+    height: 100%;
+}
+
+
+
     </style>
 </head>
+
 <body>
     <div id="page">
-        <div id="f-selector">
-s
-        </div>
-        <div id="schulhof-selector">
-w
-        </div>
-        <div id="c-selector">
-se
-        </div>
         <div id="information">
-f
+            <h1 id="screen-ratio">Wähle einen Bereich aus</h1>
+        </div>
+
+        <div id="schulhof-selector" >
+            <div id="image-container" class="screenRes1">
+                <svg viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
+                    <style>
+                        .small { font: 13px sans-serif; }
+                        .heavy { font: bold 30px sans-serif; }
+                      </style>
+                    <image href="plan.png" draggable="false">
+                    </image>
+                    <text x="710" y="450" class="heavy">Schulhof</text>
+                    <text x="710" y="60" class="heavy">F-Gebäude</text>
+                    <text x="710" y="930" class="heavy">C-Gebäude</text>
+
+                        <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill=rgb(255,0,0,0.3) />
+                </svg>
+            </div>
         </div>
     </div>
+
+    <script>
+        document
+
+
+        document
+            .getElementById("schulhof-selector")
+            .addEventListener("click", function () {
+                console.log("Schulhof");
+            });
+
+    </script>
+
+    <script>
+function getScreenRatio() {
+    let imageContainer = document.getElementById('image-container');
+      if (imageContainer.clientHeight < window.innerHeight && imageContainer.classList.contains('screenRes2')) {
+        imageContainer.classList.remove('screenRes2');
+        imageContainer.classList.add('screenRes1');
+        
+    }else if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
+        imageContainer.classList.remove('screenRes2');
+        imageContainer.classList.add('screenRes1');
+    }
+ if (imageContainer.clientHeight > window.innerHeight && imageContainer.classList.contains('screenRes1')) {
+        imageContainer.classList.remove('screenRes1');
+        imageContainer.classList.add('screenRes2');
+    }
+
+
+}
+getScreenRatio();
+window.addEventListener("resize", () => {
+    getScreenRatio();
+});
+        
+    </script>
 </body>
+
 </html>
