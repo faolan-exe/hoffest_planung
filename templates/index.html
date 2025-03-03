@@ -10,7 +10,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            /* overflow: hidden; */
+            overflow: hidden;
         }
 
         #page {
@@ -31,11 +31,11 @@
             grid-area: 1 / 1 / 6 / 5;
             background-color: white;
             width: 100%;
-            
+
             display: flex;
-            flex-direction: column; 	
-            flex-wrap: wrap;        	
-            justify-content: center;	
+            flex-direction: column;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
         }
 
@@ -54,93 +54,162 @@
         }
 
         #image-container {
-    position: relative;
-    
-    /* overflow: hidden; */
-}
-.screenRes1 {
-    width: 100%;
-    height: fit-content;
-}
+            position: relative;
 
-.screenRes2 {
-    width: fit-content;
-    height: 100%;
-}
+            /* overflow: hidden; */
+        }
 
-#image-container svg {
-    /* position: absolute;
-    top: 0;
-    left: 0; */
-    max-width: 100%;
-    height: 100%;
-}
+        .screenRes1 {
+            width: 100%;
+            height: fit-content;
+        }
 
+        .screenRes2 {
+            width: fit-content;
+            height: 100%;
+        }
 
-
+        #image-container svg {
+            
+            max-width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 
 <body>
-    <div id="page">
+    <div id="page" onmousedown="startDrawing(event)">
         <div id="information">
             <h1 id="screen-ratio">Wähle einen Bereich aus</h1>
         </div>
 
         <div id="schulhof-selector" >
             <div id="image-container" class="screenRes1">
-                <svg viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
+                <svg  id="svgCanvas" viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
                     <style>
-                        .small { font: 13px sans-serif; }
-                        .heavy { font: bold 30px sans-serif; }
-                      </style>
-                    <image href="plan.png" draggable="false">
+                        .small {
+                            font: 13px sans-serif;
+                        }
+
+                        .heavy {
+                            font: bold 30px sans-serif;
+                        }
+                    </style>
+                    <image href="plan.png" draggable="false" style="pointer-events: none;">
                     </image>
                     <text x="710" y="450" class="heavy">Schulhof</text>
                     <text x="710" y="60" class="heavy">F-Gebäude</text>
                     <text x="710" y="930" class="heavy">C-Gebäude</text>
-
-                        <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill=rgb(255,0,0,0.3) />
+                    <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill=rgb(255,0,0,0.3) />
                 </svg>
             </div>
         </div>
     </div>
 
     <script>
-        document
+        function getScreenRatio() {
+            let imageContainer = document.getElementById('image-container');
+            if (imageContainer.clientHeight < window.innerHeight && imageContainer.classList.contains('screenRes2')) {
+                imageContainer.classList.remove('screenRes2');
+                imageContainer.classList.add('screenRes1');
+
+            } else if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
+                imageContainer.classList.remove('screenRes2');
+                imageContainer.classList.add('screenRes1');
+            }
+            if (imageContainer.clientHeight > window.innerHeight && imageContainer.classList.contains('screenRes1')) {
+                imageContainer.classList.remove('screenRes1');
+                imageContainer.classList.add('screenRes2');
+            }
 
 
-        document
-            .getElementById("schulhof-selector")
-            .addEventListener("click", function () {
-                console.log("Schulhof");
-            });
+        }
+        getScreenRatio();
+        window.addEventListener("resize", () => {
+            getScreenRatio();
+        });
 
     </script>
 
     <script>
-function getScreenRatio() {
-    let imageContainer = document.getElementById('image-container');
-      if (imageContainer.clientHeight < window.innerHeight && imageContainer.classList.contains('screenRes2')) {
-        imageContainer.classList.remove('screenRes2');
-        imageContainer.classList.add('screenRes1');
-        
-    }else if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
-        imageContainer.classList.remove('screenRes2');
-        imageContainer.classList.add('screenRes1');
-    }
- if (imageContainer.clientHeight > window.innerHeight && imageContainer.classList.contains('screenRes1')) {
-        imageContainer.classList.remove('screenRes1');
-        imageContainer.classList.add('screenRes2');
-    }
+        let startX, startY, rect, lastRect;
+        const svg = document.getElementById("svgCanvas");
+        function getMousePosition(event) {
+            const svg = document.getElementById("svgCanvas");
+            const pt = svg.createSVGPoint();
+            pt.x = event.clientX;
+            pt.y = event.clientY;
+            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+            return { x: cursorPt.x, y: cursorPt.y };
+        }
+
+        function startDrawing(event) {
+            
+            const pos = getMousePosition(event);
+            startX = pos.x;
+            startY = pos.y;
+            if (rect) {
+                lastRect = rect.cloneNode(true);
+                try{
+                    svg.removeChild(rect);
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+            rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", startX);
+            rect.setAttribute("y", startY);
+            rect.setAttribute("width", 0);
+            rect.setAttribute("height", 0);
+            rect.setAttribute("fill", "rgb(0, 0, 255, 0.3)");
+            rect.setAttribute("stroke", "black");
+            
+            svg.appendChild(rect);
+            document.addEventListener("mousemove", drawRectangle);
+            document.addEventListener("mouseup", stopDrawing);
+        }
+        function drawRectangle(event) {
+            const rectBounds = svg.getBoundingClientRect();
+            const pos = getMousePosition(event);
+            let width = pos.x - startX;
+            let height = pos.y - startY;
+            if (event.clientX > rectBounds.left && event.clientX < rectBounds.right) {
+    rect.setAttribute("width", Math.abs(width));
+    rect.setAttribute("x", width < 0 ? pos.x : startX);
+            }
+            if (event.clientY > rectBounds.top && event.clientY < rectBounds.bottom) {
+                rect.setAttribute("height", Math.abs(height));
+                rect.setAttribute("y", height < 0 ? pos.y : startY);
+            }
+            
+            
+            
 
 
-}
-getScreenRatio();
-window.addEventListener("resize", () => {
-    getScreenRatio();
-});
-        
+            if (event.clientX < rectBounds.left || event.clientX > rectBounds.right) {
+                return;
+            }
+            if (event.clientY < rectBounds.top || event.clientY > rectBounds.bottom) {
+                return;
+            }
+        }
+
+        function stopDrawing() {
+            const svg = document.getElementById("svgCanvas");
+            let width = parseInt(rect.getAttribute("width"));
+            let height = parseInt(rect.getAttribute("height"));
+
+            document.removeEventListener("mousemove", drawRectangle);
+            document.removeEventListener("mouseup", stopDrawing);
+
+            if (width < 10 || height < 10) {
+                svg.removeChild(rect);
+                if (lastRect) {
+                    svg.appendChild(lastRect);
+                    rect = lastRect;
+                }
+            }
+        }
     </script>
 </body>
 
