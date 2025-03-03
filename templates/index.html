@@ -70,22 +70,82 @@
         }
 
         #image-container svg {
-            
             max-width: 100%;
             height: 100%;
         }
     </style>
+    <script>
+        allowedToDraw = false;
+    </script>
 </head>
 
 <body>
     <div id="page" onmousedown="startDrawing(event)">
         <div id="information">
-            <h1 id="screen-ratio">Wähle einen Bereich aus</h1>
+            <div id="stage1" style="display: block">
+                <h1 id="action-title">Willkommen!</h1>
+                <h2>Sie haben noch keinen Stand regestriert!</h2>
+
+                <button id="register-now"
+                    onclick="document.getElementById('stage1').style.display = 'none'; document.getElementById('stage2').style.display = 'block';highlightElement('h');">
+                    Jetzt einen Stand regestrieren
+                </button>
+            </div>
+            <div id="stage2" style="display: none">
+                <h1>Standregestrierung</h1>
+                <h2>Wo soll sich der Stand befinden?</h2>
+                
+                <input type="radio" name="standOrt" id="stand1" value="hof" checked onclick="highlightElement('h')" />
+                <label for="stand1">Auf dem Schulhof</label><br />
+                <input type="radio" name="standOrt" id="stand2" value="f" onclick="highlightElement('f')" />
+                <label for="stand2">Im F-Gebäude</label><br />
+                <input type="radio" name="standOrt" id="stand3" value="c" onclick="highlightElement('c')" />
+                <label for="stand3">Im C-Gebäude</label>
+                <br />
+                <button id="register-now" onclick="initStage3()">Weiter</button>
+                <script>
+                    document.getElementById("stand1").checked = true;
+                    function initStage3() {
+                        highlightElement("");
+                        document.getElementById("stage2").style.display = "none";
+                        ort = document.querySelector('input[name="standOrt"]:checked').value;
+                        document.getElementById("stage3_"+ort).style.display = "block";
+                        if (ort == "hof") {
+                            allowedToDraw = true;
+                        }
+                    }
+                </script>
+            </div>
+            <div id="stage3_c" style="display: none">
+                <button onclick="document.getElementById('stage3_c').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('c');">Back</button>
+                <h1>Gebäude C</h1>
+                <h2>Bitte fülle alle untenstehenden Felder aus</h2>
+                <p>...</p>
+                <button onclick="document.getElementById('stage3_c').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
+            </div>
+            <div id="stage3_f" style="display: none">
+                <button onclick="document.getElementById('stage3_f').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('f');">Back</button>
+                <h1>Gebäude F</h1>
+                <h2>Bitte fülle alle untenstehenden Felder aus</h2>
+                <p>...</p>
+                <button onclick="document.getElementById('stage3_f').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
+            </div>
+            <div id="stage3_hof" style="display: none">
+                <button onclick="allowedToDraw = false;document.getElementById('stage3_hof').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('h');">Back</button>
+                <h1>Schulhof</h1>
+                <h2>Bitte markiere jetzt einen Bereich auf dem Schulhof, indem der Stand stehen soll und drücke dann auf weiter</h2>
+                <button onclick="allowedToDraw = false;document.getElementById('stage3_hof').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
+            </div>
+            <div id="stage4" style="display: none;">
+                ...
+                <br>
+                Drücke F5 um von vorne zu beginnen
+            </div>
         </div>
 
-        <div id="schulhof-selector" >
+        <div id="schulhof-selector">
             <div id="image-container" class="screenRes1">
-                <svg  id="svgCanvas" viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
+                <svg id="svgCanvas" viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
                     <style>
                         .small {
                             font: 13px sans-serif;
@@ -95,12 +155,19 @@
                             font: bold 30px sans-serif;
                         }
                     </style>
-                    <image href="plan.png" draggable="false" style="pointer-events: none;">
-                    </image>
+                    <image href="plan.png" draggable="false" style="pointer-events: none"></image>
                     <text x="710" y="450" class="heavy">Schulhof</text>
                     <text x="710" y="60" class="heavy">F-Gebäude</text>
                     <text x="710" y="930" class="heavy">C-Gebäude</text>
-                    <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill=rgb(255,0,0,0.3) />
+                    <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill="rgb(255,0,0,0.3)" />
+                    <rect x="64" y="111.8" width="1004.6" height="712.5" fill="rgb(250, 182, 177, 0.3)"
+                        id="schulhof-highlight" stroke="black"></rect>
+                    <rect x="228.90982055664062" y="11.35402774810791" width="942.3843688964844"
+                        height="100.92468929290771" fill="rgb(250, 182, 177, 0.4)" id="f-highlight" stroke="black">
+                    </rect>
+                    <rect x="419.4051818847656" y="828.8440551757812" width="710.2575378417969"
+                        height="205.63409423828125" fill="rgb(250, 182, 177, 0.4)" id="c-highlight" stroke="black">
+                    </rect>
                 </svg>
             </div>
         </div>
@@ -108,31 +175,39 @@
 
     <script>
         function getScreenRatio() {
-            let imageContainer = document.getElementById('image-container');
-            if (imageContainer.clientHeight < window.innerHeight && imageContainer.classList.contains('screenRes2')) {
-                imageContainer.classList.remove('screenRes2');
-                imageContainer.classList.add('screenRes1');
-
-            }  if (imageContainer.clientHeight == window.innerHeight && imageContainer.classList.contains('screenRes2')) {
-                imageContainer.classList.remove('screenRes2');
-                imageContainer.classList.add('screenRes1');
+            let imageContainer = document.getElementById("image-container");
+            if (
+                imageContainer.clientHeight < window.innerHeight &&
+                imageContainer.classList.contains("screenRes2")
+            ) {
+                imageContainer.classList.remove("screenRes2");
+                imageContainer.classList.add("screenRes1");
             }
-            if (imageContainer.clientHeight >= window.innerHeight && imageContainer.classList.contains('screenRes1')) {
-                imageContainer.classList.remove('screenRes1');
-                imageContainer.classList.add('screenRes2');
-                console.log('changed to screenRes2');
-            }console.log(imageContainer.clientHeight+":"+window.innerHeight);
-            
-
+            if (
+                imageContainer.clientHeight == window.innerHeight &&
+                imageContainer.classList.contains("screenRes2")
+            ) {
+                imageContainer.classList.remove("screenRes2");
+                imageContainer.classList.add("screenRes1");
+            }
+            if (
+                imageContainer.clientHeight >= window.innerHeight &&
+                imageContainer.classList.contains("screenRes1")
+            ) {
+                imageContainer.classList.remove("screenRes1");
+                imageContainer.classList.add("screenRes2");
+                console.log("changed to screenRes2");
+            }
+            console.log(imageContainer.clientHeight + ":" + window.innerHeight);
         }
         getScreenRatio();
         window.addEventListener("resize", () => {
             getScreenRatio();
         });
-
     </script>
 
     <script>
+        
         let startX, startY, rect, lastRect;
         const svg = document.getElementById("svgCanvas");
         function getMousePosition(event) {
@@ -145,13 +220,15 @@
         }
 
         function startDrawing(event) {
-            
+            if (!allowedToDraw) {
+                return;
+            }
             const pos = getMousePosition(event);
             startX = pos.x;
             startY = pos.y;
             if (rect) {
                 lastRect = rect.cloneNode(true);
-                try{
+                try {
                     svg.removeChild(rect);
                 } catch (e) {
                     console.log(e);
@@ -164,7 +241,7 @@
             rect.setAttribute("height", 0);
             rect.setAttribute("fill", "rgb(0, 0, 255, 0.3)");
             rect.setAttribute("stroke", "black");
-            
+
             svg.appendChild(rect);
             document.addEventListener("mousemove", drawRectangle);
             document.addEventListener("mouseup", stopDrawing);
@@ -174,23 +251,31 @@
             const pos = getMousePosition(event);
             let width = pos.x - startX;
             let height = pos.y - startY;
-            if (event.clientX > rectBounds.left && event.clientX < rectBounds.right) {
-    rect.setAttribute("width", Math.abs(width));
-    rect.setAttribute("x", width < 0 ? pos.x : startX);
+            if (
+                event.clientX > rectBounds.left &&
+                event.clientX < rectBounds.right
+            ) {
+                rect.setAttribute("width", Math.abs(width));
+                rect.setAttribute("x", width < 0 ? pos.x : startX);
             }
-            if (event.clientY > rectBounds.top && event.clientY < rectBounds.bottom) {
+            if (
+                event.clientY > rectBounds.top &&
+                event.clientY < rectBounds.bottom
+            ) {
                 rect.setAttribute("height", Math.abs(height));
                 rect.setAttribute("y", height < 0 ? pos.y : startY);
             }
-            
-            
-            
 
-
-            if (event.clientX < rectBounds.left || event.clientX > rectBounds.right) {
+            if (
+                event.clientX < rectBounds.left ||
+                event.clientX > rectBounds.right
+            ) {
                 return;
             }
-            if (event.clientY < rectBounds.top || event.clientY > rectBounds.bottom) {
+            if (
+                event.clientY < rectBounds.top ||
+                event.clientY > rectBounds.bottom
+            ) {
                 return;
             }
         }
@@ -211,6 +296,32 @@
                 }
             }
         }
+    </script>
+
+    <script>
+        function highlightElement(element) {
+            c = document.getElementById("c-highlight");
+            f = document.getElementById("f-highlight");
+            h = document.getElementById("schulhof-highlight");
+            if (element === "c") {
+                c.style.display = "block";
+                f.style.display = "none";
+                h.style.display = "none";
+            } else if (element === "f") {
+                f.style.display = "block";
+                c.style.display = "none";
+                h.style.display = "none";
+            } else if (element === "h") {
+                h.style.display = "block";
+                f.style.display = "none";
+                c.style.display = "none";
+            } else {
+                c.style.display = "none";
+                f.style.display = "none";
+                h.style.display = "none";
+            }
+        }
+        highlightElement();
     </script>
 </body>
 
