@@ -1,328 +1,544 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoffest Planer | © Tobias Auer</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
 
-        #page {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            grid-template-rows: repeat(5, 1fr);
-            grid-column-gap: 0px;
-            grid-row-gap: 0px;
-            height: 100vh;
-        }
+      #page {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100vh;
+      }
 
-        #information {
-            grid-area: 1 / 5 / 6 / 7;
-            background-color: rgb(0, 255, 0, 0.3);
-        }
+      #information {
+        grid-area: 1 / 5 / 6 / 7;
+        background-color: rgb(0, 255, 0, 0.3);
+      }
 
-        #schulhof-selector {
-            grid-area: 1 / 1 / 6 / 5;
-            background-color: white;
-            width: 100%;
+      #schulhof-selector {
+        grid-area: 1 / 1 / 6 / 5;
+        background-color: white;
+        width: 100%;
 
-            display: flex;
-            flex-direction: column;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+      }
 
-        #schulhof-selector {
-            position: relative;
-        }
+      #schulhof-selector {
+        position: relative;
+      }
 
-        #schulhof-selector h1 {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
+      #schulhof-selector h1 {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
+      }
 
-        #image-container {
-            position: relative;
+      #image-container {
+        position: relative;
 
-            /* overflow: hidden; */
-        }
+        /* overflow: hidden; */
+      }
 
-        .screenRes1 {
-            width: 100%;
-            height: fit-content;
-        }
+      .screenRes1 {
+        width: 100%;
+        height: fit-content;
+      }
 
-        .screenRes2 {
-            width: fit-content;
-            height: 100%;
-        }
+      .screenRes2 {
+        width: fit-content;
+        height: 100%;
+      }
 
-        #image-container svg {
-            max-width: 100%;
-            height: 100%;
-        }
+      #image-container svg {
+        max-width: 100%;
+        height: 100%;
+      }
+
+      .noDisplay {
+        display: none !important;
+      }
     </style>
     <script>
-        allowedToDraw = false;
+      allowedToDraw = false;
     </script>
-</head>
+  </head>
 
-<body>
-    <div id="page" onmousedown="startDrawing(event)">
-        <div id="information">
-            <div id="stage1" style="display: block">
-                <h1 id="action-title">Willkommen!</h1>
-                <h2>Sie haben noch keinen Stand regestriert!</h2>
-
-                <button id="register-now"
-                    onclick="document.getElementById('stage1').style.display = 'none'; document.getElementById('stage2').style.display = 'block';highlightElement('h');">
-                    Jetzt einen Stand regestrieren
-                </button>
-            </div>
-            <div id="stage2" style="display: none">
-                <h1>Standregestrierung</h1>
-                <h2>Wo soll sich der Stand befinden?</h2>
-                
-                <input type="radio" name="standOrt" id="stand1" value="hof" checked onclick="highlightElement('h')" />
-                <label for="stand1">Auf dem Schulhof</label><br />
-                <input type="radio" name="standOrt" id="stand2" value="f" onclick="highlightElement('f')" />
-                <label for="stand2">Im F-Gebäude</label><br />
-                <input type="radio" name="standOrt" id="stand3" value="c" onclick="highlightElement('c')" />
-                <label for="stand3">Im C-Gebäude</label>
-                <br />
-                <button id="register-now" onclick="initStage3()">Weiter</button>
-                <script>
-                    document.getElementById("stand1").checked = true;
-                    function initStage3() {
-                        highlightElement("");
-                        document.getElementById("stage2").style.display = "none";
-                        ort = document.querySelector('input[name="standOrt"]:checked').value;
-                        document.getElementById("stage3_"+ort).style.display = "block";
-                        if (ort == "hof") {
-                            allowedToDraw = true;
-                        }
-                    }
-                </script>
-            </div>
-            <div id="stage3_c" style="display: none">
-                <button onclick="document.getElementById('stage3_c').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('c');">Back</button>
-                <h1>Gebäude C</h1>
-                <h2>Bitte fülle alle untenstehenden Felder aus</h2>
-                <p>...</p>
-                <button onclick="document.getElementById('stage3_c').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
-            </div>
-            <div id="stage3_f" style="display: none">
-                <button onclick="document.getElementById('stage3_f').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('f');">Back</button>
-                <h1>Gebäude F</h1>
-                <h2>Bitte fülle alle untenstehenden Felder aus</h2>
-                <p>...</p>
-                <button onclick="document.getElementById('stage3_f').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
-            </div>
-            <div id="stage3_hof" style="display: none">
-                <button onclick="allowedToDraw = false;document.getElementById('stage3_hof').style.display = 'none';document.getElementById('stage2').style.display = 'block';highlightElement('h');">Back</button>
-                <h1>Schulhof</h1>
-                <h2>Bitte markiere jetzt einen Bereich auf dem Schulhof, indem der Stand stehen soll und drücke dann auf weiter</h2>
-                <button onclick="allowedToDraw = false;document.getElementById('stage3_hof').style.display='none';document.getElementById('stage4').style.display = 'block';">weiter</button>
-            </div>
-            <div id="stage4" style="display: none;">
-                ...
-                <br>
-                Drücke F5 um von vorne zu beginnen
-            </div>
+  <body>
+    <div id="page">
+      <div id="information">
+        <h1 id="actionTitle"></h1>
+        <h2 id="actionSubtext"></h2>
+        <div id="additionalText"></div>
+        <div id="baseLocation" style="display: none">
+          <input
+            type="radio"
+            name="baseLocationInput"
+            id="baseLocation1"
+            value="h"
+            checked
+            onclick="highlightElement('h')"
+          />
+          <label for="baseLocation1">Auf dem Schulhof</label><br />
+          <input
+            type="radio"
+            name="baseLocationInput"
+            id="baseLocation2"
+            value="f"
+            onclick="highlightElement('f')"
+          />
+          <label for="baseLocation2">Im F-Gebäude</label><br />
+          <input
+            type="radio"
+            name="baseLocationInput"
+            id="baseLocation3"
+            value="c"
+            onclick="highlightElement('c')"
+          />
+          <label for="baseLocation3">Im C-Gebäude</label>
         </div>
+        <div id="inputBoxes"></div>
+        <div id="questions"></div>
+        <input type="hidden" name="" id="nextAction" />
+        <input type="hidden" name="" id="lastAction" />
+        <button
+          id="lastStage"
+          onclick="stageManager(document.getElementById('lastAction').value)"
+        >Zurück</button>
+        <button
+          id="nextStage"
+          onclick="stageManager(document.getElementById('nextAction').value)"
+        ></button>
+      </div>
 
-        <div id="schulhof-selector">
-            <div id="image-container" class="screenRes1">
-                <svg id="svgCanvas" viewBox="0 0 1478 1037" preserveAspectRatio="xMinYMin meet" draggable="false">
-                    <style>
-                        .small {
-                            font: 13px sans-serif;
-                        }
+      <div id="schulhof-selector" onmousedown="startDrawing(event)">
+        <div id="image-container" class="screenRes1">
+          <svg
+            id="svgCanvas"
+            viewBox="0 0 1478 1037"
+            preserveAspectRatio="xMinYMin meet"
+            draggable="false"
+          >
+            <style>
+              .small {
+                font: 13px sans-serif;
+              }
 
-                        .heavy {
-                            font: bold 30px sans-serif;
-                        }
-                    </style>
-                    <image href="plan.png" draggable="false" style="pointer-events: none"></image>
-                    <text x="710" y="450" class="heavy">Schulhof</text>
-                    <text x="710" y="60" class="heavy">F-Gebäude</text>
-                    <text x="710" y="930" class="heavy">C-Gebäude</text>
-                    <rect width="230" height="50" x="768" y="113" rx="9" ry="9" fill="rgb(255,0,0,0.3)" />
-                    <rect x="64" y="111.8" width="1004.6" height="712.5" fill="rgb(250, 182, 177, 0.3)"
-                        id="schulhof-highlight" stroke="black"></rect>
-                    <rect x="228.90982055664062" y="11.35402774810791" width="942.3843688964844"
-                        height="100.92468929290771" fill="rgb(250, 182, 177, 0.4)" id="f-highlight" stroke="black">
-                    </rect>
-                    <rect x="419.4051818847656" y="828.8440551757812" width="710.2575378417969"
-                        height="205.63409423828125" fill="rgb(250, 182, 177, 0.4)" id="c-highlight" stroke="black">
-                    </rect>
-                </svg>
-            </div>
+              .heavy {
+                font: bold 30px sans-serif;
+              }
+            </style>
+            <image
+              href="plan.png"
+              draggable="false"
+              style="pointer-events: none"
+            ></image>
+            <text x="710" y="450" class="heavy">Schulhof</text>
+            <text x="710" y="60" class="heavy">F-Gebäude</text>
+            <text x="710" y="930" class="heavy">C-Gebäude</text>
+            <rect
+              width="230"
+              height="50"
+              x="768"
+              y="113"
+              rx="9"
+              ry="9"
+              fill="rgb(255,0,0,0.3)"
+            />
+            <rect
+              x="64"
+              y="111.8"
+              width="1004.6"
+              height="712.5"
+              fill="rgb(250, 182, 177, 0.3)"
+              id="schulhof-highlight"
+              stroke="black"
+            ></rect>
+            <rect
+              x="228.90982055664062"
+              y="11.35402774810791"
+              width="942.3843688964844"
+              height="100.92468929290771"
+              fill="rgb(250, 182, 177, 0.4)"
+              id="f-highlight"
+              stroke="black"
+            ></rect>
+            <rect
+              x="419.4051818847656"
+              y="828.8440551757812"
+              width="710.2575378417969"
+              height="205.63409423828125"
+              fill="rgb(250, 182, 177, 0.4)"
+              id="c-highlight"
+              stroke="black"
+            ></rect>
+          </svg>
         </div>
+      </div>
     </div>
 
     <script>
-        function getScreenRatio() {
-            let imageContainer = document.getElementById("image-container");
-            if (
-                imageContainer.clientHeight < window.innerHeight &&
-                imageContainer.classList.contains("screenRes2")
-            ) {
-                imageContainer.classList.remove("screenRes2");
-                imageContainer.classList.add("screenRes1");
-            }
-            if (
-                imageContainer.clientHeight == window.innerHeight &&
-                imageContainer.classList.contains("screenRes2")
-            ) {
-                imageContainer.classList.remove("screenRes2");
-                imageContainer.classList.add("screenRes1");
-            }
-            if (
-                imageContainer.clientHeight >= window.innerHeight &&
-                imageContainer.classList.contains("screenRes1")
-            ) {
-                imageContainer.classList.remove("screenRes1");
-                imageContainer.classList.add("screenRes2");
-                console.log("changed to screenRes2");
-            }
-            console.log(imageContainer.clientHeight + ":" + window.innerHeight);
+      function getScreenRatio() {
+        let imageContainer = document.getElementById("image-container");
+        if (
+          imageContainer.clientHeight < window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
         }
+        if (
+          imageContainer.clientHeight == window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
+        }
+        if (
+          imageContainer.clientHeight >= window.innerHeight &&
+          imageContainer.classList.contains("screenRes1")
+        ) {
+          imageContainer.classList.remove("screenRes1");
+          imageContainer.classList.add("screenRes2");
+          console.log("changed to screenRes2");
+        }
+        console.log(imageContainer.clientHeight + ":" + window.innerHeight);
+      }
+      getScreenRatio();
+      window.addEventListener("resize", () => {
         getScreenRatio();
-        window.addEventListener("resize", () => {
-            getScreenRatio();
-        });
+      });
     </script>
 
-    <script>
-        
-        let startX, startY, rect, lastRect;
+    <script defer>
+      let startX, startY, rect, lastRect;
+      const svg = document.getElementById("svgCanvas");
+      function getMousePosition(event) {
         const svg = document.getElementById("svgCanvas");
-        function getMousePosition(event) {
-            const svg = document.getElementById("svgCanvas");
-            const pt = svg.createSVGPoint();
-            pt.x = event.clientX;
-            pt.y = event.clientY;
-            const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
-            return { x: cursorPt.x, y: cursorPt.y };
+        const pt = svg.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+        return { x: cursorPt.x, y: cursorPt.y };
+      }
+
+      function startDrawing(event) {
+        if (!allowedToDraw) {
+          return;
+        }
+        document.getElementById("nextStage").disabled = true;
+        const pos = getMousePosition(event);
+        startX = pos.x;
+        startY = pos.y;
+        if (rect) {
+          lastRect = rect.cloneNode(true);
+          try {
+            svg.removeChild(rect);
+          } catch (e) {
+            console.log(e);
+          }
+        }
+        rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", startX);
+        rect.setAttribute("y", startY);
+        rect.setAttribute("width", 0);
+        rect.setAttribute("height", 0);
+        rect.setAttribute("fill", "rgb(0, 0, 255, 0.3)");
+        rect.setAttribute("stroke", "black");
+        //.getElementById("schulhof-selector")
+        svg.appendChild(rect);
+        document.addEventListener("mousemove", drawRectangle);
+        document
+          .getElementById("schulhof-selector")
+          .addEventListener("mouseup", stopDrawing);
+      }
+      function drawRectangle(event) {
+        const rectBounds = svg.getBoundingClientRect();
+        const pos = getMousePosition(event);
+        let width = pos.x - startX;
+        let height = pos.y - startY;
+        if (
+          event.clientX > rectBounds.left &&
+          event.clientX < rectBounds.right
+        ) {
+          rect.setAttribute("width", Math.abs(width));
+          rect.setAttribute("x", width < 0 ? pos.x : startX);
+        }
+        if (
+          event.clientY > rectBounds.top &&
+          event.clientY < rectBounds.bottom
+        ) {
+          rect.setAttribute("height", Math.abs(height));
+          rect.setAttribute("y", height < 0 ? pos.y : startY);
         }
 
-        function startDrawing(event) {
-            if (!allowedToDraw) {
-                return;
-            }
-            const pos = getMousePosition(event);
-            startX = pos.x;
-            startY = pos.y;
-            if (rect) {
-                lastRect = rect.cloneNode(true);
-                try {
-                    svg.removeChild(rect);
-                } catch (e) {
-                    console.log(e);
-                }
-            }
-            rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            rect.setAttribute("x", startX);
-            rect.setAttribute("y", startY);
-            rect.setAttribute("width", 0);
-            rect.setAttribute("height", 0);
-            rect.setAttribute("fill", "rgb(0, 0, 255, 0.3)");
-            rect.setAttribute("stroke", "black");
-
-            svg.appendChild(rect);
-            document.addEventListener("mousemove", drawRectangle);
-            document.addEventListener("mouseup", stopDrawing);
+        if (
+          event.clientX < rectBounds.left ||
+          event.clientX > rectBounds.right
+        ) {
+          return;
         }
-        function drawRectangle(event) {
-            const rectBounds = svg.getBoundingClientRect();
-            const pos = getMousePosition(event);
-            let width = pos.x - startX;
-            let height = pos.y - startY;
-            if (
-                event.clientX > rectBounds.left &&
-                event.clientX < rectBounds.right
-            ) {
-                rect.setAttribute("width", Math.abs(width));
-                rect.setAttribute("x", width < 0 ? pos.x : startX);
-            }
-            if (
-                event.clientY > rectBounds.top &&
-                event.clientY < rectBounds.bottom
-            ) {
-                rect.setAttribute("height", Math.abs(height));
-                rect.setAttribute("y", height < 0 ? pos.y : startY);
-            }
+        if (
+          event.clientY < rectBounds.top ||
+          event.clientY > rectBounds.bottom
+        ) {
+          return;
+        }
+      }
 
-            if (
-                event.clientX < rectBounds.left ||
-                event.clientX > rectBounds.right
-            ) {
-                return;
-            }
-            if (
-                event.clientY < rectBounds.top ||
-                event.clientY > rectBounds.bottom
-            ) {
-                return;
-            }
+      function stopDrawing() {
+        document.getElementById("nextStage").disabled = false;
+        rectangleSelectionActive = true;
+        const svg = document.getElementById("svgCanvas");
+        let width = parseInt(rect.getAttribute("width"));
+        let height = parseInt(rect.getAttribute("height"));
+
+        document.removeEventListener("mousemove", drawRectangle);
+        document.removeEventListener("mouseup", stopDrawing);
+
+        if (width < 2 && height < 2) {
+          deleteRectangle();
+          document.getElementById("nextStage").disabled = true;
+          rectangleSelectionActive = false;
+          return;
         }
 
-        function stopDrawing() {
-            const svg = document.getElementById("svgCanvas");
-            let width = parseInt(rect.getAttribute("width"));
-            let height = parseInt(rect.getAttribute("height"));
-
-            document.removeEventListener("mousemove", drawRectangle);
-            document.removeEventListener("mouseup", stopDrawing);
-
-            if (width < 10 || height < 10) {
-                svg.removeChild(rect);
-                if (lastRect) {
-                    svg.appendChild(lastRect);
-                    rect = lastRect;
-                }
-            }
+        if (width < 10 || height < 10) {
+          try {
+            svg.removeChild(rect);
+            document.getElementById("nextStage").disabled = false;
+            rectangleSelectionActive = true;
+          } catch (e) {
+            document.getElementById("nextStage").disabled = true;
+            rectangleSelectionActive = false;
+          }
+          if (lastRect) {
+            svg.appendChild(lastRect);
+            rect = lastRect;
+          }
         }
+      }
+      function deleteRectangle() {
+        try {
+          svg.removeChild(rect);
+        } catch (e) {
+          console.log(e);
+        }
+      }
     </script>
 
     <script>
-        function highlightElement(element) {
-            c = document.getElementById("c-highlight");
-            f = document.getElementById("f-highlight");
-            h = document.getElementById("schulhof-highlight");
-            if (element === "c") {
-                c.style.display = "block";
-                f.style.display = "none";
-                h.style.display = "none";
-            } else if (element === "f") {
-                f.style.display = "block";
-                c.style.display = "none";
-                h.style.display = "none";
-            } else if (element === "h") {
-                h.style.display = "block";
-                f.style.display = "none";
-                c.style.display = "none";
-            } else {
-                c.style.display = "none";
-                f.style.display = "none";
-                h.style.display = "none";
-            }
-        }
-        highlightElement();
-    </script>
-</body>
+      function highlightElement(element) {
+        try {
+          document.getElementById("raumnummer").placeholder = document.querySelector('input[name="baseLocationInput"]:checked').value + "101"
 
+        } catch (e) {
+        }
+        c = document.getElementById("c-highlight");
+        f = document.getElementById("f-highlight");
+        h = document.getElementById("schulhof-highlight");
+        if (element === "c") {
+          c.style.display = "block";
+          f.style.display = "none";
+          h.style.display = "none";
+        } else if (element === "f") {
+          f.style.display = "block";
+          c.style.display = "none";
+          h.style.display = "none";
+        } else if (element === "h") {
+          h.style.display = "block";
+          f.style.display = "none";
+          c.style.display = "none";
+        } else {
+          c.style.display = "none";
+          f.style.display = "none";
+          h.style.display = "none";
+        }
+      }
+      highlightElement();
+    </script>
+
+    <script defer>
+      actionTitle = document.getElementById("actionTitle");
+      actionSubText = document.getElementById("actionSubtext");
+      additionaltext = document.getElementById("additionalText");
+      baseLocation = document.getElementById("baseLocation");
+      baseLocation1 = document.getElementById("baseLocation1");
+      inputBoxes = document.getElementById("inputBoxes");
+      questionsField = document.getElementById("questions");
+      nextAction = document.getElementById("nextAction");
+      lastAction = document.getElementById("lastAction");
+      nextStageBtn = document.getElementById("nextStage");
+      lastStageBtn = document.getElementById("lastStage");
+      rectangleSelectionActive = false;
+      questionHTML1 = `
+            <label for="lehrername">Name:</label>
+            <input type="text" id="lehrername" placeholder="Max Mustermann" />
+            <br />
+            <label for="klasse">Klasse:</label>
+            <input type="text" id="klasse" placeholder="5e" />
+            <br />
+            <label class="rNr" for="raumnummer">Raumnummer:</label>
+            <input class="rNr" type="text" id="raumnummer" placeholder="..." />
+            <br class="rNr" />
+            <label for="projektName">Name des Projekts</label>
+            <input type="text" id="projektName" />
+            <br />
+            <label for="projektBeschreibung">Beschreibung des Projektes:</label><br />
+            <textarea
+                class="projektBeschreibung"
+                rows="4"
+                cols="50"
+                maxlength="5000"
+            ></textarea>
+            <br />
+      `;
+      questionTemplate = `
+        <input type="checkbox" id="|questionID|">
+        <label for="|questionID|">|questionText|</label>
+        <br>
+        `;
+
+      const questions = {
+        1: "Es werden elektrische Geräte verwendet, die geprüft werden müssen.",
+        2: "Es werden Lebensmittel verkauft.",
+      };
+
+      function stageManager(stage) {
+        additionaltext.style.display = "none";
+        baseLocation.style.display = "none";
+        inputBoxes.style.display = "none";
+        questionsField.style.display = "none";
+        additionaltext.innerHTML = ""
+        actionTitle.innerHTML = "";
+        actionSubText.innerHTML = "";
+        allowedToDraw = false;
+        nextStageBtn.disabled = false;
+        lastStageBtn.style.display = "block";
+        highlightElement("");
+        console.log(stage)
+
+        if (stage == "start") {
+          initStart();
+          nextAction.value = "selectBaseLocation";
+          actionTitle.innerHTML = "Willkommen!";
+          actionSubText.innerHTML = "Sie haben noch keinen Stand registriert!";
+          nextStageBtn.innerText = "Jetzt Beginnen!";
+
+          lastStageBtn.style.display = "none"
+        } 
+        else if (stage == "selectBaseLocation") {
+          initSelectBaseLocation()
+          lastStage.style.display = "block";
+          baseLocation.style.display = "block";
+          highlightElement(
+            document.querySelector('input[name="baseLocationInput"]:checked')
+              .value
+          );
+          actionTitle.innerHTML = "Wo soll sich der Stand befinden?";
+          actionSubText.innerHTML =
+            "Wählen Sie einen Ort aus, an dem sich der Stand befinden soll:";
+          nextAction.value = "stage3";
+          nextStageBtn.innerText = "Weiter";
+          lastAction.value = "start"
+        }
+        else if (stage == "stage3") {
+          selectedLocation = document.querySelector('input[name="baseLocationInput"]:checked').value + "101"
+          inputBoxes.style.display = "block";
+          questionsField.style.display = "block";
+          
+          
+          if (selectedLocation == "h" && !rectangleSelectionActive) {
+            stageManager("selectRectangle");
+            return;
+          }
+          initQuestionBlock();
+
+          if (selectedLocation != "h") {
+            rectangleSelectionActive = false;
+            deleteRectangle();
+            document.querySelectorAll('.rNr').forEach(el => el.classList.remove('noDisplay'));
+            highlightElement(selectedLocation);
+            lastAction.value = "selectBaseLocation"
+          } 
+          else {
+            document.querySelectorAll('.rNr').forEach(el => el.classList.add('noDisplay'));
+            lastAction.value = "selectRectangle"
+          }
+          actionTitle.innerHTML = "Details";
+          actionSubText.innerHTML =
+            "Bitte beantworten Sie noch folgende Fragen bezüglich Ihres Standes:";
+
+          nextAction.value = "verify";
+          nextStageBtn.innerText = "Abschließen";
+        }  
+        else if (stage == "selectRectangle") {   
+          actionTitle.innerHTML = "Fläche auswählen";
+          actionSubText.innerHTML =
+            "Bitte wählen markieren Sie sich eine Fläche auf dem Schulhof";
+          allowedToDraw = true;
+
+          additionaltext.innerHTML =
+            "<p>Klicken Sie hierfür auf eine Stelle auf dem Schulhof, halten gedrückt und markieren, wie groß ihr Stand sein soll. Beachten sie hierbei, dass Ihr Stand mit keinem anderen kollidiert</p>";
+          additionaltext.style.display = "block";
+            nextAction.value = "stage3";
+          if (!rectangleSelectionActive) {nextStageBtn.disabled = true;}
+          nextStageBtn.innerText = "Weiter";
+          lastAction.value = "selectBaseLocation"
+      }
+      else if (stage=="verify") {
+        actionTitle.innerHTML = "Abschließen";
+          actionSubText.innerHTML =
+            "Bitte überprüfen Sie noch Ihre Eingaben. Danach können Sie sich Ihren Stand genehmigen lassen.<br><br> (Kommt noch...)";
+            nextAction.value = "confirm";
+            lastAction.value = "stage3";
+            nextStageBtn.innerText = "Bestätigen";
+      }
+    }
+      startInited = false;
+      function initStart() {
+        if (startInited) {
+          return;
+        }
+        startInited = true;
+        baseLocation1.checked = true;
+      }
+      function initSelectBaseLocation() {}
+
+      initedQuestionBlock = false;
+      function initQuestionBlock() {
+        if (initedQuestionBlock) {
+          return;
+        }
+        initedQuestionBlock = true;
+        inputBoxes.innerHTML = questionHTML1;
+        document.getElementById("raumnummer").placeholder = document.querySelector('input[name="baseLocationInput"]:checked').value
+        for (const key in questions) {
+            questionsField.innerHTML += questionTemplate
+              .replaceAll("|questionID|", key)
+              .replaceAll("|questionText|", questions[key]);
+          }
+      }
+
+      stageManager("start");
+      </script>
+  </body>
 </html>
