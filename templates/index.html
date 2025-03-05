@@ -122,7 +122,9 @@
         <button
           id="lastStage"
           onclick="stageManager(document.getElementById('lastAction').value)"
-        >Zurück</button>
+        >
+          Zurück
+        </button>
         <button
           id="nextStage"
           onclick="stageManager(document.getElementById('nextAction').value)"
@@ -348,10 +350,10 @@
     <script>
       function highlightElement(element) {
         try {
-          document.getElementById("raumnummer").placeholder = document.querySelector('input[name="baseLocationInput"]:checked').value + "101"
-
-        } catch (e) {
-        }
+          document.getElementById("raumnummer").placeholder =
+            document.querySelector('input[name="baseLocationInput"]:checked')
+              .value + "101";
+        } catch (e) {}
         c = document.getElementById("c-highlight");
         f = document.getElementById("f-highlight");
         h = document.getElementById("schulhof-highlight");
@@ -404,7 +406,7 @@
             <br />
             <label for="projektBeschreibung">Beschreibung des Projektes:</label><br />
             <textarea
-                class="projektBeschreibung"
+                id="projektBeschreibung"
                 rows="4"
                 cols="50"
                 maxlength="5000"
@@ -427,14 +429,14 @@
         baseLocation.style.display = "none";
         inputBoxes.style.display = "none";
         questionsField.style.display = "none";
-        additionaltext.innerHTML = ""
+        additionaltext.innerHTML = "";
         actionTitle.innerHTML = "";
         actionSubText.innerHTML = "";
         allowedToDraw = false;
         nextStageBtn.disabled = false;
         lastStageBtn.style.display = "block";
         highlightElement("");
-        console.log(stage)
+        console.log(stage);
 
         if (stage == "start") {
           initStart();
@@ -442,11 +444,9 @@
           actionTitle.innerHTML = "Willkommen!";
           actionSubText.innerHTML = "Sie haben noch keinen Stand registriert!";
           nextStageBtn.innerText = "Jetzt Beginnen!";
-
-          lastStageBtn.style.display = "none"
+          lastStageBtn.style.display = "none";
         } 
         else if (stage == "selectBaseLocation") {
-          initSelectBaseLocation()
           lastStage.style.display = "block";
           baseLocation.style.display = "block";
           highlightElement(
@@ -458,14 +458,15 @@
             "Wählen Sie einen Ort aus, an dem sich der Stand befinden soll:";
           nextAction.value = "stage3";
           nextStageBtn.innerText = "Weiter";
-          lastAction.value = "start"
-        }
+          lastAction.value = "start";
+        } 
         else if (stage == "stage3") {
-          selectedLocation = document.querySelector('input[name="baseLocationInput"]:checked').value + "101"
+          selectedLocation =
+            document.querySelector('input[name="baseLocationInput"]:checked')
+              .value;
           inputBoxes.style.display = "block";
           questionsField.style.display = "block";
-          
-          
+
           if (selectedLocation == "h" && !rectangleSelectionActive) {
             stageManager("selectRectangle");
             return;
@@ -475,13 +476,16 @@
           if (selectedLocation != "h") {
             rectangleSelectionActive = false;
             deleteRectangle();
-            document.querySelectorAll('.rNr').forEach(el => el.classList.remove('noDisplay'));
+            document
+              .querySelectorAll(".rNr")
+              .forEach((el) => el.classList.remove("noDisplay"));
             highlightElement(selectedLocation);
-            lastAction.value = "selectBaseLocation"
-          } 
-          else {
-            document.querySelectorAll('.rNr').forEach(el => el.classList.add('noDisplay'));
-            lastAction.value = "selectRectangle"
+            lastAction.value = "selectBaseLocation";
+          } else {
+            document
+              .querySelectorAll(".rNr")
+              .forEach((el) => el.classList.add("noDisplay"));
+            lastAction.value = "selectRectangle";
           }
           actionTitle.innerHTML = "Details";
           actionSubText.innerHTML =
@@ -489,8 +493,7 @@
 
           nextAction.value = "verify";
           nextStageBtn.innerText = "Abschließen";
-        }  
-        else if (stage == "selectRectangle") {   
+        } else if (stage == "selectRectangle") {
           actionTitle.innerHTML = "Fläche auswählen";
           actionSubText.innerHTML =
             "Bitte wählen markieren Sie sich eine Fläche auf dem Schulhof";
@@ -499,20 +502,23 @@
           additionaltext.innerHTML =
             "<p>Klicken Sie hierfür auf eine Stelle auf dem Schulhof, halten gedrückt und markieren, wie groß ihr Stand sein soll. Beachten sie hierbei, dass Ihr Stand mit keinem anderen kollidiert</p>";
           additionaltext.style.display = "block";
-            nextAction.value = "stage3";
-          if (!rectangleSelectionActive) {nextStageBtn.disabled = true;}
+          nextAction.value = "stage3";
+          if (!rectangleSelectionActive) {
+            nextStageBtn.disabled = true;
+          }
           nextStageBtn.innerText = "Weiter";
-          lastAction.value = "selectBaseLocation"
-      }
-      else if (stage=="verify") {
-        actionTitle.innerHTML = "Abschließen";
+          lastAction.value = "selectBaseLocation";
+        } else if (stage == "verify") {
+          actionTitle.innerHTML = "Abschließen";
           actionSubText.innerHTML =
-            "Bitte überprüfen Sie noch Ihre Eingaben. Danach können Sie sich Ihren Stand genehmigen lassen.<br><br> (Kommt noch...)";
-            nextAction.value = "confirm";
-            lastAction.value = "stage3";
-            nextStageBtn.innerText = "Bestätigen";
+            "Bitte überprüfen Sie noch Ihre Eingaben. Danach können Sie sich Ihren Stand genehmigen lassen.";
+          additionaltext.style.display = "block";
+          nextAction.value = "confirm";
+          lastAction.value = "stage3";
+          nextStageBtn.innerText = "Bestätigen";
+          displayData();
+        }
       }
-    }
       startInited = false;
       function initStart() {
         if (startInited) {
@@ -521,7 +527,6 @@
         startInited = true;
         baseLocation1.checked = true;
       }
-      function initSelectBaseLocation() {}
 
       initedQuestionBlock = false;
       function initQuestionBlock() {
@@ -530,15 +535,57 @@
         }
         initedQuestionBlock = true;
         inputBoxes.innerHTML = questionHTML1;
-        document.getElementById("raumnummer").placeholder = document.querySelector('input[name="baseLocationInput"]:checked').value
+        document.getElementById("raumnummer").placeholder =
+          document.querySelector(
+            'input[name="baseLocationInput"]:checked'
+          ).value;
         for (const key in questions) {
-            questionsField.innerHTML += questionTemplate
-              .replaceAll("|questionID|", key)
-              .replaceAll("|questionText|", questions[key]);
-          }
+          questionsField.innerHTML += questionTemplate
+            .replaceAll("|questionID|", key)
+            .replaceAll("|questionText|", questions[key]);
+        }
+      }
+
+      function gatherData() {
+        data = {};
+        data.lehrername = document.getElementById("lehrername").value;
+        data.klasse = document.getElementById("klasse").value;
+        data.baseLocation = document.querySelector(
+          'input[name="baseLocationInput"]:checked'
+        ).value;
+        data.raumnummer = document.getElementById("raumnummer").value;
+        data.projektName = document.getElementById("projektName").value;
+        data.projektBeschreibung = document.getElementById(
+          "projektBeschreibung"
+        ).value;
+        data.questions = {};
+        for (const key in questions) {
+          const questionID = key;
+          const questionElement = document.getElementById(`${questionID}`);
+          data.questions[questionID] = questionElement.checked;
+        }
+        return data;
+      }
+
+      function displayData() {
+        gatherData();
+        additionaltext.innerHTML += JSON.stringify(data, null, 2);
+      }
+
+      function submitData() {
+        fetch("/submit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((result) => console.log(result))
+          .catch((error) => console.error("Error:", error));
       }
 
       stageManager("start");
-      </script>
+    </script>
   </body>
 </html>
