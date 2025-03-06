@@ -41,6 +41,11 @@ CREATE TABLE "admin"(
   CONSTRAINT admin_email_key UNIQUE(email)
 );
 
+CREATE TABLE "trusted_ids"(
+  id serial PRIMARY KEY,
+  trusted text NOT NULL
+);
+
 ALTER TABLE staende
   ADD CONSTRAINT staende_genehmigungs_prozess_fkey
     FOREIGN KEY (genehmigungs_prozess) REFERENCES genehmigungen (id);

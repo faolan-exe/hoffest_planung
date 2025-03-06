@@ -167,7 +167,55 @@ class DatabaseManager:
                 print("E-Mail erfolgreich gesendet!")
             except Exception as e:
                 print(f"Fehler beim Senden: {e}")
-                
-                
+    
+    #########################################################
+    def addNewTrustedId(self, id):
+        """
+        Adds a new trusted ID to the database.
+
+        Parameters:
+        id (str): The ID to be added.
+
+        Returns:
+        bool: True if the ID was successfully added, False otherwise.
+        """
+        logger.debug(f"addNewTrustedId is called")
+        query = "INSERT INTO trusted_ids (trusted) VALUES (%s);"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (id,))
+            self.conn.commit()
+            logger.info(f"ID {id} added successfully")
+        except Exception as e:
+            logger.error(f"Error adding ID: {e}")
+            self.conn.rollback()
+            return False
+        return True
+    
+    def checkTrustedId(self, id):
+        """
+        Checks if a given ID is a trusted ID in the database.
+
+        Parameters:
+        id (str): The ID to be checked.
+
+        Returns:
+        bool: True if the ID is trusted, False otherwise.
+        """
+        logger.debug(f"checkTrustedId is called")
+        query = "SELECT COUNT(*) FROM trusted_ids WHERE trusted = %s;"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (id,))
+            result = self.cursor.fetchone()
+            if result[0] > 0:
+                logger.info(f"ID {id} is trusted")
+                return True
+            else:
+                logger.info(f"ID {id} is not trusted")
+        except Exception as e:
+            logger.error(f"Error checking ID: {e}")
+        return False
+    
 if __name__ == "__main__":
     db_manager = DatabaseManager()
