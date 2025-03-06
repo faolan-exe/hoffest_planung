@@ -31,11 +31,20 @@ def index():
         return jsonify(error="Invalid authentication", bypass="https://hoffest.t-auer.com/?id=bypass"), 401
     
     sessionValue = session.get("id", "")
+    print("SESSION VALUE: " + sessionValue)
     if checkAuth(sessionValue):
         return render_template('index.html')
     session.clear()
     return jsonify(error="Invalid authentication", bypass="https://hoffest.t-auer.com/?id=bypass"), 401
-    
+
+
+@app.route("/commitStand", methods=["POST"])
+def commitStand():
+    if not checkAuth(session.get("id")):
+        return jsonify(error="Invalid authentication"), 401
+    data = request.json
+    print(data)
+    return "", 200
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -55,7 +64,7 @@ def register():
 def validate_auth(auth):
     try:
         id, checksum = auth.split(":")
-    except ValueError:
+    except Exception:
         return False
     logger.info("validating auth")
     logger.info(f"checksum: {type(checksum)}\nhashed: {type(reverse_obfuscated_algorithm(id))}")

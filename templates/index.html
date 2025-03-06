@@ -518,6 +518,10 @@
           nextStageBtn.innerText = "Bestätigen";
           displayData();
         }
+        else if (stage == "confirm") {
+          submitData()
+
+        }
       }
       startInited = false;
       function initStart() {
@@ -573,7 +577,7 @@
       }
 
       function submitData() {
-        fetch("/submit", {
+        fetch("/commitStand", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
