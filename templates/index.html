@@ -536,7 +536,16 @@
         }
         else if (stage == "confirm") {
           submitData()
-
+        }
+        else if (stage == "display") {
+          actionTitle.innerHTML = "Bestätigung";
+          actionSubText.innerHTML =
+            "Sie haben Ihre Daten abgeschlossen. Ihr Stand wurde erfolgreich registriert.";
+          additionaltext.style.display = "block";
+          additionaltext.innerText = data
+          nextAction.value = "";
+          nextStageBtn.style.display ="none"
+          lastStageBtn.style.display ="none"
         }
       }
       startInited = false;
@@ -606,7 +615,17 @@
           .catch((error) => console.error("Error:", error));
       }
 
-      stageManager("start");
+      submittedData = '{{already_submitted_data}}'
+submittedData2 = submittedData.replaceAll("&#39;", '"')
+
+if (submittedData == "None") {
+    stageManager("start");
+} else {
+    console.log(submittedData2);  // Gibt den JSON-String aus
+    data = JSON.parse(submittedData2);  // Nur JSON.parse, keine doppelte Stringifizierung
+    stageManager("display");
+}
+      
     </script>
   </body>
 </html>

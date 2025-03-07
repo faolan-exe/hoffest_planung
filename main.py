@@ -32,10 +32,13 @@ def index():
     
     sessionValue = session.get("id", "")
     print("SESSION VALUE: " + sessionValue)
-    if checkAuth(sessionValue):
-        return render_template('index.html')
-    session.clear()
-    return jsonify(error="Invalid authentication", bypass="https://hoffest.t-auer.com/?id=bypass"), 401
+    if not checkAuth(sessionValue):
+        session.clear()
+        return jsonify(error="Invalid authentication", bypass="https://hoffest.t-auer.com/?id=bypass"), 401
+        
+        
+    already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
+    return render_template('index.html', already_submitted_data=already_submitted_data)
 
 
 @app.route("/commitStand", methods=["POST"])
@@ -45,8 +48,8 @@ def commitStand():
     data = request.json
     print(data)
     if db_manager.addNewStand(data, auth_id=session.get("id")):
-        return "", 200
-    return "error", 401
+        return jsonify({"ok":"ok"}), 200
+    return jsonify({"error":"error"}), 401
 
 @app.route("/register", methods=["POST"])
 def register():

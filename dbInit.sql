@@ -36,6 +36,7 @@ CREATE TABLE public.stand(
   ort_spezifikation text NOT NULL,
   lehrer text NOT NULL,
   klasse text NOT NULL,
+  name text NOT NULL,
   beschreibung text NOT NULL,
   CONSTRAINT stand_pkey PRIMARY KEY(id),
   CONSTRAINT stand_auth_id_key UNIQUE(auth_id)
@@ -68,9 +69,9 @@ ALTER TABLE public.staende
 
 ALTER TABLE public.standQuestions
   ADD CONSTRAINT "standQuestions_stand_id_fkey"
-    FOREIGN KEY (stand_id) REFERENCES public.stand (id)
+    FOREIGN KEY (stand_id) REFERENCES public.stand (id);
 
 ALTER TABLE public.standQuestions
   ADD CONSTRAINT "standQuestions_question_id_fkey"
-    FOREIGN KEY (question_id) REFERENCES public.questions (id)
+    FOREIGN KEY (question_id) REFERENCES public.questions (id);
 

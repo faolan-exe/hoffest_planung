@@ -257,21 +257,22 @@ class DatabaseManager:
         bool: True if the stand was successfully added, False otherwise.
         """
         logger.debug(f"addNewStand is called")
-        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, beschreibung)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (auth_id) 
                     DO UPDATE SET 
                         ort = EXCLUDED.ort,
                         ort_spezifikation = EXCLUDED.ort_spezifikation,
                         lehrer = EXCLUDED.lehrer,
                         klasse = EXCLUDED.klasse,
+                        name = EXCLUDED.name,
                         beschreibung = EXCLUDED.beschreibung
                     RETURNING id;"""
+        values = (auth_id, data["baseLocation"], str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"], data["lehrername"], data["klasse"], data["projektName"] ,data["projektBeschreibung"])
 
-        values = (auth_id, data["baseLocation"], str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"], data["lehrername"], data["klasse"], data["projektBeschreibung"])
-        try:
+        try:        
             logger.debug(f"Executing SQL query: {query}")
-            logger.debug(f"with data: {values}")
+            logger.debug(f"with data: {values}")            
             self.cursor.execute(query, values)
             self.conn.commit()
             last_id = self.cursor.fetchone()[0]
@@ -291,9 +292,43 @@ class DatabaseManager:
             logger.error(f"Error adding stand: {e}")
             self.conn.rollback()
             return False
+        
+    def get_submitted_data_from_id(self, id):
+        """
+        Retrieves the submitted data for a given user ID from the database.
+
+        Parameters:
+        id (int): The auth_ID of the user.
+
+        Returns:
+        dict: The submitted data for the stand.
+        """
+        logger.debug(f"get_submitted_data_from_id is called")
+        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id)
+                    FROM stand as s
+                    join standQuestions AS sq ON sq.stand_id = s.id
+                    WHERE s.auth_id = %s
+                    GROUP BY s.id;"""
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(id,)}")
+        try:
+            self.cursor.execute(query, (id,))
+            result = self.cursor.fetchall()
+            if result == []:
+                return None
+            data = [
+                (item.replace("'", '\"') if isinstance(item, str) else item) for item in result[0]
+            ]
+            logger.info(f"Data retrieved successfully")
+            return data
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
     
     
 if __name__ == "__main__":
     db_manager = DatabaseManager()
-    db_manager.add_question("Strom und geräte?")
-    db_manager.add_question("Lebensmittel?")
+    # db_manager.add_question("Strom und geräte?")
+    # db_manager.add_question("Lebensmittel?")
+    print(db_manager.get_submitted_data_from_id("bypass"))
