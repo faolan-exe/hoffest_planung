@@ -44,7 +44,9 @@ def commitStand():
         return jsonify(error="Invalid authentication"), 401
     data = request.json
     print(data)
-    return "", 200
+    if db_manager.addNewStand(data, auth_id=session.get("id")):
+        return "", 200
+    return "error", 401
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -56,6 +58,7 @@ def register():
             print("success")
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
+    
 
 
 

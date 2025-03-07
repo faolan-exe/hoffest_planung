@@ -97,15 +97,35 @@ class DatabaseManager:
             self.cursor.execute(query)
             self.conn.commit()
             logger.info("Tables initiated successfully")
-            self.init_item_blocks_lookup_table("database/blocks.json")
-            self.init_item_items_lookup_table("database/itemlist.json")
-            logger.info("block and item data initiated successfully")
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
             self.conn.rollback()
             return False
         return True
 
+    def add_question(self, question):
+        """
+        Inserts a new question into the database.
+
+        Parameters:
+        question (str): The question to be added.
+
+        Returns:
+        int: The ID of the newly inserted question.
+        """
+        logger.debug("add_question is called")
+        query = "INSERT INTO questions (question) VALUES (%s)"
+        logger.debug(f"executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (question,))
+            self.conn.commit()
+            logger.info(f"Question added!")
+            return True
+        except Exception as e:
+            logger.error(f"Error adding question: {e}")
+            self.conn.rollback()
+            return False
+    
     def drop_db(self):
         """
         WARNING: This function wipes the whole database. Only run on critical errors.
@@ -217,5 +237,63 @@ class DatabaseManager:
             logger.error(f"Error checking ID: {e}")
         return False
     
+    def addNewStand(self, data, auth_id):
+        
+    #{'lehrername': 'name', 
+    # 'klasse': 'class', 
+    # 'baseLocation': 'h', 
+    # 'raumnummer': '', 
+    # 'projektName': 'nameprojekt', 
+    # 'projektBeschreibung': 'descrip', 
+    # 'mapSelection': {'x': 504, 'y': 114, 'width': 227, 'height': 54}, 
+    # 'questions': {'1': False, '2': True}}
+        """
+        Adds a new stand to the database.
+
+        Parameters:
+        data (dict): The data of the stand to be added.
+
+        Returns:
+        bool: True if the stand was successfully added, False otherwise.
+        """
+        logger.debug(f"addNewStand is called")
+        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, beschreibung)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (auth_id) 
+                    DO UPDATE SET 
+                        ort = EXCLUDED.ort,
+                        ort_spezifikation = EXCLUDED.ort_spezifikation,
+                        lehrer = EXCLUDED.lehrer,
+                        klasse = EXCLUDED.klasse,
+                        beschreibung = EXCLUDED.beschreibung
+                    RETURNING id;"""
+
+        values = (auth_id, data["baseLocation"], str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"], data["lehrername"], data["klasse"], data["projektBeschreibung"])
+        try:
+            logger.debug(f"Executing SQL query: {query}")
+            logger.debug(f"with data: {values}")
+            self.cursor.execute(query, values)
+            self.conn.commit()
+            last_id = self.cursor.fetchone()[0]
+            logger.info(f"Stand added successfully")
+            delete_query = "DELETE FROM standQuestions WHERE stand_id = %s"
+            self.cursor.execute(delete_query, (last_id,))
+            self.conn.commit()
+            query = "INSERT INTO standQuestions (stand_id, question_id) VALUES (%s, %s)"
+            for key, value in data["questions"].items():
+                if value:
+                    logger.debug(f"Executing SQL query: {query}")
+                    logger.debug(f"with data: {last_id}, {key}")
+                    self.cursor.execute(query, (last_id, int(key)))
+                    self.conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error adding stand: {e}")
+            self.conn.rollback()
+            return False
+    
+    
 if __name__ == "__main__":
     db_manager = DatabaseManager()
+    db_manager.add_question("Strom und geräte?")
+    db_manager.add_question("Lebensmittel?")

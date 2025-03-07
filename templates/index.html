@@ -305,6 +305,22 @@
           return;
         }
       }
+      
+      function getMapSelectionCoords() {
+        if (!rect) {
+        return {};
+        }
+        const x = parseInt(rect.getAttribute("x"));
+        const y = parseInt(rect.getAttribute("y"));
+        const width = parseInt(rect.getAttribute("width"));
+        const height = parseInt(rect.getAttribute("height"));
+        return {
+          x,
+          y,
+          width,
+          height,
+        };
+      }
 
       function stopDrawing() {
         document.getElementById("nextStage").disabled = false;
@@ -562,6 +578,7 @@
         data.projektBeschreibung = document.getElementById(
           "projektBeschreibung"
         ).value;
+        data.mapSelection = getMapSelectionCoords();
         data.questions = {};
         for (const key in questions) {
           const questionID = key;
