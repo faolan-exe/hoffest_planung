@@ -12,10 +12,9 @@ CREATE TABLE public."admin"(
 );
 
 CREATE TABLE public.genehmigungen(
-  id serial NOT NULL,
-  admin_id integer NOT NULL,
-  genehmigt boolean NOT NULL,
-  kommentar text NOT NULL,
+  id integer NOT NULL,
+  genehmigt boolean,
+  kommentar text,
   CONSTRAINT genehmigungen_pkey PRIMARY KEY(id)
 );
 
@@ -24,10 +23,6 @@ id serial NOT NULL, question text NOT NULL,
   CONSTRAINT questions_pkey PRIMARY KEY(id)
 );
 
-CREATE TABLE public.staende(
-stand_id integer NOT NULL, genehmigungs_prozess integer NOT NULL,
-  CONSTRAINT staende_pkey PRIMARY KEY(stand_id, genehmigungs_prozess)
-);
 
 CREATE TABLE public.stand(
   id serial NOT NULL,
@@ -38,6 +33,7 @@ CREATE TABLE public.stand(
   klasse text NOT NULL,
   name text NOT NULL,
   beschreibung text NOT NULL,
+  genehmigungs_id serial NOT NULL UNIQUE,
   CONSTRAINT stand_pkey PRIMARY KEY(id),
   CONSTRAINT stand_auth_id_key UNIQUE(auth_id)
 );
@@ -52,21 +48,6 @@ id serial NOT NULL, "trusted" text NOT NULL,
   CONSTRAINT trusted_ids_pkey PRIMARY KEY(id)
 );
 
-ALTER TABLE public.genehmigungen
-  ADD CONSTRAINT genehmigungen_admin_id_fkey
-    FOREIGN KEY (admin_id) REFERENCES public."admin" (id) ON DELETE No action
-      ON UPDATE No action;
-
-ALTER TABLE public.staende
-  ADD CONSTRAINT staende_genehmigungs_prozess_fkey
-    FOREIGN KEY (genehmigungs_prozess) REFERENCES public.genehmigungen (id)
-      ON DELETE No action ON UPDATE No action;
-
-ALTER TABLE public.staende
-  ADD CONSTRAINT staende_stand_id_fkey
-    FOREIGN KEY (stand_id) REFERENCES public.stand (id) ON DELETE No action
-      ON UPDATE No action;
-
 ALTER TABLE public.standQuestions
   ADD CONSTRAINT "standQuestions_stand_id_fkey"
     FOREIGN KEY (stand_id) REFERENCES public.stand (id);
@@ -75,3 +56,6 @@ ALTER TABLE public.standQuestions
   ADD CONSTRAINT "standQuestions_question_id_fkey"
     FOREIGN KEY (question_id) REFERENCES public.questions (id);
 
+ALTER TABLE public.genehmigungen
+  ADD CONSTRAINT genehmigungen_stand_id_fkey
+    FOREIGN KEY (id) REFERENCES public.stand (genehmigungs_id);
