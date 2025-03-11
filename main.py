@@ -3,12 +3,14 @@ from flask import Flask, jsonify, redirect, render_template, request, session
 from logger import get_logger
 from flask_cors import CORS
 import db
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 db_manager = db.DatabaseManager()
 
 logger = get_logger("main")
 secretAuthKey = open("./secretAuthCode.txt", "r").readline()
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 CORS(app)
 app.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(weeks=99999)
 app.config['SECRET_KEY'] = open("./flaskSecretKey.txt", "r").readline()
@@ -62,6 +64,10 @@ def register():
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
     
+
+@app.route("/robots.txt")
+def static_robots():
+    return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
 
 
 
