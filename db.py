@@ -5,7 +5,9 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
+import argon2
 
+ph = argon2.PasswordHasher()
 from logger import get_logger
 logger = get_logger("databaseManager",logging.DEBUG)
 RESET_DATABASE = False
@@ -287,6 +289,7 @@ class DatabaseManager:
                     logger.debug(f"with data: {last_id}, {key}")
                     self.cursor.execute(query, (last_id, int(key)))
                     self.conn.commit()
+            self.create_new_genehmigungs_entry(last_id)
             return True
         except Exception as e:
             logger.error(f"Error adding stand: {e}")
@@ -304,20 +307,22 @@ class DatabaseManager:
         dict: The submitted data for the stand.
         """
         logger.debug(f"get_submitted_data_from_id is called")
-        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id)
+        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar
                     FROM stand as s
-                    join standQuestions AS sq ON sq.stand_id = s.id
+                    LEFT join standQuestions AS sq ON sq.stand_id = s.id
+                    join genehmigungen AS g on g.id = s.genehmigungs_id
                     WHERE s.auth_id = %s
-                    GROUP BY s.id;"""
+                    GROUP BY s.id, g.genehmigt, g.kommentar;"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(id,)}")
         try:
             self.cursor.execute(query, (id,))
             result = self.cursor.fetchall()
             if result == []:
+                logger.debug(f"No results found")
                 return None
             data = [
-                (item.replace("'", '\"') if isinstance(item, str) else item) for item in result[0]
+                (item.replace("'", '\"') if isinstance(item, str) else "" if (item==None) else "" if item==[None,] else item) for item in result[0]
             ]
             logger.info(f"Data retrieved successfully")
             return data
@@ -325,10 +330,75 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+        
+    def add_admin_account(self, name, pwd, email):
+        """
+        Adds a new admin account to the database.
+
+        Parameters:
+        name (str): The name of the admin account.
+        pwd (str): The password of the admin account.
+        email (str): The email of the admin account.
+
+        Returns:
+        bool: True if the admin account was successfully added, False otherwise.
+        """
+        logger.debug(f"add_admin_account is called")
+        query = "INSERT INTO admin (name, password, email) VALUES (%s, %s, %s)"
+        logger.debug(f"Executing SQL query: {query}")
+        pwd = ph.hash(pwd)
+        logger.debug(f"with data: {(name, pwd, email)}")
+        try:
+            self.cursor.execute(query, (name, pwd, email))
+            self.conn.commit()
+            logger.info(f"Admin account added successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error adding admin account: {e}")
+            self.conn.rollback()
+        return False
     
+    def create_new_genehmigungs_entry(self, stand_id):
+        """
+        Creates a new genehmigungs_entry for a given stand ID.
+
+        Parameters:
+        stand_id (int): The ID of the stand.
+
+        Returns:
+        bool: True if the genehmigungs_entry was successfully created, False otherwise.
+        """
+        logger.debug(f"create_new_genehmigungs_entry is called")
+        query = "INSERT INTO genehmigungen (id) VALUES (%s)"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(stand_id,)}")
+        try:
+            self.cursor.execute(query, (stand_id,))
+            self.conn.commit()
+            logger.info(f"Genehmigungs_entry created successfully for stand_id: {stand_id}")
+            email_text = """Es gibt einen neuen Stand, der auf Bestätigung wartet..."""
+            query = "SELECT email FROM admin"
+            self.cursor.execute(query)
+            emails = self.cursor.fetchall()
+            print(emails)
+            for email in emails:
+                self.send_email(email[0], email_text)
+            return True
+        except Exception as e:
+            logger.error(f"Error creating genehmigungs_entry: {e}")
+            self.conn.rollback()
+        
     
+# db_manager = DatabaseManager() 
+# db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+# db_manager.add_question("Strom und geräte?")
+# db_manager.add_question("Lebensmittel?")
+# print(db_manager.get_submitted_data_from_id("bypass")) 
 if __name__ == "__main__":
-    db_manager = DatabaseManager()
-    # db_manager.add_question("Strom und geräte?")
-    # db_manager.add_question("Lebensmittel?")
+    db_manager = DatabaseManager() 
+    db_manager.init_tables()
+    db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+    db_manager.add_question("Strom und geräte?")
+    db_manager.add_question("Lebensmittel?")
     print(db_manager.get_submitted_data_from_id("bypass"))
+    
