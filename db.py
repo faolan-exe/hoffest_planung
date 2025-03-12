@@ -387,6 +387,41 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error creating genehmigungs_entry: {e}")
             self.conn.rollback()
+    
+    def authenticateAdmin(self, username, password):
+        """
+        Authenticates an admin account.
+
+        Parameters:
+        username (str): The username of the admin account.
+        password (str): The password of the admin account.
+
+        Returns:
+        bool: True if the admin account is authenticated, False otherwise.
+        """
+        logger.debug(f"authenticateAdmin is called")
+        query = "SELECT password FROM admin WHERE LOWER(name) = LOWER(%s)"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(username,)}")
+        try:
+            self.cursor.execute(query, (username,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return False
+            
+            pwd_hash = result[0]
+            if ph.verify(pwd_hash,password):
+                print("verify password")
+                logger.info(f"Admin account authenticated successfully")
+                return True
+            else:
+                logger.debug(f"Incorrect password")
+                return False
+        except Exception as e:
+            logger.error(f"Error authenticating admin account: {e}")
+            self.conn.rollback()
+            return False
         
     
 # db_manager = DatabaseManager() 

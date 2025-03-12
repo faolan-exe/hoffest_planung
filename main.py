@@ -64,6 +64,30 @@ def register():
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
     
+@app.route("/admin", methods=["POST", "GET"])
+def admin_route():
+    if request.method == "POST":
+        data = request.json
+        return login_route(data)
+    if isinstance(session.get("adminName"), str):
+        pending = db_manager.get_pending()
+        completed = db_manager.get_completed()
+        return render_template("admin.html", pending=pending, pendingCount=len(pending), completed=completed, completedCount=len(completed))
+    else:
+        return login_route()
+
+def login_route(data=None):
+    if data:
+        username = data["username"]
+        password = data["password"]
+        if db_manager.authenticateAdmin(username, password):
+            session["adminName"] = username
+            return "ok", 200
+        else:
+            return "failed", 401
+    return render_template("/login.html")
+
+    
 
 @app.route("/robots.txt")
 def static_robots():
