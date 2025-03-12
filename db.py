@@ -330,6 +330,41 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    
+    def get_submitted_data_from_stand_id(self, id):
+        """
+        Retrieves the submitted data for a given user ID from the database.
+
+        Parameters:
+        id (int): The auth_ID of the user.
+
+        Returns:
+        dict: The submitted data for the stand.
+        """
+        logger.debug(f"get_submitted_data_from_stand_id is called")
+        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar
+                    FROM stand as s
+                    LEFT join standQuestions AS sq ON sq.stand_id = s.id
+                    join genehmigungen AS g on g.id = s.genehmigungs_id
+                    WHERE s.genehmigungs_id = %s
+                    GROUP BY s.id, g.genehmigt, g.kommentar;"""
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(id,)}")
+        try:
+            self.cursor.execute(query, (id,))
+            result = self.cursor.fetchall()
+            if result == []:
+                logger.debug(f"No results found")
+                return None
+            data = [
+                (item.replace("'", '\"') if isinstance(item, str) else "" if (item==None) else "" if item==[None,] else item) for item in result[0]
+            ]
+            logger.info(f"Data retrieved successfully")
+            return data
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
         
     def add_admin_account(self, name, pwd, email):
         """
@@ -464,6 +499,7 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    
         
     
 # db_manager = DatabaseManager() 

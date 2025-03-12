@@ -70,11 +70,24 @@ def admin_route():
         data = request.json
         return login_route(data)
     if isinstance(session.get("adminName"), str):
-        pending = db_manager.get_pending()
-        completed = db_manager.get_completed()
-        return render_template("admin.html", pending=pending, pendingCount=len(pending), completed=completed, completedCount=len(completed))
+        pending_ids = db_manager.get_pending()
+        pending = []
+        for id in pending_ids:
+                pending.append({"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)})
+        completed_ids = db_manager.get_completed()
+        completed = []
+        for id in completed:
+                pending.append({"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)})
+        return render_template("admin.html", pending=pending, pendingCount=len(pending_ids), completed=completed, completedCount=len(completed_ids))
     else:
         return login_route()
+    
+@app.route("/admin/<path_id>", methods=["GET", "POST"])
+def admin_stand_route(path_id):
+    if not isinstance(session.get("adminName"), str):
+        return jsonify(error="Invalid authentication"), 401
+    stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
+    return str(stand_data)
 
 def login_route(data=None):
     if data:
