@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<h1>Hoffest Administration</h1>
+
+<h2>Dashboard</h2>
+<h3>Ausstehende Bestätigungen: </h3>
+<div id="ausstehend">
+    <p>Es gibt <span id="ausstehend_counter">X</span> ausstehende Bestätigungen</p>
+    <div id="ausstehendDiv">
+        ...
+    </div>
+</div>
+<hr>
+<h3>Bereits bestätigte Stände</h3>
+<div id="bestaetigt">
+    <p>Es gibt <span id="bestaetigt_counter">Y</span> bereits bestätigte Stände</p>
+    <div id="fertigDiv">
+        ...
+    </div>
+</div>
+
+<script>
+    pendingCounter = document.getElementById("ausstehend_counter")
+    completedCounter = document.getElementById("bestaetigt_counter")
+
+    pendingCounter.innerHTML = "{{pendingCount}}"
+    completedCounter.innerHTML = "{{completedCount}}"
+
+</script>
+</body>
+</html>

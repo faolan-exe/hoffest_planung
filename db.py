@@ -423,6 +423,48 @@ class DatabaseManager:
             self.conn.rollback()
             return False
         
+    def get_pending(self):
+        """
+        Retrieves all pending stands from the database.
+
+        Returns:
+        list: A list of tuples containing the stand IDs and names.
+        """
+        logger.debug(f"get_pending is called")
+        query = "SELECT id FROM genehmigungen WHERE genehmigt IS NULL"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info(f"Data retrieved successfully")
+            return [result[0] for result in result]
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
+    
+    def get_completed(self):
+        """
+        Retrieves all pending stands from the database.
+
+        Returns:
+        list: A list of tuples containing the stand IDs and names.
+        """
+        logger.debug(f"get_completed is called")
+        query = "SELECT id FROM genehmigungen WHERE genehmigt IS true"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info(f"Data retrieved successfully")
+            return [result[0] for result in result]
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
+        
     
 # db_manager = DatabaseManager() 
 # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
