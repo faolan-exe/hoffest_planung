@@ -30,6 +30,7 @@ CREATE TABLE public.stand(
   ort text NOT NULL,
   ort_spezifikation text NOT NULL,
   lehrer text NOT NULL,
+  email text NOT NULL,
   klasse text NOT NULL,
   name text NOT NULL,
   beschreibung text NOT NULL,

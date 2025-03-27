@@ -325,6 +325,9 @@
             <label for="projektName">Name des Projekts</label>
             <input type="text" id="projektName" />
             <br />
+            <label for="email">E-Mail Adresse</label>
+            <input type="text" id="email" />
+            <br />
             <label for="projektBeschreibung">Beschreibung des Projektes:</label><br />
             <textarea
                 id="projektBeschreibung"
@@ -453,6 +456,7 @@
         data.projektBeschreibung = document.getElementById(
           "projektBeschreibung"
         ).value;
+        data.email = document.getElementById("email").value;
         data.mapSelection = getMapSelectionCoords();
         data.questions = {};
         for (const key in questions) {

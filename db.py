@@ -1,3 +1,4 @@
+import random
 import time
 import logger
 import psycopg2
@@ -9,12 +10,22 @@ import argon2
 
 ph = argon2.PasswordHasher()
 from logger import get_logger
-logger = get_logger("databaseManager",logging.DEBUG)
+
+from SMTPMailer import SMTPMailer
+
+with open("./credentials.txt", "r") as file:
+        SMTP_USER = file.readline().strip()
+        SMTP_PASS = file.readline().strip()
+mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS)
+
+logger = get_logger("databaseManager", logging.DEBUG)
 RESET_DATABASE = True
+
 
 def read_sql_file(filepath):
     with open(filepath, "r") as file:
         return file.read()
+
 
 class DatabaseManager:
     TABLE_COUNT = 4  # minimum table count
@@ -35,6 +46,7 @@ class DatabaseManager:
 
         if not self.check_database_integrity() or RESET_DATABASE:
             self.init_tables()
+
     ################################ INIT FUNCTIONS ###################################
     def check_database_integrity(self):
         """
@@ -56,7 +68,7 @@ class DatabaseManager:
         else:
             logger.info("Database integrity check passed.")
         return True
-    
+
     def get_all_tables(self):
         """
         Retrieves all table names from the connected database.
@@ -74,7 +86,7 @@ class DatabaseManager:
         tables = self.cursor.fetchall()
         logger.debug(f"Table names retrieved: {tables}")
         return tables
-    
+
     def init_tables(self):
         """
         WARNING: This function wipes the whole database.
@@ -90,15 +102,14 @@ class DatabaseManager:
         """
         logger.debug("create_tables is called")
         logger.debug("dropping existing tables in 3 seconds...\nPress strg+c to cancel")
-        
-            
+
         self.drop_db()
         query = read_sql_file("./dbInit.sql")
         logger.debug(f"executing SQL query: {query}")
         try:
             self.cursor.execute(query)
             self.conn.commit()
-            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
             self.add_question("Strom und geräte?")
             self.add_question("Lebensmittel?")
             logger.info("Tables initiated successfully")
@@ -130,7 +141,7 @@ class DatabaseManager:
             logger.error(f"Error adding question: {e}")
             self.conn.rollback()
             return False
-    
+
     def drop_db(self):
         """
         WARNING: This function wipes the whole database. Only run on critical errors.
@@ -144,7 +155,9 @@ class DatabaseManager:
         None
         """
         logger.debug("drop_db is called")
-        logger.warning("\nDropping database in 3 Seconds!!!\n\n!!! To cancel press CTRL+C !!!\n")
+        logger.warning(
+            "\nDropping database in 3 Seconds!!!\n\n!!! To cancel press CTRL+C !!!\n"
+        )
         for i in range(3, 0, -1):
             print(f"Reset in {i}...")
             time.sleep(1)
@@ -154,45 +167,8 @@ class DatabaseManager:
         logger.warning("Database dropped")
         self.conn.commit()
 
-
-    def send_email(self, recipient, text):
-            SMTP_SERVER = "smtp.strato.com"
-            SMTP_PORT = 587  
-            with open("./credentials.txt", "r") as file:
-                SMTP_USER = file.readline().strip()
-                SMTP_PASS = file.readline().strip()
-
-            # E-Mail Details
-            sender_email = SMTP_USER
-            receiver_email = recipient
-            subject = "Test HTML E-Mail"
-
-            # HTML-Inhalt der E-Mail
-            html_content = f"""\
-            <html>
-            <body>
-                {text}
-            </body>
-            </html>
-            """
-
-            # E-Mail Nachricht erstellen
-            msg = MIMEMultipart()
-            msg["From"] = sender_email
-            msg["To"] = receiver_email
-            msg["Subject"] = subject
-            msg.attach(MIMEText(html_content, "html"))
-
-            # E-Mail senden
-            try:
-                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                    server.starttls()  # TLS-Verschlüsselung aktivieren
-                    server.login(SMTP_USER, SMTP_PASS)
-                    server.sendmail(sender_email, receiver_email, msg.as_string())
-                print("E-Mail erfolgreich gesendet!")
-            except Exception as e:
-                print(f"Fehler beim Senden: {e}")
     
+
     #########################################################
     def addNewTrustedId(self, id):
         """
@@ -216,7 +192,7 @@ class DatabaseManager:
             self.conn.rollback()
             return False
         return True
-    
+
     def checkTrustedId(self, id):
         """
         Checks if a given ID is a trusted ID in the database.
@@ -241,17 +217,17 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error checking ID: {e}")
         return False
-    
+
     def addNewStand(self, data, auth_id):
-        
-    #{'lehrername': 'name', 
-    # 'klasse': 'class', 
-    # 'baseLocation': 'h', 
-    # 'raumnummer': '', 
-    # 'projektName': 'nameprojekt', 
-    # 'projektBeschreibung': 'descrip', 
-    # 'mapSelection': {'x': 504, 'y': 114, 'width': 227, 'height': 54}, 
-    # 'questions': {'1': False, '2': True}}
+        # {'lehrername': 'name',
+        # 'klasse': 'class',
+        # 'baseLocation': 'h',
+        # 'raumnummer': '',
+        # 'projektName': 'nameprojekt',
+        # 'projektBeschreibung': 'descrip',
+        # 'email': ''
+        # 'mapSelection': {'x': 504, 'y': 114, 'width': 227, 'height': 54},
+        # 'questions': {'1': False, '2': True}}
         """
         Adds a new stand to the database.
 
@@ -262,8 +238,8 @@ class DatabaseManager:
         bool: True if the stand was successfully added, False otherwise.
         """
         logger.debug(f"addNewStand is called")
-        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (auth_id) 
                     DO UPDATE SET 
                         ort = EXCLUDED.ort,
@@ -271,13 +247,27 @@ class DatabaseManager:
                         lehrer = EXCLUDED.lehrer,
                         klasse = EXCLUDED.klasse,
                         name = EXCLUDED.name,
-                        beschreibung = EXCLUDED.beschreibung
+                        beschreibung = EXCLUDED.beschreibung,
+                        email = EXCLUDED.email
                     RETURNING id;"""
-        values = (auth_id, data["baseLocation"], str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"], data["lehrername"], data["klasse"], data["projektName"] ,data["projektBeschreibung"])
+        values = (
+            auth_id,
+            data["baseLocation"],
+            (
+                str(data["mapSelection"])
+                if data["baseLocation"] == "h"
+                else data["raumnummer"]
+            ),
+            data["lehrername"],
+            data["klasse"],
+            data["projektName"],
+            data["projektBeschreibung"],
+            data["email"],
+        )
 
-        try:        
+        try:
             logger.debug(f"Executing SQL query: {query}")
-            logger.debug(f"with data: {values}")            
+            logger.debug(f"with data: {values}")
             self.cursor.execute(query, values)
             self.conn.commit()
             last_id = self.cursor.fetchone()[0]
@@ -292,13 +282,13 @@ class DatabaseManager:
                     logger.debug(f"with data: {last_id}, {key}")
                     self.cursor.execute(query, (last_id, int(key)))
                     self.conn.commit()
-            self.create_new_genehmigungs_entry(last_id)
+            self.create_new_genehmigungs_entry(last_id, data["email"])
             return True
         except Exception as e:
             logger.error(f"Error adding stand: {e}")
             self.conn.rollback()
             return False
-        
+
     def get_submitted_data_from_id(self, id):
         """
         Retrieves the submitted data for a given user ID from the database.
@@ -325,7 +315,23 @@ class DatabaseManager:
                 logger.debug(f"No results found")
                 return None
             data = [
-                (item.replace("'", '\"') if isinstance(item, str) else "" if (item==None) else "" if item==[None,] else item) for item in result[0]
+                (
+                    item.replace("'", '"')
+                    if isinstance(item, str)
+                    else (
+                        ""
+                        if (item == None)
+                        else (
+                            ""
+                            if item
+                            == [
+                                None,
+                            ]
+                            else item
+                        )
+                    )
+                )
+                for item in result[0]
             ]
             logger.info(f"Data retrieved successfully")
             return data
@@ -333,7 +339,7 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
-    
+
     def get_submitted_data_from_stand_id(self, id):
         """
         Retrieves the submitted data for a given user ID from the database.
@@ -360,7 +366,23 @@ class DatabaseManager:
                 logger.debug(f"No results found")
                 return None
             data = [
-                (item.replace("'", '\"') if isinstance(item, str) else "" if (item==None) else "" if item==[None,] else item) for item in result[0]
+                (
+                    item.replace("'", '"')
+                    if isinstance(item, str)
+                    else (
+                        ""
+                        if (item == None)
+                        else (
+                            ""
+                            if item
+                            == [
+                                None,
+                            ]
+                            else item
+                        )
+                    )
+                )
+                for item in result[0]
             ]
             logger.info(f"Data retrieved successfully")
             return data
@@ -368,7 +390,7 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
-        
+
     def add_admin_account(self, name, pwd, email):
         """
         Adds a new admin account to the database.
@@ -395,8 +417,8 @@ class DatabaseManager:
             logger.error(f"Error adding admin account: {e}")
             self.conn.rollback()
         return False
-    
-    def create_new_genehmigungs_entry(self, stand_id):
+
+    def create_new_genehmigungs_entry(self, stand_id, teacher_email):
         """
         Creates a new genehmigungs_entry for a given stand ID.
 
@@ -413,19 +435,23 @@ class DatabaseManager:
         try:
             self.cursor.execute(query, (stand_id,))
             self.conn.commit()
-            logger.info(f"Genehmigungs_entry created successfully for stand_id: {stand_id}")
+            logger.info(
+                f"Genehmigungs_entry created successfully for stand_id: {stand_id}"
+            )
             email_text = """Es gibt einen neuen Stand, der auf Bestätigung wartet..."""
+            email_text_teacher = f"""Ihr Stand wurde erfolgreich übertragen und wird demnächst überprüft..."""
             query = "SELECT email FROM admin"
             self.cursor.execute(query)
             emails = self.cursor.fetchall()
             print(emails)
-            for email in emails:
-                self.send_email(email[0], email_text)
+            for email in emails: # emails from all admins
+                mailer.send_email(email[0], email_text)
+            mailer.send_email(teacher_email, email_text_teacher)
             return True
         except Exception as e:
             logger.error(f"Error creating genehmigungs_entry: {e}")
             self.conn.rollback()
-    
+
     def authenticateAdmin(self, username, password):
         """
         Authenticates an admin account.
@@ -447,9 +473,9 @@ class DatabaseManager:
             if result == None:
                 logger.debug(f"No results found")
                 return False
-            
+
             pwd_hash = result[0]
-            if ph.verify(pwd_hash,password):
+            if ph.verify(pwd_hash, password):
                 print("verify password")
                 logger.info(f"Admin account authenticated successfully")
                 return True
@@ -460,7 +486,7 @@ class DatabaseManager:
             logger.error(f"Error authenticating admin account: {e}")
             self.conn.rollback()
             return False
-        
+
     def get_pending(self):
         """
         Retrieves all pending stands from the database.
@@ -481,7 +507,7 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
-    
+
     def get_completed(self):
         """
         Retrieves all pending stands from the database.
@@ -502,19 +528,17 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
-    
-        
-    
-# db_manager = DatabaseManager() 
-# db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+
+
+# db_manager = DatabaseManager()
+# db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
 # db_manager.add_question("Strom und geräte?")
 # db_manager.add_question("Lebensmittel?")
-# print(db_manager.get_submitted_data_from_id("bypass")) 
+# print(db_manager.get_submitted_data_from_id("bypass"))
 if __name__ == "__main__":
-    db_manager = DatabaseManager() 
+    db_manager = DatabaseManager()
     db_manager.init_tables()
-    db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+    db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
     db_manager.add_question("Strom und geräte?")
     db_manager.add_question("Lebensmittel?")
     print(db_manager.get_submitted_data_from_id("bypass"))
-    
