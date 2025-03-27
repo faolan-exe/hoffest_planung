@@ -88,33 +88,7 @@
         <h1 id="actionTitle"></h1>
         <h2 id="actionSubtext"></h2>
         <div id="additionalText"></div>
-        <div id="baseLocation" style="display: none">
-          <input
-            type="radio"
-            name="baseLocationInput"
-            id="baseLocation1"
-            value="h"
-            checked
-            onclick="highlightElement('h')"
-          />
-          <label for="baseLocation1">Auf dem Schulhof</label><br />
-          <input
-            type="radio"
-            name="baseLocationInput"
-            id="baseLocation2"
-            value="f"
-            onclick="highlightElement('f')"
-          />
-          <label for="baseLocation2">Im F-Gebäude</label><br />
-          <input
-            type="radio"
-            name="baseLocationInput"
-            id="baseLocation3"
-            value="c"
-            onclick="highlightElement('c')"
-          />
-          <label for="baseLocation3">Im C-Gebäude</label>
-        </div>
+        
         <div id="inputBoxes"></div>
         <div id="questions"></div>
         <input type="hidden" name="" id="nextAction" />
@@ -156,42 +130,8 @@
             <text x="710" y="450" class="heavy">Schulhof</text>
             <text x="710" y="60" class="heavy">F-Gebäude</text>
             <text x="710" y="930" class="heavy">C-Gebäude</text>
-            <rect
-              width="230"
-              height="50"
-              x="768"
-              y="113"
-              rx="9"
-              ry="9"
-              fill="rgb(255,0,0,0.3)"
-            />
-            <rect
-              x="64"
-              y="111.8"
-              width="1004.6"
-              height="712.5"
-              fill="rgb(250, 182, 177, 0.3)"
-              id="schulhof-highlight"
-              stroke="black"
-            ></rect>
-            <rect
-              x="228.90982055664062"
-              y="11.35402774810791"
-              width="942.3843688964844"
-              height="100.92468929290771"
-              fill="rgb(250, 182, 177, 0.4)"
-              id="f-highlight"
-              stroke="black"
-            ></rect>
-            <rect
-              x="419.4051818847656"
-              y="828.8440551757812"
-              width="710.2575378417969"
-              height="205.63409423828125"
-              fill="rgb(250, 182, 177, 0.4)"
-              id="c-highlight"
-              stroke="black"
-            ></rect>
+            
+            
           </svg>
         </div>
       </div>
@@ -363,43 +303,11 @@
       }
     </script>
 
-    <script>
-      function highlightElement(element) {
-        try {
-          document.getElementById("raumnummer").placeholder =
-            document.querySelector('input[name="baseLocationInput"]:checked')
-              .value + "101";
-        } catch (e) {}
-        c = document.getElementById("c-highlight");
-        f = document.getElementById("f-highlight");
-        h = document.getElementById("schulhof-highlight");
-        if (element === "c") {
-          c.style.display = "block";
-          f.style.display = "none";
-          h.style.display = "none";
-        } else if (element === "f") {
-          f.style.display = "block";
-          c.style.display = "none";
-          h.style.display = "none";
-        } else if (element === "h") {
-          h.style.display = "block";
-          f.style.display = "none";
-          c.style.display = "none";
-        } else {
-          c.style.display = "none";
-          f.style.display = "none";
-          h.style.display = "none";
-        }
-      }
-      highlightElement();
-    </script>
 
     <script defer>
       actionTitle = document.getElementById("actionTitle");
       actionSubText = document.getElementById("actionSubtext");
       additionaltext = document.getElementById("additionalText");
-      baseLocation = document.getElementById("baseLocation");
-      baseLocation1 = document.getElementById("baseLocation1");
       inputBoxes = document.getElementById("inputBoxes");
       questionsField = document.getElementById("questions");
       nextAction = document.getElementById("nextAction");
@@ -414,9 +322,6 @@
             <label for="klasse">Klasse:</label>
             <input type="text" id="klasse" placeholder="5e" />
             <br />
-            <label class="rNr" for="raumnummer">Raumnummer:</label>
-            <input class="rNr" type="text" id="raumnummer" placeholder="..." />
-            <br class="rNr" />
             <label for="projektName">Name des Projekts</label>
             <input type="text" id="projektName" />
             <br />
@@ -442,7 +347,6 @@
 
       function stageManager(stage) {
         additionaltext.style.display = "none";
-        baseLocation.style.display = "none";
         inputBoxes.style.display = "none";
         questionsField.style.display = "none";
         additionaltext.innerHTML = "";
@@ -451,58 +355,26 @@
         allowedToDraw = false;
         nextStageBtn.disabled = false;
         lastStageBtn.style.display = "block";
-        highlightElement("");
         console.log(stage);
 
         if (stage == "start") {
           initStart();
-          nextAction.value = "selectBaseLocation";
+          nextAction.value = "selectArea";
           actionTitle.innerHTML = "Willkommen!";
           actionSubText.innerHTML = "Sie haben noch keinen Stand registriert!";
           nextStageBtn.innerText = "Jetzt Beginnen!";
           lastStageBtn.style.display = "none";
         } 
-        else if (stage == "selectBaseLocation") {
-          lastStage.style.display = "block";
-          baseLocation.style.display = "block";
-          highlightElement(
-            document.querySelector('input[name="baseLocationInput"]:checked')
-              .value
-          );
-          actionTitle.innerHTML = "Wo soll sich der Stand befinden?";
-          actionSubText.innerHTML =
-            "Wählen Sie einen Ort aus, an dem sich der Stand befinden soll:";
-          nextAction.value = "stage3";
-          nextStageBtn.innerText = "Weiter";
-          lastAction.value = "start";
-        } 
+        else if (stage == "selectArea") {
+          stageManager("selectRectangle");
+        }
         else if (stage == "stage3") {
-          selectedLocation =
-            document.querySelector('input[name="baseLocationInput"]:checked')
-              .value;
           inputBoxes.style.display = "block";
           questionsField.style.display = "block";
 
-          if (selectedLocation == "h" && !rectangleSelectionActive) {
-            stageManager("selectRectangle");
-            return;
-          }
+
           initQuestionBlock();
 
-          if (selectedLocation != "h") {
-            rectangleSelectionActive = false;
-            deleteRectangle();
-            document
-              .querySelectorAll(".rNr")
-              .forEach((el) => el.classList.remove("noDisplay"));
-            highlightElement(selectedLocation);
-            lastAction.value = "selectBaseLocation";
-          } else {
-            document
-              .querySelectorAll(".rNr")
-              .forEach((el) => el.classList.add("noDisplay"));
-            lastAction.value = "selectRectangle";
-          }
           actionTitle.innerHTML = "Details";
           actionSubText.innerHTML =
             "Bitte beantworten Sie noch folgende Fragen bezüglich Ihres Standes:";
@@ -523,7 +395,7 @@
             nextStageBtn.disabled = true;
           }
           nextStageBtn.innerText = "Weiter";
-          lastAction.value = "selectBaseLocation";
+          lastAction.value = "start";
         } else if (stage == "verify") {
           actionTitle.innerHTML = "Abschließen";
           actionSubText.innerHTML =
@@ -554,7 +426,6 @@
           return;
         }
         startInited = true;
-        baseLocation1.checked = true;
       }
 
       initedQuestionBlock = false;
@@ -564,10 +435,7 @@
         }
         initedQuestionBlock = true;
         inputBoxes.innerHTML = questionHTML1;
-        document.getElementById("raumnummer").placeholder =
-          document.querySelector(
-            'input[name="baseLocationInput"]:checked'
-          ).value;
+        
         for (const key in questions) {
           questionsField.innerHTML += questionTemplate
             .replaceAll("|questionID|", key)
@@ -579,10 +447,8 @@
         data = {};
         data.lehrername = document.getElementById("lehrername").value;
         data.klasse = document.getElementById("klasse").value;
-        data.baseLocation = document.querySelector(
-          'input[name="baseLocationInput"]:checked'
-        ).value;
-        data.raumnummer = document.getElementById("raumnummer").value;
+        data.baseLocation = "h"
+        data.raumnummer = ""
         data.projektName = document.getElementById("projektName").value;
         data.projektBeschreibung = document.getElementById(
           "projektBeschreibung"
