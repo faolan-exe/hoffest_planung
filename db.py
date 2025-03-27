@@ -10,7 +10,7 @@ import argon2
 ph = argon2.PasswordHasher()
 from logger import get_logger
 logger = get_logger("databaseManager",logging.DEBUG)
-RESET_DATABASE = False
+RESET_DATABASE = True
 
 def read_sql_file(filepath):
     with open(filepath, "r") as file:
@@ -25,7 +25,7 @@ class DatabaseManager:
         logger.debug("Initializing database manager")
         self.conn = psycopg2.connect(
             database="hoffest-postgresDB",
-            host="localhost",
+            host="127.0.0.1",
             user="admin",
             password="admin",
             port="5432",
@@ -89,7 +89,7 @@ class DatabaseManager:
         Exception: If an error occurs while executing the SQL query or committing the changes.
         """
         logger.debug("create_tables is called")
-        logger.debug("dropping existing tables in 5 seconds...\nPress strg+c to cancel")
+        logger.debug("dropping existing tables in 3 seconds...\nPress strg+c to cancel")
         
             
         self.drop_db()
@@ -98,6 +98,9 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             self.conn.commit()
+            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")   
+            self.add_question("Strom und geräte?")
+            self.add_question("Lebensmittel?")
             logger.info("Tables initiated successfully")
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
@@ -141,8 +144,8 @@ class DatabaseManager:
         None
         """
         logger.debug("drop_db is called")
-        logger.warning("\nDropping database in 5 Seconds!!!\n\n!!! To cancel press CTRL+C !!!\n")
-        for i in range(5, 0, -1):
+        logger.warning("\nDropping database in 3 Seconds!!!\n\n!!! To cancel press CTRL+C !!!\n")
+        for i in range(3, 0, -1):
             print(f"Reset in {i}...")
             time.sleep(1)
         query = "DROP SCHEMA public CASCADE;CREATE SCHEMA public;"
