@@ -91,36 +91,38 @@ def register():
 
 @admin.route("/", methods=["POST", "GET"])
 def admin_route():
-    if isinstance(session.get("adminName"), str):
-        pending_ids = db_manager.get_pending()
-        pending = []
-        for id in pending_ids:
-            pending.append(
-                {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
-            )
-        completed_ids = db_manager.get_completed()
-        completed = []
-        for id in completed:
-            pending.append(
-                {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
-            )
-        return render_template(
-            "admin.html",
-            pending=pending,
-            pendingCount=len(pending_ids),
-            completed=completed,
-            completedCount=len(completed_ids),
+    pending_ids = db_manager.get_pending()
+    pending = []
+    for id in pending_ids:
+        pending.append(
+            {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
         )
-    else:
-        return login_route()
-
+    completed_ids = db_manager.get_completed()
+    completed = []
+    for id in completed:
+        pending.append(
+            {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
+        )
+    return render_template(
+        "admin.html",
+        pending=pending,
+        pendingCount=len(pending_ids),
+        completed=completed,
+        completedCount=len(completed_ids),
+    )
 
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
-    if not isinstance(session.get("adminName"), str):
-        return jsonify(error="Invalid authentication"), 401
+    if request.method == "POST":
+        data = request.json
+        print(data)
+        if not db_manager.approve_stand(path_id, data["status"], data["comment"]):
+            logger.error(f"Error approving stand")
+            return jsonify({"error": "Error approving stand"}), 500
+        return jsonify({"ok": "ok"}), 200
     stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
-    return str(stand_data)
+    return render_template("review.html", data=stand_data)
+
 
 
 @app.route("/login", methods=["POST", "GET"])

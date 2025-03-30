@@ -13,9 +13,9 @@
 <div id="ausstehend">
     <p>Es gibt <span id="ausstehend_counter">X</span> ausstehende Bestätigungen</p>
     <div id="ausstehendDiv">
-        ...
+    ...    
     </div>
-    {{pending}}
+    
 </div>
 <hr>
 <h3>Bereits bestätigte Stände</h3>
@@ -24,16 +24,46 @@
     <div id="fertigDiv">
         ...
     </div>
-    {{completed}}
 </div>
-
-<script>
+<script id="pending-data" type="application/json">
+    [
+    {% for i in pending %}
+        {{ i | tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+    ]
+</script>
+<script defer>
     pendingCounter = document.getElementById("ausstehend_counter")
     completedCounter = document.getElementById("bestaetigt_counter")
 
     pendingCounter.innerHTML = "{{pendingCount}}"
     completedCounter.innerHTML = "{{completedCount}}"
 
+    pendingDiv = document.getElementById("ausstehendDiv");
+    pendingRequests = JSON.parse(document.getElementById("pending-data").textContent);
+    pendingRequests.forEach(request => {
+    if (typeof request.value[1] === "string") {
+        try {
+            request.value[1] = JSON.parse(request.value[1]);
+        } catch (e) {
+            console.error("Fehler beim Parsen von value[1]:", e);
+        }
+    }
+});
+    console.log(pendingRequests)
+
+    pendingDiv.innerHTML = "";
+    pendingRequests.forEach(request => {
+        let div = document.createElement("div");
+        div.className = "pending";
+        div.innerHTML = `
+            <h4>${request.value[4]}</h4>
+            <p>von ${request.value[2]}</p>
+            <button class="moreBtn" onclick="window.location.href='/admin/stand/${request.id}'">Mehr</button>
+            <hr />
+        `;
+        pendingDiv.appendChild(div);
+    });
 </script>
 </body>
 </html>

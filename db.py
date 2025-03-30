@@ -19,7 +19,7 @@ with open("./credentials.txt", "r") as file:
 mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS)
 
 logger = get_logger("databaseManager", logging.DEBUG)
-RESET_DATABASE = True
+RESET_DATABASE = False
 
 
 def read_sql_file(filepath):
@@ -507,6 +507,34 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    
+    def approve_stand(self, stand_id, status, comment):
+        """
+        Approves a stand and updates the genehmigungs entry.
+
+        Parameters:
+        stand_id (int): The ID of the stand to be approved.
+        comment (str): The comment for the approval.
+
+        Returns:
+        bool: True if the stand was successfully approved, False otherwise.
+        """
+        logger.debug(f"approve_stand is called")
+        query = "UPDATE genehmigungen SET genehmigt = %s, kommentar = %s WHERE id = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        data = (True if status == "accepted" else False, comment, stand_id)
+        logger.debug(f"with data: {data}")
+        try:
+            self.cursor.execute(query, data)
+            self.conn.commit()
+            logger.info(f"Stand {stand_id} approved successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error approving stand: {e}")
+            self.conn.rollback()
+            return False
+        
+    
 
     def get_completed(self):
         """

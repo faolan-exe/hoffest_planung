@@ -62,7 +62,7 @@ class SMTPMailer:
         self.worker_thread.join()
 
 
-# Beispiel-Nutzung
+# Test
 if __name__ == "__main__":
     # Lade Zugangsdaten aus Datei
     with open("./credentials.txt", "r") as file:
@@ -72,8 +72,8 @@ if __name__ == "__main__":
     mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS)
 
     # Mehrere E-Mails versenden (asynchron)
-    # mailer.send_email("test1@t-auer.com", "Hallo, dies ist eine Nachricht.")
-    # mailer.send_email("test2@t-auer.com", "Noch eine Nachricht.")
+    mailer.send_email("test1@t-auer.com", "Hallo, dies ist eine Nachricht.")
+    mailer.send_email("test2@t-auer.com", "Noch eine Nachricht.")
     mailer.send_email("balu.safemail@gmail.com", "Dritte Nachricht.")
 
     # Warten, bis alle E-Mails versendet wurden
