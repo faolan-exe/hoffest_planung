@@ -1,5 +1,5 @@
 from datetime import timedelta
-from flask import Flask, jsonify, redirect, render_template, request, session
+from flask import Flask, jsonify, redirect, render_template, request, session, Blueprint, url_for
 from logger import get_logger
 from flask_cors import CORS
 import db
@@ -9,7 +9,17 @@ db_manager = db.DatabaseManager()
 
 logger = get_logger("main")
 secretAuthKey = open("./secretAuthCode.txt", "r").readline()
+
+admin = Blueprint("admin", __name__, url_prefix="/admin")
+
+@admin.before_request
+def check_admin():
+    print("checking admin")
+    if not isinstance(session.get("adminName"), str):
+        return redirect(url_for("login_route"))
+    
 app = Flask(__name__)
+
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 CORS(app)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
@@ -79,7 +89,7 @@ def register():
         return jsonify(error="Failed to add ID"), 400
 
 
-@app.route("/admin", methods=["POST", "GET"])
+@admin.route("/", methods=["POST", "GET"])
 def admin_route():
     if isinstance(session.get("adminName"), str):
         pending_ids = db_manager.get_pending()
@@ -105,7 +115,7 @@ def admin_route():
         return login_route()
 
 
-@app.route("/admin/<path_id>", methods=["GET", "POST"])
+@admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
     if not isinstance(session.get("adminName"), str):
         return jsonify(error="Invalid authentication"), 401
@@ -166,4 +176,5 @@ def reverse_obfuscated_algorithm(input_string):
 
 
 if __name__ == "__main__":
+    app.register_blueprint(admin)
     app.run(port=8000, host="0.0.0.0", threaded=True, debug=True)
