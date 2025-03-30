@@ -18,7 +18,19 @@ def check_admin():
     if not isinstance(session.get("adminName"), str):
         return redirect(url_for("login_route"))
     
-app = Flask(__name__)
+app = Flask(__name__)    
+@app.before_request
+def check_auth():
+    print("checking auth............")
+    print(request.path)
+    if request.path in ["/login", "/", "/favicon.ico"] or request.path.startswith("/admin"):
+        print("ok")
+        return  # Authentifizierung nicht erforderlich für diese Endpunkte
+    if not checkAuth(session.get("id")):
+        print("not ok")
+        session.clear()
+        return redirect(url_for("index"))
+
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 CORS(app)
@@ -26,14 +38,19 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
 app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
 
-def checkAuth(id):
-    if not validate_auth(id) and id != "bypass":
-        return False
-    if not db_manager.checkTrustedId(id) and id != "bypass":
-        print("not trusted")
-        return False
-    return True
+def checkAuth(user_id):
+    """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
+    if user_id == "bypass":
+        return True  # Erlaubt Bypass-Benutzer
 
+    if not validate_auth(user_id):
+        return False  # Ungültige Authentifizierung
+
+    if not db_manager.check_trusted_id(user_id):
+        print("User ID is not trusted")
+        return False  # Nicht vertrauenswürdig
+
+    return True
 
 @app.route("/")
 def index():
@@ -76,6 +93,10 @@ def commitStand():
         return jsonify({"ok": "ok"}), 200
     return jsonify({"error": "error"}), 401
 
+@app.route("/test")
+def test():
+    print("test")
+    return jsonify(ok=True), 200
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -123,6 +144,12 @@ def admin_stand_route(path_id):
     stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
     return render_template("review.html", data=stand_data)
 
+@app.route("/moodleApi")
+def moodleApi():
+    data = request.json
+    if db_manager.addNewMoodleData(data):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "error"}), 401
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -144,6 +171,7 @@ def login_route(data=None):
 @app.route("/robots.txt")
 def static_robots():
     return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
+
 
 
 def validate_auth(auth):
