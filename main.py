@@ -81,9 +81,6 @@ def register():
 
 @app.route("/admin", methods=["POST", "GET"])
 def admin_route():
-    if request.method == "POST":
-        data = request.json
-        return login_route(data)
     if isinstance(session.get("adminName"), str):
         pending_ids = db_manager.get_pending()
         pending = []
@@ -116,8 +113,12 @@ def admin_stand_route(path_id):
     return str(stand_data)
 
 
+@app.route("/login", methods=["POST", "GET"])
 def login_route(data=None):
+    if request.method == "POST":
+        data = request.json
     if data:
+        print("login route")
         username = data["username"]
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):

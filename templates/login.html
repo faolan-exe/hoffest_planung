@@ -26,7 +26,7 @@
                 password: document.getElementById("password").value
             };
 
-            const response = await fetch("/admin", {
+            const response = await fetch("/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
