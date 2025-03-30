@@ -527,13 +527,40 @@ class DatabaseManager:
         try:
             self.cursor.execute(query, data)
             self.conn.commit()
-            logger.info(f"Stand {stand_id} approved successfully")
+            logger.info(f"Stand {stand_id} processed successfully")
+            self.notify_approval(stand_id, status, comment)
             return True
         except Exception as e:
             logger.error(f"Error approving stand: {e}")
             self.conn.rollback()
             return False
-        
+    
+    def notify_approval(self, stand_id, status, comment):
+        """
+        Sends an email notification to the admin account and the teacher about the stand's approval.
+
+        Parameters:
+        stand_id (int): The ID of the stand.
+        status (str): The status of the approval ("accepted" or "rejected").
+        comment (str): The comment for the approval.
+        """
+        logger.debug(f"notify_approval is called")
+        query = "SELECT email FROM stand WHERE id = %s"
+        logger.debug(f"with data: {(stand_id,)}")
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (stand_id,))
+            result = self.cursor.fetchone()
+            email = result[0]
+            logger.debug(f"Email retrieved successfully")
+            email_text = f"""Der Stand {stand_id} wurde {status}.\nKommentar: {comment}\n\nBitte beachte, das bedeutet nur, dass versucht wird, Ihren Wunsch zu berücksichtigen. Es gibt keinen Anspruch darauf, dass es genau so umgesetzt werden kann!"""
+            mailer.send_email(email, email_text)
+        except Exception as e:
+            logger.error(f"Error sending email: {e}")
+            self.conn.rollback()
+            return False
+        logger.info(f"notify_approval executed successfully")
+        return True 
     
 
     def get_completed(self):
