@@ -26,7 +26,7 @@ app = Flask(__name__)
 def check_auth():
     print("checking auth............")
     print(request.path)
-    if request.path in ["/login", "/", "/favicon.ico"] or request.path.startswith("/admin"):
+    if request.path in ["/login", "/", "/favicon.ico", "/moodleApi"] or request.path.startswith("/admin"):
         print("ok")
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
     if not checkAuth(session.get("id")):
@@ -147,10 +147,26 @@ def admin_stand_route(path_id):
 
 @app.route("/moodleApi")
 def moodleApi():
-    data = request.json
-    if db_manager.addNewMoodleData(data):
-        return jsonify({"ok": "ok"}), 200
-    return jsonify({"error": "error"}), 401
+    id = request.args.get("id", "nothing")
+    
+    if not checkAuth(id):
+        return jsonify({"error": "Invalid authentication"}), 401
+    confirmedIDS = db_manager.get_completed()
+    confirmed = []
+    for id in confirmedIDS:
+        data = db_manager.get_submitted_data_from_stand_id(id)
+        confirmed.append(
+            {"lehrer": data[2], "name": data[4]}
+        )
+    
+    pendingIDS = db_manager.get_pending()
+    pending = []
+    for id in pendingIDS:
+        data = db_manager.get_submitted_data_from_stand_id(id)
+        pending.append(
+            {"lehrer": data[2], "name": data[4]}
+        )
+    return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -172,6 +188,8 @@ def login_route(data=None):
 @app.route("/robots.txt")
 def static_robots():
     return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
+
+
 
 
 
