@@ -12,6 +12,7 @@ secretAuthKey = open("./secretAuthCode.txt", "r").readline()
 
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
+# Global admin verification
 @admin.before_request
 def check_admin():
     print("checking admin")
@@ -19,6 +20,8 @@ def check_admin():
         return redirect(url_for("login_route"))
     
 app = Flask(__name__)    
+
+# Global user verification
 @app.before_request
 def check_auth():
     print("checking auth............")
@@ -54,9 +57,9 @@ def checkAuth(user_id):
 
 @app.route("/")
 def index():
-    id = request.args.get("id", "")
+    id = request.args.get("id", "")  
     if id != "":
-        if checkAuth(id):
+        if checkAuth(id):  # important local check!
             session["id"] = id
             return redirect("/")
         return (
@@ -85,8 +88,6 @@ def index():
 
 @app.route("/commitStand", methods=["POST"])
 def commitStand():
-    if not checkAuth(session.get("id")):
-        return jsonify(error="Invalid authentication"), 401
     data = request.json
     print(data)
     if db_manager.addNewStand(data, auth_id=session.get("id")):
