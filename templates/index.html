@@ -11,6 +11,21 @@
         padding: 0;
         overflow: hidden;
       }
+      input[type="checkbox"] 
+       {
+        width: 18px;
+        height: 18px;
+        padding-top: 2px;
+        margin-right: 5px;
+        vertical-align: middle;
+        
+      }
+      input[type="checkbox"] + label {
+        vertical-align: middle;
+      }
+      input[type="checkbox"] {
+        accent-color: green;
+      }
 
       #page {
         display: grid;
@@ -24,6 +39,7 @@
       #information {
         grid-area: 1 / 5 / 6 / 7;
         background-color: rgb(0, 255, 0, 0.3);
+        overflow: scroll;
       }
 
       #schulhof-selector {
@@ -77,6 +93,170 @@
         display: none !important;
       }
     </style>
+    <style>
+      #actionTitle {
+        text-align: center;
+        margin: 12px 0;
+      }
+      #actionSubtext {
+        margin: 12px 0;
+      }
+      #additionalText {
+        margin: 12px 0;
+        text-align: justify;
+      }
+      #information {
+        padding: 25px;
+        padding-bottom: 0;
+      }
+      .arrow {
+        border: solid rgb(0, 0, 0);
+        border-width: 0 3px 3px 0;
+        display: inline-block;
+        padding: 4px;
+      }
+      .left {
+        transform: rotate(135deg);
+        -webkit-transform: rotate(135deg);
+      }
+      #lastStage {
+        padding: 3px;
+      }
+    </style>
+    <style>
+      .small {
+        font: 13px sans-serif;
+      }
+
+      .heavy {
+        font: bold 30px sans-serif;
+      }
+    </style>
+    <style>
+      .start-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        will-change: box-shadow, transform;
+        background: radial-gradient(
+          100% 100% at 100% 0%,
+          #89e5ff 0%,
+          #5468ff 100%
+        );
+        box-shadow: 0px 2px 4px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%),
+          inset 0px -3px 0px rgb(58 65 111 / 50%);
+        padding: 0 28px;
+        border-radius: 6px;
+        color: #fff;
+        height: 44px;
+        font-size: 18px;
+        text-shadow: 0 1px 0 rgb(0 0 0 / 40%);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        align-self: center;
+      }
+      .start-btn:hover {
+        box-shadow: 0px 4px 8px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%), inset 0px -3px 0px #3c4fe0;
+        transform: translateY(-2px);
+      }
+      .start-btn:active {
+        box-shadow: inset 0px 3px 7px #3c4fe0;
+        transform: translateY(2px);
+      }
+
+      .normal-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: #fff;
+        font-size: 14px;
+        height: 38px;
+        padding: 8px 24px;
+        border-radius: 50px;
+        background-image: linear-gradient(180deg, #7c8aff, #3c4fe0);
+        box-shadow: 0 4px 11px 0 rgb(37 44 97 / 15%),
+          0 1px 3px 0 rgb(93 100 148 / 20%);
+        transition: all 0.1s linear;
+      }
+      .normal-btn:hover {
+        box-shadow: 0 8px 22px 0 rgb(37 44 97 / 15%),
+          0 4px 6px 0 rgb(93 100 148 / 20%);
+        transform: scale(1.09);
+      }
+      .normal-btn:disabled {
+        background-image: linear-gradient(180deg, #848abd, #535779);
+        box-shadow: none;
+      }
+      .normal-btn:disabled:hover {
+        box-shadow: none;
+        transform: scale(1);
+        cursor: default;
+      }
+    </style>
+    <style>
+      .form-container {
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+        max-width: 100%;
+      }
+      .form-container label {
+        font-size: 1rem;
+        color: black;
+        margin-bottom: 4px;
+        display: block;
+      }
+      .form-container input[type="text"],
+      .form-container textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 4px 0 12px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+      .form-container textarea {
+        resize: vertical;
+      }
+      input[type="text"]:focus,
+      textarea:focus {
+        border-color: #66a3ff;
+        outline: none;
+      }
+      .form-container button {
+        background-color: #66a3ff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        font-size: 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s ease;
+      }
+      .form-container button:hover {
+        background-color: #5588cc;
+      }
+
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        border-radius: 50%;
+        background-color: #3498db;
+        color: white;
+        padding: 0.75px 3px;
+        font-size: 70%;
+        text-align: center;
+        font-weight: bold;
+        line-height: 1;
+        vertical-align: middle;
+      }
+    </style>
+
     <script>
       allowedToDraw = false;
     </script>
@@ -85,24 +265,37 @@
   <body>
     <div id="page">
       <div id="information">
-        <h1 id="actionTitle"></h1>
-        <h2 id="actionSubtext"></h2>
-        <div id="additionalText"></div>
-        
-        <div id="inputBoxes"></div>
-        <div id="questions"></div>
-        <input type="hidden" name="" id="nextAction" />
-        <input type="hidden" name="" id="lastAction" />
         <button
           id="lastStage"
           onclick="stageManager(document.getElementById('lastAction').value)"
         >
-          Zurück
+          <i class="arrow left" id="disabledArrow"></i> Zurück
         </button>
-        <button
-          id="nextStage"
-          onclick="stageManager(document.getElementById('nextAction').value)"
-        ></button>
+        <h1 id="actionTitle"></h1>
+        <h2 id="actionSubtext"></h2>
+        <div id="additionalText"></div>
+        <div class="form-container">
+          <div id="inputBoxes"></div>
+          <div id="questions"></div>
+        </div>
+
+        <input type="hidden" name="" id="nextAction" />
+        <input type="hidden" name="" id="lastAction" />
+
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            margin: 45px;
+            margin-bottom: 0;
+            padding: 20px;
+          "
+        >
+          <button
+            id="nextStage"
+            onclick="stageManager(document.getElementById('nextAction').value)"
+          ></button>
+        </div>
       </div>
 
       <div id="schulhof-selector" onmousedown="startDrawing(event)">
@@ -113,15 +306,6 @@
             preserveAspectRatio="xMinYMin meet"
             draggable="false"
           >
-            <style>
-              .small {
-                font: 13px sans-serif;
-              }
-
-              .heavy {
-                font: bold 30px sans-serif;
-              }
-            </style>
             <image
               href="{{ url_for('static', filename='plan.png') }}"
               draggable="false"
@@ -130,8 +314,6 @@
             <text x="710" y="450" class="heavy">Schulhof</text>
             <text x="710" y="60" class="heavy">F-Gebäude</text>
             <text x="710" y="930" class="heavy">C-Gebäude</text>
-            
-            
           </svg>
         </div>
       </div>
@@ -245,10 +427,10 @@
           return;
         }
       }
-      
+
       function getMapSelectionCoords() {
         if (!rect) {
-        return {};
+          return {};
         }
         const x = parseInt(rect.getAttribute("x"));
         const y = parseInt(rect.getAttribute("y"));
@@ -283,9 +465,11 @@
           try {
             svg.removeChild(rect);
             document.getElementById("nextStage").disabled = false;
+
             rectangleSelectionActive = true;
           } catch (e) {
             document.getElementById("nextStage").disabled = true;
+
             rectangleSelectionActive = false;
           }
           if (lastRect) {
@@ -303,7 +487,6 @@
       }
     </script>
 
-
     <script defer>
       actionTitle = document.getElementById("actionTitle");
       actionSubText = document.getElementById("actionSubtext");
@@ -314,33 +497,34 @@
       lastAction = document.getElementById("lastAction");
       nextStageBtn = document.getElementById("nextStage");
       lastStageBtn = document.getElementById("lastStage");
+      formContent = document.querySelector(".form-container");
+      arrow = document.querySelector(".arrow");
       rectangleSelectionActive = false;
       questionHTML1 = `
-            <label for="lehrername">Name:</label>
-            <input type="text" id="lehrername" placeholder="Max Mustermann" />
-            <br />
-            <label for="klasse">Klasse:</label>
-            <input type="text" id="klasse" placeholder="5e" />
-            <br />
-            <label for="projektName">Name des Projekts</label>
-            <input type="text" id="projektName" />
-            <br />
-            <label for="email">E-Mail Adresse</label>
-            <input type="text" id="email" />
-            <br />
-            <label for="projektBeschreibung">Beschreibung des Projektes:</label><br />
-            <textarea
-                id="projektBeschreibung"
-                rows="4"
-                cols="50"
-                maxlength="5000"
-            ></textarea>
-            <br />
+            
+<div class="">
+    <label for="lehrername">Name:</label>
+    <input type="text" id="lehrername" placeholder="Max Mustermann" />
+    
+    <label for="klasse">Klasse:</label>
+    <input type="text" id="klasse" placeholder="5e" />
+    
+    <label for="projektName">Name des Projekts/Stands:</label>
+    <input type="text" id="projektName" placeholder="Projekt XY" />
+    
+    <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
+    <input type="text" id="email" placeholder="example@email.com" />
+    
+    <label for="projektBeschreibung">Beschreibung des Projektes:</label>
+    <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
+</div>
       `;
       questionTemplate = `
+      <div style="display: inline-flex;">
         <input type="checkbox" id="|questionID|">
-        <label for="|questionID|">|questionText|</label>
+        <label for="|questionID|" style="display:inline">|questionText|</label>
         <br>
+        </div>
         `;
 
       const questions = {
@@ -349,86 +533,117 @@
       };
 
       function stageManager(stage) {
-        additionaltext.style.display = "none";
-        inputBoxes.style.display = "none";
-        questionsField.style.display = "none";
-        additionaltext.innerHTML = "";
-        actionTitle.innerHTML = "";
-        actionSubText.innerHTML = "";
+        // Grundlegende UI-Elemente zurücksetzen
+        [inputBoxes, questionsField, formContent].forEach(
+          (el) => (el.style.display = "none")
+        );
+        [additionaltext, actionTitle, actionSubText].forEach(
+          (el) => (el.innerHTML = "")
+        );
+        [additionaltext, lastStageBtn].forEach(
+          (el) => (el.style.display = "block")
+        );
+
         allowedToDraw = false;
         nextStageBtn.disabled = false;
-        lastStageBtn.style.display = "block";
+        lastStageBtn.disabled = false;
+        nextStageBtn.classList.remove("start-btn");
+        nextStageBtn.classList.add("normal-btn");
+        arrow.style.borderColor = "black";
         console.log(stage);
 
-        if (stage == "start") {
-          initStart();
-          nextAction.value = "selectArea";
-          actionTitle.innerHTML = "Willkommen!";
-          actionSubText.innerHTML = "Sie haben noch keinen Stand registriert!";
-          nextStageBtn.innerText = "Jetzt Beginnen!";
-          lastStageBtn.style.display = "none";
-        } 
-        else if (stage == "selectArea") {
-          stageManager("selectRectangle");
-        }
-        else if (stage == "stage3") {
-          inputBoxes.style.display = "block";
-          questionsField.style.display = "block";
+        const stages = {
+          start: () => {
+            nextStageBtn.classList.remove("normal-btn");
+            nextStageBtn.classList.add("start-btn");
 
-
-          initQuestionBlock();
-
-          actionTitle.innerHTML = "Details";
-          actionSubText.innerHTML =
-            "Bitte beantworten Sie noch folgende Fragen bezüglich Ihres Standes:";
-
-          nextAction.value = "verify";
-          nextStageBtn.innerText = "Abschließen";
-        } else if (stage == "selectRectangle") {
-          actionTitle.innerHTML = "Fläche auswählen";
-          actionSubText.innerHTML =
-            "Bitte wählen markieren Sie sich eine Fläche auf dem Schulhof";
-          allowedToDraw = true;
-
-          additionaltext.innerHTML =
-            "<p>Klicken Sie hierfür auf eine Stelle auf dem Schulhof, halten gedrückt und markieren, wie groß ihr Stand sein soll. Beachten sie hierbei, dass Ihr Stand mit keinem anderen kollidiert</p>";
-          additionaltext.style.display = "block";
-          nextAction.value = "stage3";
-          if (!rectangleSelectionActive) {
-            nextStageBtn.disabled = true;
-          }
-          nextStageBtn.innerText = "Weiter";
-          lastAction.value = "start";
-        } else if (stage == "verify") {
-          actionTitle.innerHTML = "Abschließen";
-          actionSubText.innerHTML =
-            "Bitte überprüfen Sie noch Ihre Eingaben. Danach können Sie sich Ihren Stand genehmigen lassen.";
-          additionaltext.style.display = "block";
-          nextAction.value = "confirm";
-          lastAction.value = "stage3";
-          nextStageBtn.innerText = "Bestätigen";
-          displayData();
-        }
-        else if (stage == "confirm") {
-          submitData()
-        }
-        else if (stage == "display") {
-          actionTitle.innerHTML = "Bestätigung";
-          actionSubText.innerHTML =
-            "Sie haben Ihre Daten abgeschlossen. Ihr Stand wurde erfolgreich registriert.";
-          additionaltext.style.display = "block";
-          additionaltext.innerText = data
-          nextAction.value = "";
-          nextStageBtn.style.display ="none"
-          lastStageBtn.style.display ="none"
-        }
+            updateUI(
+              "Willkommen!",
+              "Sie haben sich noch für keinen Stand registriert.",
+              "Um einen Stand zu reservieren, starten Sie jetzt mit der Auswahl einer Fläche auf dem Schulhof.",
+              "Jetzt starten!",
+              "selectRectangle",
+              ""
+            );
+            lastStageBtn.disabled = true;
+            arrow.style.borderColor = "grey";
+          },
+          selectRectangle: () => {
+            allowedToDraw = true;
+            updateUI(
+              "Fläche auswählen",
+              "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
+              "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können bis zu 6 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter orga@schule.de.",
+              "Weiter",
+              "stage3",
+              "start"
+            );
+            additionaltext.style.display = "block";
+            if (!rectangleSelectionActive) {
+              nextStageBtn.disabled = true;
+            }
+            lastAction.value = "start";
+          },
+          stage3: () => {
+            [inputBoxes, questionsField, formContent].forEach(
+              (el) => (el.style.display = "block")
+            );
+            initQuestionBlock();
+            updateUI(
+              "Details zu Ihrem Stand",
+              "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
+              "Um die Anmeldung abzuschließen müssen noch folgende Fragen beantworten. Achten Sie bitte darauf, dass bei der Beschreibung des Projektes klar hervorgeht, was geplant ist und in welchem Bezug es zum Motto steht. ",
+              "Abschließen",
+              "verify",
+              "selectRectangle"
+            );
+          },
+          verify: () => {
+            updateUI(
+              "Überprüfung Ihrer Angaben",
+              "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
+              "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet. Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.",
+              "Bestätigen",
+              "confirm",
+              "stage3"
+            );
+            additionaltext.style.display = "block";
+            displayData();
+          },
+          confirm: submitData,
+          display: () => {
+            updateUI(
+              "Registrierung abgeschlossen",
+              "Ihr Stand wurde erfolgreich registriert! Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren.",
+              "add",
+              "",
+              "",
+              ""
+            );
+            additionaltext.style.display = "block";
+            additionaltext.innerText = data;
+            [nextStageBtn, lastStageBtn].forEach(
+              (el) => (el.style.display = "none")
+            );
+          },
+        };
+        if (stages[stage]) stages[stage]();
       }
-      startInited = false;
-      function initStart() {
-        if (startInited) {
-          return;
-        }
-        startInited = true;
+
+      function updateUI(
+        title,
+        subtitle,
+        addText,
+        nextText,
+        nextActionValue,
+        lastActionValue
+      ) {
+        actionTitle.innerHTML = title;
+        actionSubText.innerHTML = subtitle;
+        additionaltext.innerHTML = addText;
+        nextStageBtn.innerText = nextText;
+        nextAction.value = nextActionValue;
+        lastAction.value = lastActionValue;
       }
 
       initedQuestionBlock = false;
@@ -438,7 +653,6 @@
         }
         initedQuestionBlock = true;
         inputBoxes.innerHTML = questionHTML1;
-        
         for (const key in questions) {
           questionsField.innerHTML += questionTemplate
             .replaceAll("|questionID|", key)
@@ -450,8 +664,8 @@
         data = {};
         data.lehrername = document.getElementById("lehrername").value;
         data.klasse = document.getElementById("klasse").value;
-        data.baseLocation = "h"
-        data.raumnummer = ""
+        data.baseLocation = "h";
+        data.raumnummer = "";
         data.projektName = document.getElementById("projektName").value;
         data.projektBeschreibung = document.getElementById(
           "projektBeschreibung"
@@ -485,17 +699,16 @@
           .catch((error) => console.error("Error:", error));
       }
 
-      submittedData = '{{already_submitted_data}}'
-submittedData2 = submittedData.replaceAll("&#39;", '"')
+      submittedData = "{{already_submitted_data}}";
+      submittedData2 = submittedData.replaceAll("&#39;", '"');
 
-if (submittedData == "None") {
-    stageManager("start");
-} else {
-    console.log(submittedData2);  // Gibt den JSON-String aus
-    data = JSON.parse(submittedData2);  // Nur JSON.parse, keine doppelte Stringifizierung
-    stageManager("display");
-}
-      
+      if (submittedData == "None") {
+        stageManager("start");
+      } else {
+        console.log(submittedData2); // Gibt den JSON-String aus
+        data = JSON.parse(submittedData2); // Nur JSON.parse, keine doppelte Stringifizierung
+        stageManager("display");
+      }
     </script>
   </body>
 </html>
