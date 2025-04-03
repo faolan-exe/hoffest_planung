@@ -593,7 +593,7 @@ class DatabaseManager:
 if __name__ == "__main__":
     db_manager = DatabaseManager()
     db_manager.init_tables()
-    db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
-    db_manager.add_question("Strom und geräte?")
-    db_manager.add_question("Lebensmittel?")
+    # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
+    # db_manager.add_question("Strom und geräte?")
+    # db_manager.add_question("Lebensmittel?")
     print(db_manager.get_submitted_data_from_id("bypass"))
