@@ -1,6 +1,7 @@
 from datetime import timedelta
 from flask import (
     Flask,
+    abort,
     jsonify,
     redirect,
     render_template,
@@ -99,12 +100,14 @@ def index():
             ),
             401,
         )
-    
+
     questions = db_manager.get_questions()
     logger.debug("Got questions: " + str(questions))
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
-    return render_template("index.html", already_submitted_data=already_submitted_data, questions=questions)
+    return render_template(
+        "index.html", already_submitted_data=already_submitted_data, questions=questions
+    )
 
 
 @app.route("/commitStand", methods=["POST"])
@@ -136,26 +139,46 @@ def register():
 
 @admin.route("/", methods=["POST", "GET"])
 def admin_route():
+    data = {
+        "active": 0,
+        "pending": [],
+        "completed": [],
+    }
     pending_ids = db_manager.get_pending()
-    pending = []
     for id in pending_ids:
-        pending.append(
-            {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
+        tempData = db_manager.get_submitted_data_from_stand_id(id)
+        data["pending"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+            }
         )
-    completed_ids = db_manager.get_completed()
-    completed = []
-    for id in completed:
-        pending.append(
-            {"id": id, "value": db_manager.get_submitted_data_from_stand_id(id)}
+    pending_ids = db_manager.get_completed()
+    for id in pending_ids:
+        tempData = db_manager.get_submitted_data_from_stand_id(id)
+        data["completed"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+                "kommentar": tempData[8],
+            }
         )
-    return render_template(
-        "admin.html",
-        pending=pending,
-        pendingCount=len(pending_ids),
-        completed=completed,
-        completedCount=len(completed_ids),
-    )
+    return render_template("dashBASE.html", data=data)
 
+
+@admin.route("/loader/<page>")
+def loader(page):
+    return app.send_static_file(f"loader/{page}.js")
 
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):

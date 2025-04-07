@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dash.css" />
+    <script defer>
+
+
+      data = {{ data | tojson }}
+
+    </script>
+    <script>
+      function load(page, nav) {
+        document.querySelectorAll("a").forEach((el) => el.classList.remove("active"));
+        document.getElementById(nav).classList.add("active");
+        const script = document.createElement("script");
+        script.src = `/admin/loader/${page}`;
+        script.onload = () => {
+          if (typeof init === "function") {
+            init();
+          } else {
+            console.error("init nicht gefunden");
+          }
+        };
+        document.body.appendChild(script);
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="grid-container">
+      <div class="grid-item item-logo">Logo</div>
+      <div class="grid-item item-welcome">
+        <div class="welcome-text">
+          <h1>Willkommen</h1>
+          <h3 id="status-text"></h3>
+        </div>
+      </div>
+      <div class="grid-item item-actionbutton">
+        <div
+          style="display: flex; justify-content: space-around; margin-top: 10%"
+        >
+          <button class="add-btn" onclick="window.location.href = ''">
+            Stand manuell hinzufügen
+          </button>
+        </div>
+      </div>
+      <div class="grid-item item-sidebar">
+        <div style="display: block">
+          <p>
+            <a id="nav1" class="link1" onclick="load('unconfirmed', 'nav1')">Ausstehend</a>
+          </p>
+          <p><a id="nav2" onclick="load('confirmed', 'nav2')">Bestätigt</a></p>
+          <p>
+            <a id="nav3" onclick="load('overview', 'nav3')">Übersicht</a>
+          </p>
+          <p >
+            <a id="nav4" onclick="load('settings', 'nav4')">Einstellungen</a>
+          </p>
+          <!-- <p>
+          <img src="https://avatars.githubusercontent.com/u/76256754?v=4" alt="" />
+        </p> -->
+        </div>
+      </div>
+      <div id="inner-grid" class="inner-grid">
+        <div class="spacer" id="heading">ERROR</div>
+      </div>
+      <div id="loader">
+        <script>
+          load("unconfirmed", "nav1");
+        </script>
+      </div>
+    </div>
+  </body>
+</html>

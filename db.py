@@ -28,7 +28,7 @@ def read_sql_file(filepath):
 
 
 class DatabaseManager:
-    TABLE_COUNT = 4  # minimum table count
+    TABLE_COUNT = 4
     LOWEST_WEB_ACCESS_LEVEL = 0
 
     def __init__(self):
@@ -142,21 +142,6 @@ class DatabaseManager:
             self.conn.rollback()
             return False
     
-    def get_questions(self):
-        logger.debug("get_questions is called")
-        query = "SELECT id, question FROM questions"
-        try:
-            self.cursor.execute(query)
-            questions = self.cursor.fetchall()
-            logger.info(f"Questions retrieved: {questions}")
-            questionsDict = {}
-            for question in questions:
-                questionsDict[question[0]] = question[1]
-            return questionsDict
-        except Exception as e:
-            logger.error(f"Error retrieving questions: {e}")
-            self.conn.rollback()
-            return []
 
     def drop_db(self):
         """
@@ -186,6 +171,22 @@ class DatabaseManager:
     
 
     #########################################################
+    def get_questions(self):
+        logger.debug("get_questions is called")
+        query = "SELECT id, question FROM questions"
+        try:
+            self.cursor.execute(query)
+            questions = self.cursor.fetchall()
+            logger.info(f"Questions retrieved: {questions}")
+            questionsDict = {}
+            for question in questions:
+                questionsDict[question[0]] = question[1]
+            return questionsDict
+        except Exception as e:
+            logger.error(f"Error retrieving questions: {e}")
+            self.conn.rollback()
+            return []
+
     def addNewTrustedId(self, id):
         """
         Adds a new trusted ID to the database.
