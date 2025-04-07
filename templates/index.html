@@ -11,14 +11,17 @@
         padding: 0;
         overflow: hidden;
       }
-      input[type="checkbox"] 
-       {
+      .list-item-end {
+        margin-left: 15px;
+        overflow: visible;
+        text-align: left;
+      }
+      input[type="checkbox"] {
         width: 18px;
         height: 18px;
         padding-top: 2px;
         margin-right: 5px;
         vertical-align: middle;
-        
       }
       input[type="checkbox"] + label {
         vertical-align: middle;
@@ -255,6 +258,17 @@
         line-height: 1;
         vertical-align: middle;
       }
+
+      .credits {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        z-index: 9999;
+        padding: 1rem;
+        text-align: center;
+        pointer-events: none;
+        font-size: 0.8rem;
+      }
     </style>
 
     <script>
@@ -295,6 +309,10 @@
             id="nextStage"
             onclick="stageManager(document.getElementById('nextAction').value)"
           ></button>
+        </div>
+        <div class="credits">
+          <hr />
+          Made by Tobias Auer
         </div>
       </div>
 
@@ -512,12 +530,20 @@
     <label for="projektName">Name des Projekts/Stands:</label>
     <input type="text" id="projektName" placeholder="Projekt XY" />
     
-    <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
+    <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
     <input type="text" id="email" placeholder="example@email.com" />
     
     <label for="projektBeschreibung">Beschreibung des Projektes:</label>
     <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
 </div>
+      `;
+      verifyTemplate = `
+      <p>Name: |name|</p>
+      <p>Klasse: |klasse|</p>
+      <p>Projektname: |projektName|</p>
+      <p>Projektbeschreibung: |projektBeschreibung|</p>
+      <p>E-Mail: |email|</p>
+      <p>Angekreuzete Aufgaben: |checked|</p>
       `;
       questionTemplate = `
       <div style="display: inline-flex;">
@@ -599,31 +625,66 @@
             );
           },
           verify: () => {
+            checked = [];
+            for (const key in questions) {
+              const questionID = key;
+              const questionElement = document.getElementById(`${questionID}`);
+              if (questionElement.checked) {
+                checked.push(questions[questionID]);
+              }
+            }
+            currentData = gatherData();
+            verifyTempl = verifyTemplate
+              .replace("|name|", currentData["lehrername"])
+              .replace("|klasse|", currentData["klasse"])
+              .replace("|projektName|", currentData["projektName"])
+              .replace(
+                "|projektBeschreibung|",
+                currentData["projektBeschreibung"]
+              )
+              .replace("|email|", currentData["email"])
+              .replace(
+                "|checked|",
+                "<ul>" +
+                  checked
+                    .map((item) => `<li class="list-item-end">${item}</li>`)
+                    .join("") +
+                  "</ul>"
+              );
+
             updateUI(
               "Überprüfung Ihrer Angaben",
               "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
-              "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet. Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.",
+              "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet.<br> Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.<br><br>" +
+                verifyTempl,
               "Bestätigen",
               "confirm",
               "stage3"
             );
-            additionaltext.style.display = "block";
-            displayData();
           },
           confirm: submitData,
           display: () => {
             updateUI(
               "Registrierung abgeschlossen",
-              "Ihr Stand wurde erfolgreich registriert! Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren.",
-              "add",
+              "Ihr Stand wurde erfolgreich registriert! ",
+              "Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
               "",
               "",
               ""
             );
-            additionaltext.style.display = "block";
-            additionaltext.innerText = data;
+
             [nextStageBtn, lastStageBtn].forEach(
               (el) => (el.style.display = "none")
+            );
+          },
+          error: () => {
+            updateUI(
+              "Fehler",
+              "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+              "",
+              "Zurück",
+              "start",
+              ""
             );
           },
         };
@@ -681,21 +742,23 @@
         return data;
       }
 
-      function displayData() {
-        gatherData();
-        additionaltext.innerHTML += JSON.stringify(data, null, 2);
-      }
-
       function submitData() {
         fetch("/commitStand", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify(gatherData()),
         })
           .then((response) => response.json())
-          .then((result) => console.log(result))
+          .then((result) => {
+            console.log("Success:", result);
+            if (result.ok == "ok") {
+              stageManager("display");
+            } else {
+              stageManager("error");
+            }
+          })
           .catch((error) => console.error("Error:", error));
       }
 
@@ -705,8 +768,8 @@
       if (submittedData == "None") {
         stageManager("start");
       } else {
-        console.log(submittedData2); // Gibt den JSON-String aus
-        data = JSON.parse(submittedData2); // Nur JSON.parse, keine doppelte Stringifizierung
+        console.log(submittedData2);
+        data = JSON.parse(submittedData2);
         stageManager("display");
       }
     </script>

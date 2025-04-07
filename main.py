@@ -1,5 +1,14 @@
 from datetime import timedelta
-from flask import Flask, jsonify, redirect, render_template, request, session, Blueprint, url_for
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    Blueprint,
+    url_for,
+)
 from logger import get_logger
 from flask_cors import CORS
 import db
@@ -12,21 +21,29 @@ secretAuthKey = open("./secretAuthCode.txt", "r").readline()
 
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
+
 # Global admin verification
 @admin.before_request
 def check_admin():
     print("checking admin")
     if not isinstance(session.get("adminName"), str):
         return redirect(url_for("login_route"))
-    
-app = Flask(__name__)    
+
+
+app = Flask(__name__)
+
 
 # Global user verification
 @app.before_request
 def check_auth():
     print("checking auth............")
     print(request.path)
-    if request.path in ["/login", "/", "/favicon.ico", "/moodleApi"] or request.path.startswith("/admin"):
+    if request.path in [
+        "/login",
+        "/",
+        "/favicon.ico",
+        "/moodleApi",
+    ] or request.path.startswith("/admin"):
         print("ok")
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
     if not checkAuth(session.get("id")):
@@ -55,9 +72,10 @@ def checkAuth(user_id):
 
     return True
 
+
 @app.route("/")
 def index():
-    id = request.args.get("id", "")  
+    id = request.args.get("id", "")
     if id != "":
         if checkAuth(id):  # important local check!
             session["id"] = id
@@ -94,10 +112,12 @@ def commitStand():
         return jsonify({"ok": "ok"}), 200
     return jsonify({"error": "error"}), 401
 
+
 @app.route("/test")
 def test():
     print("test")
     return jsonify(ok=True), 200
+
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -133,6 +153,7 @@ def admin_route():
         completedCount=len(completed_ids),
     )
 
+
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
     if request.method == "POST":
@@ -145,27 +166,24 @@ def admin_stand_route(path_id):
     stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
     return render_template("review.html", data=stand_data)
 
+
 @app.route("/moodleApi")
 def moodleApi():
     id = request.args.get("id", "nothing")
-    
+
     if not checkAuth(id):
         return jsonify({"error": "Invalid authentication"}), 401
     confirmedIDS = db_manager.get_completed()
     confirmed = []
     for id in confirmedIDS:
         data = db_manager.get_submitted_data_from_stand_id(id)
-        confirmed.append(
-            {"lehrer": data[2], "name": data[4]}
-        )
-    
+        confirmed.append({"lehrer": data[2], "name": data[4]})
+
     pendingIDS = db_manager.get_pending()
     pending = []
     for id in pendingIDS:
         data = db_manager.get_submitted_data_from_stand_id(id)
-        pending.append(
-            {"lehrer": data[2], "name": data[4]}
-        )
+        pending.append({"lehrer": data[2], "name": data[4]})
     return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
 
@@ -188,9 +206,6 @@ def login_route(data=None):
 @app.route("/robots.txt")
 def static_robots():
     return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
-
-
-
 
 
 def validate_auth(auth):
