@@ -99,9 +99,12 @@ def index():
             ),
             401,
         )
+    
+    questions = db_manager.get_questions()
+    logger.debug("Got questions: " + str(questions))
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
-    return render_template("index.html", already_submitted_data=already_submitted_data)
+    return render_template("index.html", already_submitted_data=already_submitted_data, questions=questions)
 
 
 @app.route("/commitStand", methods=["POST"])

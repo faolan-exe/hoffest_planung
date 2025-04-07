@@ -553,10 +553,7 @@
         </div>
         `;
 
-      const questions = {
-        1: "Es werden elektrische Geräte verwendet, die geprüft werden müssen.",
-        2: "Es werden Lebensmittel verkauft.",
-      };
+      questions = {{questions | tojson}};
 
       function stageManager(stage) {
         // Grundlegende UI-Elemente zurücksetzen
