@@ -18,7 +18,7 @@ function init() {
   document.getElementById("heading").innerHTML = headingText;
 
   standData.forEach((stand) => {
-    const { lehrer, klasse, titel, beschreibung, ort } = stand;
+    const { lehrer, klasse, titel, beschreibung, ort, id } = stand;
     position = position + 1;
     console.log(position);
     if (position == 3) {
@@ -40,7 +40,7 @@ function init() {
                   ${beschreibung}
                 </p>
                 <div class="actions">
-                  <a href="">Details ➡</a>
+                  <a href="/admin/stand/${id}">Details ➡</a>
                 </div>
               </div>
             </div>

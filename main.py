@@ -156,6 +156,7 @@ def admin_route():
                 "ort": tempData[0],
                 "ort_spezifikation": tempData[1],
                 "question_ids": tempData[6],
+                "id": tempData[9],
             }
         )
     pending_ids = db_manager.get_completed()
@@ -171,6 +172,7 @@ def admin_route():
                 "ort_spezifikation": tempData[1],
                 "question_ids": tempData[6],
                 "kommentar": tempData[8],
+                "id": tempData[9]
             }
         )
     return render_template("dashBASE.html", data=data)
@@ -178,7 +180,7 @@ def admin_route():
 
 @admin.route("/loader/<page>")
 def loader(page):
-    return app.send_static_file(f"loader/{page}.js")
+    return app.send_static_file(f"loader/{page}")
 
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):

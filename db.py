@@ -368,7 +368,7 @@ class DatabaseManager:
         dict: The submitted data for the stand.
         """
         logger.debug(f"get_submitted_data_from_stand_id is called")
-        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar
+        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar, s.id
                     FROM stand as s
                     LEFT join standQuestions AS sq ON sq.stand_id = s.id
                     join genehmigungen AS g on g.id = s.genehmigungs_id
