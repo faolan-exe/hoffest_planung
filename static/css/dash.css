@@ -27,6 +27,7 @@ html {
   grid-column-start: 2;
   grid-column-end: 3;
   margin: 0 auto;
+  z-index: 99;
 
   .welcome-text {
     width: fit-content;
@@ -122,6 +123,7 @@ html {
   }
 }
 
+
 .line-break {
   grid-column-end: 4 !important;
 }
@@ -147,6 +149,87 @@ html {
 }
 .first-column {
   height: 180px;
+}
+.inner-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.shadow-box {
+  width: 50vw;
+  padding: 2rem;
+  margin-left: 2rem;
+  background-color: #fdfdfd;
+  box-shadow: 0 4px 12px rgba(4, 207, 140, 0.2);
+  border-radius: 12px;
+  text-align: left;
+}
+
+.shadow-box h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.shadow-box p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+
+
+.shadow-box textarea {
+  width: 100%;
+  height: 80px;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.shadow-box .button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.shadow-box button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.shadow-box #confirm-button {
+  background-color: #04cf8c;
+  color: white;
+}
+
+.shadow-box #confirm-button:hover {
+  background-color: #03b87b;
+}
+
+.shadow-box #reject-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.shadow-box #reject-button:hover {
+  background-color: #d32f2f;
+}
+
+.shadow-box #cancel-button {
+  background-color: #9e9e9e;
+  color: white;
+}
+
+.shadow-box #cancel-button:hover {
+  background-color: #757575;
 }
 
 .info-card {

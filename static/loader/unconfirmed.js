@@ -40,7 +40,7 @@ function init() {
                   ${beschreibung}
                 </p>
                 <div class="actions">
-                  <a href="/admin/stand/${id}">Details ➡</a>
+                  <a href="#" onclick="load('confirmAction.js?id=${id}', 'nav1', '${id}')">Details ➡</a>
                 </div>
               </div>
             </div>

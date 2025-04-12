@@ -13,12 +13,19 @@
 
 
       data = {{ data | tojson }}
+      questionIdLookup = {{ questionIdLookup | tojson }}
+      currentID = undefined;
+      console.log("currentID: " + currentID);
 
     </script>
     <link rel="preload" href="/admin/loader/unconfirmed.js" as="script">
     <link rel="preload" href="/admin/loader/confirmed.js" as="script">
     <script>
-      function load(page, nav) {
+      function load(page, nav, setCurrentID) {
+        if (setCurrentID) {
+          currentID = setCurrentID;
+          console.log("currentID set to: " + currentID);
+        }
         try {
             document.getElementById("script").remove()
         } catch (e) {

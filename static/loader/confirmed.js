@@ -11,6 +11,7 @@ position = -1;
 standData = data.completed
 
 
+
 bigDiv = document.getElementById("inner-grid");
 function init() {
   bigDiv.innerHTML = "<div class=\"spacer\" id=\"heading\">ERROR</div>";

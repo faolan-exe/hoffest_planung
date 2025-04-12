@@ -1,5 +1,6 @@
 import random
 import time
+import traceback
 import logger
 import psycopg2
 import smtplib
@@ -571,9 +572,10 @@ class DatabaseManager:
             email = result[0]
             logger.debug(f"Email retrieved successfully")
             email_text = f"""Der Stand {stand_id} wurde {status}.\nKommentar: {comment}\n\nBitte beachte, das bedeutet nur, dass versucht wird, Ihren Wunsch zu berücksichtigen. Es gibt keinen Anspruch darauf, dass es genau so umgesetzt werden kann!"""
+            print(email_text)
             mailer.send_email(email, email_text)
         except Exception as e:
-            logger.error(f"Error sending email: {e}")
+            logger.error(f"Error sending email: {e}\n{traceback.format_exc()}")
             self.conn.rollback()
             return False
         logger.info(f"notify_approval executed successfully")

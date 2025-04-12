@@ -175,7 +175,8 @@ def admin_route():
                 "id": tempData[9]
             }
         )
-    return render_template("dashBASE.html", data=data)
+    
+    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions())
 
 
 @admin.route("/loader/<page>")
