@@ -504,271 +504,273 @@
         }
       }
     </script>
+    <script id="questions-data" type="application/json">
+      {{ questions | tojson }}
+    </script>
 
     <script defer>
-      actionTitle = document.getElementById("actionTitle");
-      actionSubText = document.getElementById("actionSubtext");
-      additionaltext = document.getElementById("additionalText");
-      inputBoxes = document.getElementById("inputBoxes");
-      questionsField = document.getElementById("questions");
-      nextAction = document.getElementById("nextAction");
-      lastAction = document.getElementById("lastAction");
-      nextStageBtn = document.getElementById("nextStage");
-      lastStageBtn = document.getElementById("lastStage");
-      formContent = document.querySelector(".form-container");
-      arrow = document.querySelector(".arrow");
-      rectangleSelectionActive = false;
-      questionHTML1 = `
-            
-<div class="">
-    <label for="lehrername">Name:</label>
-    <input type="text" id="lehrername" placeholder="Max Mustermann" />
-    
-    <label for="klasse">Klasse:</label>
-    <input type="text" id="klasse" placeholder="5e" />
-    
-    <label for="projektName">Name des Projekts/Stands:</label>
-    <input type="text" id="projektName" placeholder="Projekt XY" />
-    
-    <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
-    <input type="text" id="email" placeholder="example@email.com" />
-    
-    <label for="projektBeschreibung">Beschreibung des Projektes:</label>
-    <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
-</div>
-      `;
-      verifyTemplate = `
-      <p>Name: |name|</p>
-      <p>Klasse: |klasse|</p>
-      <p>Projektname: |projektName|</p>
-      <p>Projektbeschreibung: |projektBeschreibung|</p>
-      <p>E-Mail: |email|</p>
-      <p>Angekreuzete Aufgaben: |checked|</p>
-      `;
-      questionTemplate = `
-      <div style="display: inline-flex;">
-        <input type="checkbox" id="|questionID|">
-        <label for="|questionID|" style="display:inline">|questionText|</label>
-        <br>
-        </div>
-        `;
+            actionTitle = document.getElementById("actionTitle");
+            actionSubText = document.getElementById("actionSubtext");
+            additionaltext = document.getElementById("additionalText");
+            inputBoxes = document.getElementById("inputBoxes");
+            questionsField = document.getElementById("questions");
+            nextAction = document.getElementById("nextAction");
+            lastAction = document.getElementById("lastAction");
+            nextStageBtn = document.getElementById("nextStage");
+            lastStageBtn = document.getElementById("lastStage");
+            formContent = document.querySelector(".form-container");
+            arrow = document.querySelector(".arrow");
+            rectangleSelectionActive = false;
+            questionHTML1 = `
 
-      questions = {{questions | tojson}};
+      <div class="">
+          <label for="lehrername">Name:</label>
+          <input type="text" id="lehrername" placeholder="Max Mustermann" />
 
-      function stageManager(stage) {
-        // Grundlegende UI-Elemente zurücksetzen
-        [inputBoxes, questionsField, formContent].forEach(
-          (el) => (el.style.display = "none")
-        );
-        [additionaltext, actionTitle, actionSubText].forEach(
-          (el) => (el.innerHTML = "")
-        );
-        [additionaltext, lastStageBtn].forEach(
-          (el) => (el.style.display = "block")
-        );
+          <label for="klasse">Klasse:</label>
+          <input type="text" id="klasse" placeholder="5e" />
 
-        allowedToDraw = false;
-        nextStageBtn.disabled = false;
-        lastStageBtn.disabled = false;
-        nextStageBtn.classList.remove("start-btn");
-        nextStageBtn.classList.add("normal-btn");
-        arrow.style.borderColor = "black";
-        console.log(stage);
+          <label for="projektName">Name des Projekts/Stands:</label>
+          <input type="text" id="projektName" placeholder="Projekt XY" />
 
-        const stages = {
-          start: () => {
-            nextStageBtn.classList.remove("normal-btn");
-            nextStageBtn.classList.add("start-btn");
+          <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
+          <input type="text" id="email" placeholder="example@email.com" />
 
-            updateUI(
-              "Willkommen!",
-              "Sie haben sich noch für keinen Stand registriert.",
-              "Um einen Stand zu reservieren, starten Sie jetzt mit der Auswahl einer Fläche auf dem Schulhof.",
-              "Jetzt starten!",
-              "selectRectangle",
-              ""
-            );
-            lastStageBtn.disabled = true;
-            arrow.style.borderColor = "grey";
-          },
-          selectRectangle: () => {
-            allowedToDraw = true;
-            updateUI(
-              "Fläche auswählen",
-              "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
-              "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können bis zu 6 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter orga@schule.de.",
-              "Weiter",
-              "stage3",
-              "start"
-            );
-            additionaltext.style.display = "block";
-            if (!rectangleSelectionActive) {
-              nextStageBtn.disabled = true;
-            }
-            lastAction.value = "start";
-          },
-          stage3: () => {
-            [inputBoxes, questionsField, formContent].forEach(
-              (el) => (el.style.display = "block")
-            );
-            initQuestionBlock();
-            updateUI(
-              "Details zu Ihrem Stand",
-              "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
-              "Um die Anmeldung abzuschließen müssen noch folgende Fragen beantworten. Achten Sie bitte darauf, dass bei der Beschreibung des Projektes klar hervorgeht, was geplant ist und in welchem Bezug es zum Motto steht. ",
-              "Abschließen",
-              "verify",
-              "selectRectangle"
-            );
-          },
-          verify: () => {
-            checked = [];
-            for (const key in questions) {
-              const questionID = key;
-              const questionElement = document.getElementById(`${questionID}`);
-              if (questionElement.checked) {
-                checked.push(questions[questionID]);
-              }
-            }
-            currentData = gatherData();
-            verifyTempl = verifyTemplate
-              .replace("|name|", currentData["lehrername"])
-              .replace("|klasse|", currentData["klasse"])
-              .replace("|projektName|", currentData["projektName"])
-              .replace(
-                "|projektBeschreibung|",
-                currentData["projektBeschreibung"]
-              )
-              .replace("|email|", currentData["email"])
-              .replace(
-                "|checked|",
-                "<ul>" +
-                  checked
-                    .map((item) => `<li class="list-item-end">${item}</li>`)
-                    .join("") +
-                  "</ul>"
+          <label for="projektBeschreibung">Beschreibung des Projektes:</label>
+          <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
+      </div>
+            `;
+            verifyTemplate = `
+            <p>Name: |name|</p>
+            <p>Klasse: |klasse|</p>
+            <p>Projektname: |projektName|</p>
+            <p>Projektbeschreibung: |projektBeschreibung|</p>
+            <p>E-Mail: |email|</p>
+            <p>Angekreuzete Aufgaben: |checked|</p>
+            `;
+            questionTemplate = `
+            <div style="display: inline-flex;">
+              <input type="checkbox" id="|questionID|">
+              <label for="|questionID|" style="display:inline">|questionText|</label>
+              <br>
+              </div>
+              `;
+
+              const questions = JSON.parse(document.getElementById("questions-data").textContent);
+
+            function stageManager(stage) {
+              // Grundlegende UI-Elemente zurücksetzen
+              [inputBoxes, questionsField, formContent].forEach(
+                (el) => (el.style.display = "none")
+              );
+              [additionaltext, actionTitle, actionSubText].forEach(
+                (el) => (el.innerHTML = "")
+              );
+              [additionaltext, lastStageBtn].forEach(
+                (el) => (el.style.display = "block")
               );
 
-            updateUI(
-              "Überprüfung Ihrer Angaben",
-              "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
-              "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet.<br> Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.<br><br>" +
-                verifyTempl,
-              "Bestätigen",
-              "confirm",
-              "stage3"
-            );
-          },
-          confirm: submitData,
-          display: () => {
-            updateUI(
-              "Registrierung abgeschlossen",
-              "Ihr Stand wurde erfolgreich registriert! ",
-              "Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
-              "",
-              "",
-              ""
-            );
+              allowedToDraw = false;
+              nextStageBtn.disabled = false;
+              lastStageBtn.disabled = false;
+              nextStageBtn.classList.remove("start-btn");
+              nextStageBtn.classList.add("normal-btn");
+              arrow.style.borderColor = "black";
+              console.log(stage);
 
-            [nextStageBtn, lastStageBtn].forEach(
-              (el) => (el.style.display = "none")
-            );
-          },
-          error: () => {
-            updateUI(
-              "Fehler",
-              "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
-              "",
-              "Zurück",
-              "start",
-              ""
-            );
-          },
-        };
-        if (stages[stage]) stages[stage]();
-      }
+              const stages = {
+                start: () => {
+                  nextStageBtn.classList.remove("normal-btn");
+                  nextStageBtn.classList.add("start-btn");
 
-      function updateUI(
-        title,
-        subtitle,
-        addText,
-        nextText,
-        nextActionValue,
-        lastActionValue
-      ) {
-        actionTitle.innerHTML = title;
-        actionSubText.innerHTML = subtitle;
-        additionaltext.innerHTML = addText;
-        nextStageBtn.innerText = nextText;
-        nextAction.value = nextActionValue;
-        lastAction.value = lastActionValue;
-      }
+                  updateUI(
+                    "Willkommen!",
+                    "Sie haben sich noch für keinen Stand registriert.",
+                    "Um einen Stand zu reservieren, starten Sie jetzt mit der Auswahl einer Fläche auf dem Schulhof.",
+                    "Jetzt starten!",
+                    "selectRectangle",
+                    ""
+                  );
+                  lastStageBtn.disabled = true;
+                  arrow.style.borderColor = "grey";
+                },
+                selectRectangle: () => {
+                  allowedToDraw = true;
+                  updateUI(
+                    "Fläche auswählen",
+                    "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
+                    "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können bis zu 6 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter orga@schule.de.",
+                    "Weiter",
+                    "stage3",
+                    "start"
+                  );
+                  additionaltext.style.display = "block";
+                  if (!rectangleSelectionActive) {
+                    nextStageBtn.disabled = true;
+                  }
+                  lastAction.value = "start";
+                },
+                stage3: () => {
+                  [inputBoxes, questionsField, formContent].forEach(
+                    (el) => (el.style.display = "block")
+                  );
+                  initQuestionBlock();
+                  updateUI(
+                    "Details zu Ihrem Stand",
+                    "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
+                    "Um die Anmeldung abzuschließen müssen noch folgende Fragen beantworten. Achten Sie bitte darauf, dass bei der Beschreibung des Projektes klar hervorgeht, was geplant ist und in welchem Bezug es zum Motto steht. ",
+                    "Abschließen",
+                    "verify",
+                    "selectRectangle"
+                  );
+                },
+                verify: () => {
+                  checked = [];
+                  for (const key in questions) {
+                    const questionID = key;
+                    const questionElement = document.getElementById(`${questionID}`);
+                    if (questionElement.checked) {
+                      checked.push(questions[questionID]);
+                    }
+                  }
+                  currentData = gatherData();
+                  verifyTempl = verifyTemplate
+                    .replace("|name|", currentData["lehrername"])
+                    .replace("|klasse|", currentData["klasse"])
+                    .replace("|projektName|", currentData["projektName"])
+                    .replace(
+                      "|projektBeschreibung|",
+                      currentData["projektBeschreibung"]
+                    )
+                    .replace("|email|", currentData["email"])
+                    .replace(
+                      "|checked|",
+                      "<ul>" +
+                        checked
+                          .map((item) => `<li class="list-item-end">${item}</li>`)
+                          .join("") +
+                        "</ul>"
+                    );
 
-      initedQuestionBlock = false;
-      function initQuestionBlock() {
-        if (initedQuestionBlock) {
-          return;
-        }
-        initedQuestionBlock = true;
-        inputBoxes.innerHTML = questionHTML1;
-        for (const key in questions) {
-          questionsField.innerHTML += questionTemplate
-            .replaceAll("|questionID|", key)
-            .replaceAll("|questionText|", questions[key]);
-        }
-      }
+                  updateUI(
+                    "Überprüfung Ihrer Angaben",
+                    "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
+                    "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet.<br> Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.<br><br>" +
+                      verifyTempl,
+                    "Bestätigen",
+                    "confirm",
+                    "stage3"
+                  );
+                },
+                confirm: submitData,
+                display: () => {
+                  updateUI(
+                    "Registrierung abgeschlossen",
+                    "Ihr Stand wurde erfolgreich registriert! ",
+                    "Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
+                    "",
+                    "",
+                    ""
+                  );
 
-      function gatherData() {
-        data = {};
-        data.lehrername = document.getElementById("lehrername").value;
-        data.klasse = document.getElementById("klasse").value;
-        data.baseLocation = "h";
-        data.raumnummer = "";
-        data.projektName = document.getElementById("projektName").value;
-        data.projektBeschreibung = document.getElementById(
-          "projektBeschreibung"
-        ).value;
-        data.email = document.getElementById("email").value;
-        data.mapSelection = getMapSelectionCoords();
-        data.questions = {};
-        for (const key in questions) {
-          const questionID = key;
-          const questionElement = document.getElementById(`${questionID}`);
-          data.questions[questionID] = questionElement.checked;
-        }
-        return data;
-      }
-
-      function submitData() {
-        fetch("/commitStand", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(gatherData()),
-        })
-          .then((response) => response.json())
-          .then((result) => {
-            console.log("Success:", result);
-            if (result.ok == "ok") {
-              stageManager("display");
-            } else {
-              stageManager("error");
+                  [nextStageBtn, lastStageBtn].forEach(
+                    (el) => (el.style.display = "none")
+                  );
+                },
+                error: () => {
+                  updateUI(
+                    "Fehler",
+                    "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+                    "",
+                    "Zurück",
+                    "start",
+                    ""
+                  );
+                },
+              };
+              if (stages[stage]) stages[stage]();
             }
-          })
-          .catch((error) => console.error("Error:", error));
-      }
 
-      submittedData = "{{already_submitted_data}}";
-      submittedData2 = submittedData.replaceAll("&#39;", '"');
+            function updateUI(
+              title,
+              subtitle,
+              addText,
+              nextText,
+              nextActionValue,
+              lastActionValue
+            ) {
+              actionTitle.innerHTML = title;
+              actionSubText.innerHTML = subtitle;
+              additionaltext.innerHTML = addText;
+              nextStageBtn.innerText = nextText;
+              nextAction.value = nextActionValue;
+              lastAction.value = lastActionValue;
+            }
 
-      if (submittedData == "None") {
-        stageManager("start");
-      } else {
-        console.log(submittedData2);
-        data = JSON.parse(submittedData2);
-        stageManager("display");
-      }
+            initedQuestionBlock = false;
+            function initQuestionBlock() {
+              if (initedQuestionBlock) {
+                return;
+              }
+              initedQuestionBlock = true;
+              inputBoxes.innerHTML = questionHTML1;
+              for (const key in questions) {
+                questionsField.innerHTML += questionTemplate
+                  .replaceAll("|questionID|", key)
+                  .replaceAll("|questionText|", questions[key]);
+              }
+            }
+
+            function gatherData() {
+              data = {};
+              data.lehrername = document.getElementById("lehrername").value;
+              data.klasse = document.getElementById("klasse").value;
+              data.baseLocation = "h";
+              data.raumnummer = "";
+              data.projektName = document.getElementById("projektName").value;
+              data.projektBeschreibung = document.getElementById(
+                "projektBeschreibung"
+              ).value;
+              data.email = document.getElementById("email").value;
+              data.mapSelection = getMapSelectionCoords();
+              data.questions = {};
+              for (const key in questions) {
+                const questionID = key;
+                const questionElement = document.getElementById(`${questionID}`);
+                data.questions[questionID] = questionElement.checked;
+              }
+              return data;
+            }
+
+            function submitData() {
+              fetch("/commitStand", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(gatherData()),
+              })
+                .then((response) => response.json())
+                .then((result) => {
+                  console.log("Success:", result);
+                  if (result.ok == "ok") {
+                    stageManager("display");
+                  } else {
+                    stageManager("error");
+                  }
+                })
+                .catch((error) => console.error("Error:", error));
+            }
+
+            submittedData = {{already_submitted_data | tojson}};
+
+            if (submittedData == "None") {
+              stageManager("start");
+            } else {
+              console.log(submittedData);
+              data = submitData
+              stageManager("display");
+            }
     </script>
   </body>
 </html>
