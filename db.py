@@ -143,6 +143,51 @@ class DatabaseManager:
             self.conn.rollback()
             return False
     
+    def delete_question(self, question_id):
+        """
+        Deletes a question from the database.
+
+        Parameters:
+        question_id (int): The ID of the question to be deleted.
+
+        Returns:
+        bool: True if the question was successfully deleted, False otherwise.
+        """
+        logger.debug("delete_question is called")
+        query = "DELETE FROM questions WHERE id = %s"
+        logger.debug(f"executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (question_id,))
+            self.conn.commit()
+            logger.info(f"Question {question_id} deleted!")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting question: {e}")
+            self.conn.rollback()
+            return False
+        
+    def update_password(self, new_password):
+        """
+        Changes the password of the admin account.
+
+        Parameters:
+        new_password (str): The new password to be set.
+
+        Returns:
+        bool: True if the password was successfully changed, False otherwise.
+        """
+        logger.debug("update_password is called")
+        query = "UPDATE admin SET password = %s WHERE LOWER(name) = 'admin'"
+        logger.debug(f"executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (ph.hash(new_password),))
+            self.conn.commit()
+            logger.info(f"Password changed successfully!")
+            return True
+        except Exception as e:
+            logger.error(f"Error changing password: {e}")
+            self.conn.rollback()
+            return False
 
     def drop_db(self):
         """
@@ -456,8 +501,9 @@ class DatabaseManager:
             logger.info(
                 f"Genehmigungs_entry created successfully for stand_id: {stand_id}"
             )
-            email_text = """Es gibt einen neuen Stand, der auf Bestätigung wartet..."""
-            email_text_teacher = f"""Ihr Stand wurde erfolgreich übertragen und wird demnächst überprüft..."""
+
+            email_text = self.get_email_text(4).replace("|lehrkraft|", "[error]").replace("standname", "[error]")  #email: orga, neuer stand
+            email_text_teacher = self.get_email_text(1)  # email: lehrkraft, prozess gestartet
             query = "SELECT email FROM admin"
             self.cursor.execute(query)
             emails = self.cursor.fetchall()
@@ -571,7 +617,10 @@ class DatabaseManager:
             result = self.cursor.fetchone()
             email = result[0]
             logger.debug(f"Email retrieved successfully")
-            email_text = f"""Der Stand {stand_id} wurde {status}.\nKommentar: {comment}\n\nBitte beachte, das bedeutet nur, dass versucht wird, Ihren Wunsch zu berücksichtigen. Es gibt keinen Anspruch darauf, dass es genau so umgesetzt werden kann!"""
+            if status == "accepted":
+                email_text = self.get_email_text(2).replace("|kommentar|", comment) # email: lehrkraft, genehmigung erteilt
+            else:
+                email_text = self.get_email_text(3).replace("|kommentar|", comment)  
             print(email_text)
             mailer.send_email(email, email_text)
         except Exception as e:

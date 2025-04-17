@@ -1,7 +1,4 @@
 bigDiv = document.getElementById("inner-grid");
-console.log(data);
-console.log(data.pending);
-console.log(currentID);
 myData = data.pending.find((item) => item.id == currentID);
 var { klasse, lehrer, titel, beschreibung, ort_spezifikation, ort, question_ids, id } = myData;
 statusText = `Genehmigung für den Stand von ${lehrer}`;

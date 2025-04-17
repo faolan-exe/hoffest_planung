@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 from flask import (
     Flask,
     abort,
@@ -138,7 +139,9 @@ def register():
 
 
 @admin.route("/", methods=["POST", "GET"])
-def admin_route():
+def admin_route(destination="nav1"):
+    if session.get("dest"):
+        destination = session.get("dest")
     data = {
         "active": 0,
         "pending": [],
@@ -175,8 +178,7 @@ def admin_route():
                 "id": tempData[9]
             }
         )
-    
-    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions())
+    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination)
 
 
 @admin.route("/loader/<page>")
@@ -195,7 +197,31 @@ def admin_stand_route(path_id):
     stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
     return render_template("review.html", data=stand_data)
 
-
+@admin.route("/api", methods=["POST"]) 
+def admin_api():
+    action = request.json.get("action")
+    value = request.json.get("value")
+    
+    match (action):
+        case "newQuestion":
+            if not db_manager.add_question(value):
+                return jsonify({"error": "Failed to add question"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "deleteQuestion":
+            if not db_manager.delete_question(value):
+                return jsonify({"error": "Failed to delete question!\nSehr warscheinlich wurde diese Frage bereits von einer Lehrkraft angeklickt und kann daher nicht mehr gelöscht werden"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "newPassword":
+            if not db_manager.update_password(value):
+                return jsonify({"error": "Failed to update password"}), 400
+            logger.warning("Password updated-->Secret Key changed")
+            #session["adminName"] = username
+            app.secret_key = os.urandom(64)
+            return redirect(url_for("login_route"))
+        case _:
+            return jsonify({"error": "Invalid action"}), 400
+    
+    
 @app.route("/moodleApi")
 def moodleApi():
     id = request.args.get("id", "nothing")
@@ -226,10 +252,20 @@ def login_route(data=None):
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):
             session["adminName"] = username
+            session["id"] = "bypass"  # isAdmin=True
+            logger.info("New user session")
             return "ok", 200
         else:
             return "failed", 401
     return render_template("/login.html")
+
+@admin.route("/set_session", methods=["POST"])
+def set_session():
+    name = request.json.get("name")
+    value = request.json.get("value")
+    print(f"SETTING SESSION: {name}---{value}")
+    session[name] = value
+    return "", 200
 
 
 @app.route("/robots.txt")
