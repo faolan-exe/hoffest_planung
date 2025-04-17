@@ -31,6 +31,36 @@ function setup() {
     submitNewQuestionBtn = document.getElementById("submitNewQuestionBtn");
     submitNewPwdBtn = document.getElementById("submitNewPwdBtn");
     questionsTable = document.getElementById("questionsTable");
+    submitEmailText1Btn = document.getElementById("submitEmailText1Btn");
+    submitEmailText2Btn = document.getElementById("submitEmailText2Btn");
+    submitEmailText3Btn = document.getElementById("submitEmailText3Btn");
+    submitEmailText4Btn = document.getElementById("submitEmailText4Btn");
+    emailText1 = document.getElementById("emailText1");
+    emailText2 = document.getElementById("emailText2");
+    emailText3 = document.getElementById("emailText3");
+    emailText4 = document.getElementById("emailText4");
+    
+    emailText1.value = emailTexts["1"];
+    emailText2.value = emailTexts["2"];
+    emailText3.value = emailTexts["3"];
+    emailText4.value = emailTexts["4"];
+
+    submitEmailText1Btn.addEventListener("click", function() {
+        sendFetch("emailText1", document.getElementById("emailText1").value);
+    });
+    submitEmailText2Btn.addEventListener("click", function() {
+        sendFetch("emailText2", document.getElementById("emailText2").value);
+    }
+    );
+    submitEmailText3Btn.addEventListener("click", function() {
+        sendFetch("emailText3", document.getElementById("emailText3").value);
+    }
+    );
+    submitEmailText4Btn.addEventListener("click", function() {
+        sendFetch("emailText4", document.getElementById("emailText4").value);
+    }
+    );
+    
     submitNewQuestionBtn.addEventListener("click", submitNewQuestion);
     submitNewPwdBtn.addEventListener("click", submitNewPassword);
     questionsTable.innerHTML = "";
@@ -79,6 +109,10 @@ function sendFetch(action, value) {
     .then(resData => {
         console.log("Success:", resData);
         if (resData.ok === "ok") {
+            if (action.includes("emailText")) {
+                alert("Email text updated successfully");
+                return
+            }
             document.location = "/admin"
         } else {
             alert("Error updating status: " + resData.error);

@@ -24,6 +24,12 @@ id serial NOT NULL, question text NOT NULL,
 );
 
 
+CREATE TABLE public.email (
+  id integer NOT NULL,
+  email text NOT NULL,
+  CONSTRAINT emails_pkey PRIMARY KEY(id)
+);
+
 CREATE TABLE public.stand(
   id serial NOT NULL,
   auth_id text NOT NULL,

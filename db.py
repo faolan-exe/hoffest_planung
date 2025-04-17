@@ -113,10 +113,22 @@ class DatabaseManager:
             self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
             self.add_question("Strom und geräte?")
             self.add_question("Lebensmittel?")
+            query = "INSERT INTO email (id, text) VALUES (%s, %s)"
+            values = [
+                (1, 'Text für EMail 1'),
+                (2, 'Text für EMail 2'),
+                (3, 'Text für EMail 3'),
+                (4, 'Text für EMail 4')
+            ]
+            self.cursor.executemany(query, values)
+            self.conn.commit()
             logger.info("Tables initiated successfully")
         except Exception as e:
-            logger.error(f"Error creating tables: {e}")
             self.conn.rollback()
+            logger.critical(f"\n\nError creating tables: {e}")
+            logger.critical(traceback.format_exc())
+            logger.critical("Database could NOT be set up correctly! The appliction will FAIL!!")
+            time.sleep(5)
             return False
         return True
 
@@ -630,6 +642,79 @@ class DatabaseManager:
         logger.info(f"notify_approval executed successfully")
         return True 
     
+    
+    def update_email_text(self, email_id, email_text):
+        """
+        Updates the email text for a given email ID.
+
+        Parameters:
+        email_id (int): The ID of the email to be updated.
+        email_text (str): The new email text.
+
+        Returns:
+        bool: True if the email text was successfully updated, False otherwise.
+        """
+        logger.debug(f"update_email_text is called")
+        query = "UPDATE email SET email = %s WHERE id = %s"
+        values = (email_text, email_id)
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {values}")
+        try:
+            self.cursor.execute(query, values)
+            self.conn.commit()
+            logger.info(f"Email text updated successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating email text: {e}")
+            self.conn.rollback()
+            return False
+
+    def get_email_text(self, email_id):
+        """
+        Retrieves the email text for a given email ID.
+        Parameters:
+        email_id (int): The ID of the email to be retrieved.
+        Returns:
+        str: The email text.
+        """
+        logger.debug(f"get_email_text is called")
+        query = "SELECT email FROM email WHERE id = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(email_id,)}")
+        try:
+            self.cursor.execute(query, (email_id,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return None
+            email_text = result[0]
+            logger.info(f"Email text retrieved successfully")
+            return email_text
+        except Exception as e:
+            logger.error(f"Error retrieving email text: {e}")
+            self.conn.rollback()
+            return None        
+
+    def get_all_emails(self):
+        """
+        Retrieves all email texts from the database.
+
+        Returns:
+        list: A list of dictionaries containing the email IDs and texts.
+        """
+        logger.debug("get_all_emails is called")
+        query = "SELECT id, email FROM email"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info("Data retrieved successfully")
+            return {row[0]: row[1] for row in result}
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
 
     def get_completed(self):
         """

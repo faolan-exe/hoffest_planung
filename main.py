@@ -178,6 +178,8 @@ def admin_route(destination="nav1"):
                 "id": tempData[9]
             }
         )
+    email_texts = db_manager.get_all_emails()
+    print(email_texts)
     return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination)
 
 
@@ -218,6 +220,22 @@ def admin_api():
             #session["adminName"] = username
             app.secret_key = os.urandom(64)
             return redirect(url_for("login_route"))
+        case "emailText1":
+            if not db_manager.update_email_text(1, value):
+                return jsonify({"error": "Failed to update email text 1"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText2":
+            if not db_manager.update_email_text(2, value):
+                return jsonify({"error": "Failed to update email text 2"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText3":
+            if not db_manager.update_email_text(3,value):
+                return jsonify({"error": "Failed to update email text 3"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText4":
+            if not db_manager.update_email_text(4,value):
+                return jsonify({"error": "Failed to update email text 4"}), 400
+            return jsonify({"ok": "ok"}), 200
         case _:
             return jsonify({"error": "Invalid action"}), 400
     
