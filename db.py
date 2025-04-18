@@ -514,7 +514,7 @@ class DatabaseManager:
                 f"Genehmigungs_entry created successfully for stand_id: {stand_id}"
             )
 
-            email_text = self.get_email_text(4).replace("|lehrkraft|", "[error]").replace("standname", "[error]")  #email: orga, neuer stand
+            email_text = self.get_email_text(4)  #email: orga, neuer stand
             email_text_teacher = self.get_email_text(1)  # email: lehrkraft, prozess gestartet
             query = "SELECT email FROM admin"
             self.cursor.execute(query)

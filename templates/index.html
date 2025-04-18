@@ -586,8 +586,23 @@
                   updateUI(
                     "Willkommen!",
                     "Sie haben sich noch für keinen Stand registriert.",
-                    "Um einen Stand zu reservieren, starten Sie jetzt mit der Auswahl einer Fläche auf dem Schulhof.",
+                    "Auf diese Seite können Sie sich für einen Stand auf dem Hoffest regestrieren!",
                     "Jetzt starten!",
+                    "selectRectangle",
+                    ""
+                  );
+                  lastStageBtn.disabled = true;
+                  arrow.style.borderColor = "grey";
+                },
+                start2: () => {
+                  nextStageBtn.classList.remove("normal-btn");
+                  nextStageBtn.classList.add("start-btn");
+
+                  updateUI(
+                    "Willkommen!",
+                    "Bearbeiten sie im folgenden Ihren Eintrag.",
+                    "Für die Bearbeitung Ihres Eintrages gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Eintrag entsprechend an. <br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
+                    "Los geht's!",
                     "selectRectangle",
                     ""
                   );
@@ -670,6 +685,34 @@
                     "Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
                     "",
                     "",
+                    ""
+                  );
+
+                  [nextStageBtn, lastStageBtn].forEach(
+                    (el) => (el.style.display = "none")
+                  );
+                },
+                confirmed: () => {
+                  updateUI(
+                    "Registrierung abgeschlossen",
+                    "<span style=`color: green`>Ihr Stand wurde vorläufig genehmigt!</span>",
+                    `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung</h3>" + submittedData[8] : ""}`,
+                    "",
+                    "",
+                    ""
+                  );
+
+                  [nextStageBtn, lastStageBtn].forEach(
+                    (el) => (el.style.display = "none")
+                  );
+                },
+                notConfirmed: () => {
+                  updateUI(
+                    "Registrierung abgeschlossen",
+                    "<span style=`color: red`>Ihr Stand wurde abgelehnt</span>>",
+                    `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden! <h3>Begründung<h3>${submitData[8]}<br><br>. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
+                    "Bearbeiten",
+                    "start2",
                     ""
                   );
 
