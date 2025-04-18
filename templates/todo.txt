@@ -7,4 +7,8 @@ neue karte
 
 admins können selbst stände regestrieren
 
+admin email adreese in einstellungen hinzufügen
+
+credit text mit link und symbol
+
 emails fixen
