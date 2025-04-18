@@ -1,0 +1,10 @@
+todo:
+neue karte
+ -mapping
+ -auswahl
+ -admin anzeige
+ -verschiebbarkeit
+
+admins können selbst stände regestrieren
+
+emails fixen
