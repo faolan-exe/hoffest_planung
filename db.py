@@ -303,6 +303,7 @@ class DatabaseManager:
         # 'email': ''
         # 'mapSelection': {'x': 504, 'y': 114, 'width': 227, 'height': 54},
         # 'questions': {'1': False, '2': True}}
+        # "reedit": False
         """
         Adds a new stand to the database.
 
@@ -312,27 +313,25 @@ class DatabaseManager:
         Returns:
         bool: True if the stand was successfully added, False otherwise.
         """
-        logger.debug(f"addNewStand is called")
+                
+        logger.debug("addNewStand is called")
+        reedit = data.get("reedit", False)
         query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (auth_id) 
-                    DO UPDATE SET 
-                        ort = EXCLUDED.ort,
-                        ort_spezifikation = EXCLUDED.ort_spezifikation,
-                        lehrer = EXCLUDED.lehrer,
-                        klasse = EXCLUDED.klasse,
-                        name = EXCLUDED.name,
-                        beschreibung = EXCLUDED.beschreibung,
-                        email = EXCLUDED.email
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (auth_id) 
+                DO UPDATE SET 
+                    ort = EXCLUDED.ort,
+                    ort_spezifikation = EXCLUDED.ort_spezifikation,
+                    lehrer = EXCLUDED.lehrer,
+                    klasse = EXCLUDED.klasse,
+                    name = EXCLUDED.name,
+                    beschreibung = EXCLUDED.beschreibung
                     RETURNING id;"""
+
         values = (
             auth_id,
             data["baseLocation"],
-            (
-                str(data["mapSelection"])
-                if data["baseLocation"] == "h"
-                else data["raumnummer"]
-            ),
+            str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"],
             data["lehrername"],
             data["klasse"],
             data["projektName"],
@@ -357,13 +356,43 @@ class DatabaseManager:
                     logger.debug(f"with data: {last_id}, {key}")
                     self.cursor.execute(query, (last_id, int(key)))
                     self.conn.commit()
-            self.create_new_genehmigungs_entry(last_id, data["email"])
+            if reedit:
+                data["email"] = self.get_email_from_stand_id(last_id)
+            self.create_new_genehmigungs_entry(last_id, data["email"], reedit)
             return True
         except Exception as e:
             logger.error(f"Error adding stand: {e}")
             self.conn.rollback()
             return False
 
+    def get_email_from_stand_id(self, stand_id):
+        """
+        Retrieves the email address associated with a given stand ID.
+
+        Parameters:
+        stand_id (int): The ID of the stand.
+
+        Returns:
+        str: The email address associated with the stand ID.
+        """
+        logger.debug(f"get_email_from_stand_id is called")
+        query = "SELECT email FROM stand WHERE id = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(stand_id,)}")
+        try:
+            self.cursor.execute(query, (stand_id,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return None
+            email = result[0]
+            logger.info(f"Email retrieved successfully")
+            return email
+        except Exception as e:
+            logger.error(f"Error retrieving email: {e}")
+            self.conn.rollback()
+            return None
+    
     def get_submitted_data_from_id(self, id):
         """
         Retrieves the submitted data for a given user ID from the database.
@@ -493,7 +522,7 @@ class DatabaseManager:
             self.conn.rollback()
         return False
 
-    def create_new_genehmigungs_entry(self, stand_id, teacher_email):
+    def create_new_genehmigungs_entry(self, stand_id, teacher_email, reedit):
         """
         Creates a new genehmigungs_entry for a given stand ID.
 
@@ -504,6 +533,22 @@ class DatabaseManager:
         bool: True if the genehmigungs_entry was successfully created, False otherwise.
         """
         logger.debug(f"create_new_genehmigungs_entry is called")
+        
+        if reedit:
+            query = "DELETE FROM genehmigungen WHERE id = %s"
+            logger.debug(f"Executing SQL query: {query}")
+            logger.debug(f"with data: {(stand_id,)}")
+            try:
+                self.cursor.execute(query, (stand_id,))
+                self.conn.commit()
+                logger.info(
+                    f"old Genehmigungs_entry deleted successfully for stand_id: {stand_id}"
+                )
+            except Exception as e:
+                logger.error(f"Error deleting old genehmigungs_entry: {e}")
+                self.conn.rollback()
+                return False
+        
         query = "INSERT INTO genehmigungen (id) VALUES (%s)"
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(stand_id,)}")

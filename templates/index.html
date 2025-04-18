@@ -566,7 +566,7 @@
               [additionaltext, actionTitle, actionSubText].forEach(
                 (el) => (el.innerHTML = "")
               );
-              [additionaltext, lastStageBtn].forEach(
+              [additionaltext, lastStageBtn, nextStageBtn].forEach(
                 (el) => (el.style.display = "block")
               );
 
@@ -604,10 +604,8 @@
                     "Für die Bearbeitung Ihres Eintrages gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Eintrag entsprechend an. <br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
                     "Los geht's!",
                     "selectRectangle",
-                    ""
+                    "notConfirmed"
                   );
-                  lastStageBtn.disabled = true;
-                  arrow.style.borderColor = "grey";
                 },
                 selectRectangle: () => {
                   allowedToDraw = true;
@@ -630,6 +628,9 @@
                     (el) => (el.style.display = "block")
                   );
                   initQuestionBlock();
+                  if (submittedData[7] !== "") {
+                    loadPreviousData();
+                  }
                   updateUI(
                     "Details zu Ihrem Stand",
                     "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
@@ -695,8 +696,8 @@
                 confirmed: () => {
                   updateUI(
                     "Registrierung abgeschlossen",
-                    "<span style=`color: green`>Ihr Stand wurde vorläufig genehmigt!</span>",
-                    `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung</h3>" + submittedData[8] : ""}`,
+                    "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
+                    `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}`,
                     "",
                     "",
                     ""
@@ -709,14 +710,14 @@
                 notConfirmed: () => {
                   updateUI(
                     "Registrierung abgeschlossen",
-                    "<span style=`color: red`>Ihr Stand wurde abgelehnt</span>>",
-                    `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden! <h3>Begründung<h3>${submitData[8]}<br><br>. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
+                    "<span style=\"color: red\">Ihr Stand wurde abgelehnt</span>",
+                    `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden! <h3>Begründung:</h3>${submittedData[8]}.<br><br> Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
                     "Bearbeiten",
                     "start2",
                     ""
                   );
 
-                  [nextStageBtn, lastStageBtn].forEach(
+                  [lastStageBtn].forEach(
                     (el) => (el.style.display = "none")
                   );
                 },
@@ -750,6 +751,24 @@
               lastAction.value = lastActionValue;
             }
 
+            function loadPreviousData() {
+              document.getElementById("lehrername").value =
+                submittedData[2] || "";
+              document.getElementById("klasse").value = submittedData[3] || "";
+              document.getElementById("projektName").value =
+                submittedData[4] || "";
+              document.getElementById("projektBeschreibung").value =
+                submittedData[5] || "";
+              document.getElementById("email").value = "unverändert (aus Datenschutz weder einsehbar noch editierbar)";
+              document.getElementById("email").disabled = true;
+              for (const [key, value] of Object.entries(submittedData[6])) {
+                console.log(key, value);
+                const questionID = value;
+                const questionElement = document.getElementById(`${questionID}`);
+                questionElement.checked = true;
+              }
+            }
+
             initedQuestionBlock = false;
             function initQuestionBlock() {
               if (initedQuestionBlock) {
@@ -761,7 +780,8 @@
                 questionsField.innerHTML += questionTemplate
                   .replaceAll("|questionID|", key)
                   .replaceAll("|questionText|", questions[key]);
-              }
+              } 
+              
             }
 
             function gatherData() {
@@ -782,6 +802,7 @@
                 const questionElement = document.getElementById(`${questionID}`);
                 data.questions[questionID] = questionElement.checked;
               }
+              data.reedit = submittedData[7] !== "";
               return data;
             }
 
@@ -809,7 +830,12 @@
 
             if (submittedData == "None") {
               stageManager("start");
-            } else {
+            } else if (submittedData[7] === true) {
+              stageManager("confirmed");
+            } else if (submittedData[7] === false) {
+              stageManager("notConfirmed");
+            }
+            else {
               console.log(submittedData);
               data = submitData
               stageManager("display");
