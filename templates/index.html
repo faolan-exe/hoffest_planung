@@ -323,7 +323,7 @@
         </div>
       </div>
 
-      <div id="schulhof-selector" onmousedown="startDrawing(event)">
+      <div id="schulhof-selector" onmousedown="">
         <div id="image-container" class="screenRes1">
           <svg
             id="svgCanvas"
@@ -378,141 +378,7 @@
     </script>
 
     <script defer>
-      let startX, startY, rect, lastRect;
-      const svg = document.getElementById("svgCanvas");
-      function getMousePosition(event) {
-        const svg = document.getElementById("svgCanvas");
-        const pt = svg.createSVGPoint();
-        pt.x = event.clientX;
-        pt.y = event.clientY;
-        const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
-        return { x: cursorPt.x, y: cursorPt.y };
-      }
-
-      function startDrawing(event) {
-        if (!allowedToDraw) {
-          return;
-        }
-        document.getElementById("nextStage").disabled = true;
-        const pos = getMousePosition(event);
-        startX = pos.x;
-        startY = pos.y;
-        if (rect) {
-          lastRect = rect.cloneNode(true);
-          try {
-            svg.removeChild(rect);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-        rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", startX);
-        rect.setAttribute("y", startY);
-        rect.setAttribute("width", 0);
-        rect.setAttribute("height", 0);
-        rect.setAttribute("fill", "rgb(0, 0, 255, 0.3)");
-        rect.setAttribute("stroke", "black");
-        //.getElementById("schulhof-selector")
-        svg.appendChild(rect);
-        document.addEventListener("mousemove", drawRectangle);
-        document
-          .getElementById("schulhof-selector")
-          .addEventListener("mouseup", stopDrawing);
-      }
-      function drawRectangle(event) {
-        const rectBounds = svg.getBoundingClientRect();
-        const pos = getMousePosition(event);
-        let width = pos.x - startX;
-        let height = pos.y - startY;
-        if (
-          event.clientX > rectBounds.left &&
-          event.clientX < rectBounds.right
-        ) {
-          rect.setAttribute("width", Math.abs(width));
-          rect.setAttribute("x", width < 0 ? pos.x : startX);
-        }
-        if (
-          event.clientY > rectBounds.top &&
-          event.clientY < rectBounds.bottom
-        ) {
-          rect.setAttribute("height", Math.abs(height));
-          rect.setAttribute("y", height < 0 ? pos.y : startY);
-        }
-
-        if (
-          event.clientX < rectBounds.left ||
-          event.clientX > rectBounds.right
-        ) {
-          return;
-        }
-        if (
-          event.clientY < rectBounds.top ||
-          event.clientY > rectBounds.bottom
-        ) {
-          return;
-        }
-      }
-
-      function getMapSelectionCoords() {
-        if (!rect) {
-          return {};
-        }
-        const x = parseInt(rect.getAttribute("x"));
-        const y = parseInt(rect.getAttribute("y"));
-        const width = parseInt(rect.getAttribute("width"));
-        const height = parseInt(rect.getAttribute("height"));
-        return {
-          x,
-          y,
-          width,
-          height,
-        };
-      }
-
-      function stopDrawing() {
-        document.getElementById("nextStage").disabled = false;
-        rectangleSelectionActive = true;
-        const svg = document.getElementById("svgCanvas");
-        let width = parseInt(rect.getAttribute("width"));
-        let height = parseInt(rect.getAttribute("height"));
-
-        document.removeEventListener("mousemove", drawRectangle);
-        document.removeEventListener("mouseup", stopDrawing);
-
-        if (width < 2 && height < 2) {
-          deleteRectangle();
-          document.getElementById("nextStage").disabled = true;
-          rectangleSelectionActive = false;
-          return;
-        }
-
-        if (width < 10 || height < 10) {
-          try {
-            svg.removeChild(rect);
-            document.getElementById("nextStage").disabled = false;
-
-            rectangleSelectionActive = true;
-          } catch (e) {
-            document.getElementById("nextStage").disabled = true;
-
-            rectangleSelectionActive = false;
-          }
-          if (lastRect) {
-            svg.appendChild(lastRect);
-            rect = lastRect;
-          }
-        }
-      }
-      function deleteRectangle() {
-        try {
-          svg.removeChild(rect);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-    </script>
-
-    <script defer>
+      var svg = document.getElementById("svgCanvas");
       let isMouseDown = false;
       var selectedCells = [];
       var blacklistCells = [
@@ -661,6 +527,9 @@
             rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
             rect.setAttribute("id", `cell-${row}-${col}`);
             rect.addEventListener("mousedown", function () {
+              if (!allowedToDraw) {
+                return;
+              }
               isMouseDown = true;
               console.log(`Mouse down on cell at row ${row}, col ${col}`);
                 if (selectedCells.includes(`cell-${row}-${col}`)) {
@@ -714,6 +583,11 @@
         }
       }
       drawGrid();
+
+      function getMapSelectionCoords() {
+        return selectedCells
+      }
+
     </script>
 
     <script id="questions-data" type="application/json">
@@ -830,9 +704,6 @@
                     "start"
                   );
                   additionaltext.style.display = "block";
-                  if (!rectangleSelectionActive) {
-                    nextStageBtn.disabled = true;
-                  }
                   lastAction.value = "start";
                 },
                 stage3: () => {
@@ -840,7 +711,7 @@
                     (el) => (el.style.display = "block")
                   );
                   initQuestionBlock();
-                  if (submittedData[7] !== "") {
+                  if (submittedData !== null && submittedData[7] !== "") {
                     loadPreviousData();
                   }
                   updateUI(
@@ -1014,7 +885,11 @@
                 const questionElement = document.getElementById(`${questionID}`);
                 data.questions[questionID] = questionElement.checked;
               }
-              data.reedit = submittedData[7] !== "";
+              if (submittedData !== null) {
+                data.id = submittedData[0];
+                data.reedit = submittedData[7] !== "";
+              }
+              
               return data;
             }
 
@@ -1040,7 +915,7 @@
 
             submittedData = {{already_submitted_data | tojson}};
 
-            if (submittedData == "None") {
+            if (submittedData == null) {
               stageManager("start");
             } else if (submittedData[7] === true) {
               stageManager("confirmed");
