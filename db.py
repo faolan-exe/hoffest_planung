@@ -1,3 +1,4 @@
+import ast
 import random
 import time
 import traceback
@@ -316,6 +317,31 @@ class DatabaseManager:
                 
         logger.debug("addNewStand is called")
         reedit = data.get("reedit", False)
+        ### check for race conditions
+        existingMaps = self.getAllSelectedAreas()
+        allMaps = [data["mapSelection"] if data["baseLocation"] == "h" else data["raumnummer"], ]
+        for map in existingMaps:
+            allMaps.append(ast.literal_eval(map[2]))
+        logger.warning(f"allMaps: {allMaps}")
+        seen = set()
+        overlap_found = False
+
+        for lst in allMaps:
+            for item in lst:
+                if item in seen:
+                    overlap_found = True
+                    break
+                seen.add(item)
+            if overlap_found:
+                break
+
+        if overlap_found:
+            logger.error("Overlap found in selected areas")
+            return False  # TODO: Auto Update Map Of The User
+        
+        
+        
+        
         query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (auth_id) 
