@@ -60,9 +60,9 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
 app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
 
-def checkAuth(user_id):
+def checkAuth(user_id):  # TODO: IMPORTANT!! REMOVE BYPASS USER ON PRODUCTION
     """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
-    if user_id == "bypass":
+    if user_id == "bypass" or user_id == "bypass2":
         return True  # Erlaubt Bypass-Benutzer
 
     if not validate_auth(user_id):
@@ -107,7 +107,7 @@ def index():
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
     return render_template(
-        "index.html", already_submitted_data=already_submitted_data, questions=questions
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue)
     )
 
 

@@ -760,6 +760,51 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    
+    def getAllSelectedAreasExceptUserId(self, user_id):
+        """
+        Retrieves all selected areas from the database except for a given user ID.
+
+        Parameters:
+        user_id (str): The ID of the user to be excluded.
+
+        Returns:
+        list: A list of tuples containing the selected areas.
+        """
+        logger.debug(f"getAllSelectedAreasExceptUserId is called")
+        query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(user_id,)}")
+        try:
+            self.cursor.execute(query, (user_id,))
+            result = self.cursor.fetchall()
+            logger.info("Data retrieved successfully")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
+    def getAllSelectedAreas(self):
+        """
+        Retrieves all selected areas from the database.
+
+        Returns:
+        list: A list of tuples containing the selected areas.
+        """
+        logger.debug(f"getAllSelectedAreas is called")
+        query = "SELECT id, ort, ort_spezifikation FROM stand"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info("Data retrieved successfully")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
 
     def get_completed(self):
         """

@@ -278,6 +278,7 @@
 
     <script>
       allowedToDraw = false;
+      foreignMapData = {{ foreignMapData | tojson }}
     </script>
   </head>
 
@@ -381,6 +382,7 @@
       var svg = document.getElementById("svgCanvas");
       let isMouseDown = false;
       var selectedCells = [];
+      usedCells = [];
       var blacklistCells = [
         "cell-0-0",
         "cell-1-0",
@@ -532,22 +534,25 @@
               }
               isMouseDown = true;
               console.log(`Mouse down on cell at row ${row}, col ${col}`);
-                if (selectedCells.includes(`cell-${row}-${col}`)) {
-                  selectedCells = selectedCells.filter(
-                    (cell) => cell !== `cell-${row}-${col}`
-                  );
-                  rect.classList.remove("selected-rect");
-                  rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
-                } else {
-                  if (selectedCells.length >= 10) {
+              if (selectedCells.includes(`cell-${row}-${col}`)) {
+                selectedCells = selectedCells.filter(
+                  (cell) => cell !== `cell-${row}-${col}`
+                );
+                rect.classList.remove("selected-rect");
+                rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+              } else {
+                if (selectedCells.length >= 10) {
                   alert("Maximal 10 Kästchen auswählbar!");
                   return;
                 }
-                  selectedCells.push(`cell-${row}-${col}`);
-                  rect.classList.add("selected-rect");
-                  rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+                if (usedCells.includes(`cell-${row}-${col}`)) {
+                  alert("Dieser Bereich ist bereits belegt!");
+                  return;
                 }
-              
+                selectedCells.push(`cell-${row}-${col}`);
+                rect.classList.add("selected-rect");
+                rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+              }
             });
 
             // Wenn die Maustaste losgelassen wird
@@ -570,6 +575,9 @@
                   rect.classList.remove("selected-rect");
                   rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
                 } else {
+                  if (usedCells.includes(`cell-${row}-${col}`)) {
+                  return;
+                }
                   selectedCells.push(`cell-${row}-${col}`);
                   rect.classList.add("selected-rect");
                   rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
@@ -585,9 +593,8 @@
       drawGrid();
 
       function getMapSelectionCoords() {
-        return selectedCells
+        return selectedCells;
       }
-
     </script>
 
     <script id="questions-data" type="application/json">
@@ -891,7 +898,7 @@
                 data.id = submittedData[0];
                 data.reedit = submittedData[7] !== "";
               }
-              
+
               return data;
             }
 
@@ -940,6 +947,23 @@
                 selectedCells.push(cell);
               }
             }
+
+            function drawForeignMap() {
+
+            foreignMapData.forEach((element) => {
+              console.log("element", element);
+              const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
+              console.log("mapSelection", mapSelection);
+              for (const cell of mapSelection) {
+                console.log("cell", cell);
+                const rect = document.getElementById(cell);
+                rect.classList.add("selected-rect");
+                rect.setAttribute("fill", "rgba(200, 30, 0, 0.3)");
+                usedCells.push(cell);
+                }
+              });
+            }
+            drawForeignMap()
     </script>
   </body>
 </html>
