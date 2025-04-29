@@ -822,7 +822,7 @@
                 error: () => {
                   updateUI(
                     "Fehler",
-                    "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+                    "Es ist ein Fehler aufgetreten. Es ist sehr wahrscheinlich, dass gerade eben jemand anderes einen Stand an der gleichen Stelle wie Sie beantragt hat. Bitte versuchen Sie es nochmal mt einem anderem Ort.<br><br>Falls dieser Fehler mehrmals auftritt, wenden Sie sich bitte an die Organisatoren: <br>orga@hoffestEMAIL",
                     "",
                     "Zurück",
                     "start",
@@ -945,11 +945,7 @@
             function drawOwnExistingGrid() {
               try {
                 const mapSelection = JSON.parse(submittedData[1]);
-              } catch (e) {
-                return
-              }
-              
-              console.log("mapSelection", mapSelection);
+                console.log("mapSelection", mapSelection);
               for (const cell of mapSelection) {
                 console.log("cell", cell);
                 const rect = document.getElementById(cell);
@@ -957,6 +953,11 @@
                 rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
                 selectedCells.push(cell);
               }
+              } catch (e) {
+                return
+              }
+              
+              
             }
 
             function drawForeignMap() {

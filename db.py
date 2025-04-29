@@ -114,7 +114,7 @@ class DatabaseManager:
             self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
             self.add_question("Strom und geräte?")
             self.add_question("Lebensmittel?")
-            query = "INSERT INTO email (id, text) VALUES (%s, %s)"
+            query = "INSERT INTO email (id, email) VALUES (%s, %s)"
             values = [
                 (1, 'Text für EMail 1'),
                 (2, 'Text für EMail 2'),
@@ -321,6 +321,10 @@ class DatabaseManager:
         existingMaps = self.getAllSelectedAreas()
         allMaps = [data["mapSelection"] if data["baseLocation"] == "h" else data["raumnummer"], ]
         for map in existingMaps:
+            if map[2] == "none":
+                continue
+            print("ERRROROROROR")
+            print(f"map[2]: {map[2]}")
             allMaps.append(ast.literal_eval(map[2]))
         logger.warning(f"allMaps: {allMaps}")
         seen = set()
