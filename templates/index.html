@@ -770,7 +770,11 @@
                 },
                 confirm: submitData,
                 display: () => {
-                  drawOwnExistingGrid();
+                  try {
+                    drawOwnExistingGrid();
+                  } catch (e) {
+                  }
+                  
 
                   updateUI(
                     "Registrierung abgeschlossen",
@@ -939,7 +943,12 @@
               stageManager("display");
             }
             function drawOwnExistingGrid() {
-              const mapSelection = JSON.parse(submittedData[1]);
+              try {
+                const mapSelection = JSON.parse(submittedData[1]);
+              } catch (e) {
+                return
+              }
+              
               console.log("mapSelection", mapSelection);
               for (const cell of mapSelection) {
                 console.log("cell", cell);
