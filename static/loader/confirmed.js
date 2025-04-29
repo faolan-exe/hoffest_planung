@@ -41,7 +41,7 @@ function init() {
                   ${beschreibung}
                 </p>
                 <div class="actions">
-                  <a href="/admin/stand/${id}">Details ➡</a>
+                  <a href="#" onclick="load('nav6', '${id}')">Details ➡</a>
                 </div>
               </div>
             </div>
