@@ -676,6 +676,12 @@ class DatabaseManager:
             self.conn.commit()
             logger.info(f"Stand {stand_id} processed successfully")
             self.notify_approval(stand_id, status, comment)
+            if status != "accepted":
+                query = "UPDATE stand SET ort_spezifikation = 'none' WHERE id = %s"
+                logger.debug(f"Executing SQL query: {query}")
+                logger.debug(f"with data: {(stand_id,)}")
+                self.cursor.execute(query, (stand_id,))
+                self.conn.commit()
             return True
         except Exception as e:
             logger.error(f"Error approving stand: {e}")
