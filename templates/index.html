@@ -777,6 +777,7 @@
                   );
                 },
                 confirmed: () => {
+                  drawOwnExistingGrid();
                   updateUI(
                     "Registrierung abgeschlossen",
                     "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
@@ -791,6 +792,7 @@
                   );
                 },
                 notConfirmed: () => {
+                  drawOwnExistingGrid();
                   updateUI(
                     "Registrierung abgeschlossen",
                     "<span style=\"color: red\">Ihr Stand wurde abgelehnt</span>",
@@ -926,6 +928,17 @@
               console.log(submittedData);
               data = submitData
               stageManager("display");
+            }
+            function drawOwnExistingGrid() {
+              const mapSelection = JSON.parse(submittedData[1]);
+              console.log("mapSelection", mapSelection);
+              for (const cell of mapSelection) {
+                console.log("cell", cell);
+                const rect = document.getElementById(cell);
+                rect.classList.add("selected-rect");
+                rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+                selectedCells.push(cell);
+              }
             }
     </script>
   </body>
