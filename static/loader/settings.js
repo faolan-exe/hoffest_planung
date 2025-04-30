@@ -35,15 +35,26 @@ function setup() {
     submitEmailText2Btn = document.getElementById("submitEmailText2Btn");
     submitEmailText3Btn = document.getElementById("submitEmailText3Btn");
     submitEmailText4Btn = document.getElementById("submitEmailText4Btn");
+    submitEmailText5Btn = document.getElementById("submitEmailText5Btn");
+    submitEmailText10Btn = document.getElementById("submitEmailText10Btn");
+    sendEmailText10Btn = document.getElementById("sendEmailText10Btn");
+
+    pageStatusToggle = document.getElementById("pageStatusToggle");
+    pageStatusText = document.getElementById("pageStatusText");
+
     emailText1 = document.getElementById("emailText1");
     emailText2 = document.getElementById("emailText2");
     emailText3 = document.getElementById("emailText3");
     emailText4 = document.getElementById("emailText4");
+    emailText5 = document.getElementById("emailText5");
+    emailText10 = document.getElementById("emailText10");
     
     emailText1.value = emailTexts["1"];
     emailText2.value = emailTexts["2"];
     emailText3.value = emailTexts["3"];
     emailText4.value = emailTexts["4"];
+    emailText5.value = emailTexts["5"];
+    emailText10.value = emailTexts["10"];
 
     submitEmailText1Btn.addEventListener("click", function() {
         sendFetch("emailText1", document.getElementById("emailText1").value);
@@ -60,6 +71,38 @@ function setup() {
         sendFetch("emailText4", document.getElementById("emailText4").value);
     }
     );
+    submitEmailText5Btn.addEventListener("click", function() {
+        sendFetch("emailText5", document.getElementById("emailText5").value);
+    }
+    );
+    submitEmailText10Btn.addEventListener("click", function() {
+        sendFetch("emailText10S", document.getElementById("emailText10").value);
+    }
+    );
+    sendEmailText10Btn.addEventListener("click", function() {
+        sendFetch("emailText10", document.getElementById("emailText10").value);
+    }
+    );
+    pageStatusToggle.addEventListener("click", function() {
+        if (pageStatusToggle.checked) {
+            pageStatusText.innerHTML = "aktiv";
+            sendFetch("pageStatus", "1");
+        } else {
+            pageStatusText.innerHTML = "inaktiv";
+            sendFetch("pageStatus", "0");
+        }
+    });
+    if (enabled == 1) {
+        pageStatusToggle.checked = true;
+    } else {
+        pageStatusToggle.checked = false;
+    }
+    if (pageStatusToggle.checked) {
+        pageStatusText.innerHTML = " aktiv";
+    } else {
+        pageStatusText.innerHTML = "inaktiv";
+    }
+
     
     submitNewQuestionBtn.addEventListener("click", submitNewQuestion);
     submitNewPwdBtn.addEventListener("click", submitNewPassword);
@@ -113,6 +156,9 @@ function sendFetch(action, value) {
                 alert("Email text updated successfully");
                 return
             }
+            if (action.includes("pageStatus")) {
+                return
+            }
             document.location = "/admin"
         } else {
             alert("Error updating status: " + resData.error);
@@ -121,6 +167,4 @@ function sendFetch(action, value) {
     .catch((error) => {
         console.error("Error:", error);
     });
-
-    
 }

@@ -119,10 +119,15 @@ class DatabaseManager:
                 (1, 'Text für EMail 1'),
                 (2, 'Text für EMail 2'),
                 (3, 'Text für EMail 3'),
-                (4, 'Text für EMail 4')
+                (4, 'Text für EMail 4'),
+                (5, 'Text für EMail 5'),
+                (10, 'Text für Reminder')
+                
             ]
             self.cursor.executemany(query, values)
             self.conn.commit()
+            if not self.add_new_status_action("enabled", "0"):
+                raise Exception("Failed to add new status action")
             logger.info("Tables initiated successfully")
         except Exception as e:
             self.conn.rollback()
@@ -269,7 +274,7 @@ class DatabaseManager:
             return False
         return True
 
-    def checkTrustedId(self, id):
+    def check_trusted_id(self, id):
         """
         Checks if a given ID is a trusted ID in the database.
 
@@ -692,6 +697,86 @@ class DatabaseManager:
             self.conn.rollback()
             return False
     
+    def update_status_action(self, action, value):
+        """
+        Changes the status of a stand based on the action and value provided.
+
+        Parameters:
+        action (str): The action to be performed ("approve" or "reject").
+        value (str): The value to be set for the status.
+
+        Returns:
+        bool: True if the status was successfully changed, False otherwise.
+        """
+        logger.debug(f"change_status_action is called")
+        query = "UPDATE status SET value = %s WHERE action = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        data = (value, action)
+        logger.debug(f"with data: {data}")
+        try:
+            self.cursor.execute(query, data)
+            self.conn.commit()
+            logger.info(f"Status changed successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error changing status: {e}")
+            self.conn.rollback()
+            return False
+    
+    def add_new_status_action(self, action, value):
+        """
+        Adds a new status action to the database.
+
+        Parameters:
+        action (str): The action to be added.
+        value (str): The value of the action.
+
+        Returns:
+        bool: True if the status action was successfully added, False otherwise.
+        """
+        logger.debug(f"add_new_status_action is called")
+        query = "INSERT INTO status (action, value) VALUES (%s, %s)"
+        logger.debug(f"Executing SQL query: {query}")
+        data = (action, value)
+        logger.debug(f"with data: {data}")
+        try:
+            self.cursor.execute(query, data)
+            self.conn.commit()
+            logger.info(f"Status action added successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error adding status action: {e}")
+            self.conn.rollback()
+            return False
+    
+    def get_status_action(self, action):
+        """
+        Retrieves the status action from the database.
+
+        Parameters:
+        action (str): The action to be retrieved.
+
+        Returns:
+        str: The value of the action.
+        """
+        logger.debug(f"get_status_action is called")
+        query = "SELECT value FROM status WHERE action = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(action,)}")
+        try:
+            self.cursor.execute(query, (action,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return None
+            value = result[0]
+            logger.info(f"Status action retrieved successfully")
+            return value
+        except Exception as e:
+            logger.error(f"Error retrieving status action: {e}")
+            self.conn.rollback()
+            return None
+    
     def notify_approval(self, stand_id, status, comment):
         """
         Sends an email notification to the admin account and the teacher about the stand's approval.
@@ -724,7 +809,7 @@ class DatabaseManager:
         return True 
     
     
-    def update_email_text(self, email_id, email_text):
+    def update_email_text(self, email_id, email_text, do_broadcast=False):
         """
         Updates the email text for a given email ID.
 
@@ -744,9 +829,36 @@ class DatabaseManager:
             self.cursor.execute(query, values)
             self.conn.commit()
             logger.info(f"Email text updated successfully")
+            if email_id == 10 and do_broadcast:
+                self.broadcast_text(email_text)
             return True
         except Exception as e:
             logger.error(f"Error updating email text: {e}")
+            self.conn.rollback()
+            return False
+    
+    def broadcast_text(self, email_text):
+        """
+        Sends the email text to all teacher accounts.
+
+        Parameters:
+        email_text (str): The email text to be sent.
+
+        Returns:
+        bool: True if the email text was successfully sent, False otherwise.
+        """
+        logger.debug(f"broadcast_text is called")
+        query = "SELECT email FROM stand"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            for email in result:
+                mailer.send_email(email[0], email_text)
+            logger.info(f"Email text broadcasted successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error broadcasting email text: {e}")
             self.conn.rollback()
             return False
 

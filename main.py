@@ -102,6 +102,10 @@ def index():
             401,
         )
 
+    if db_manager.get_status_action("enabled") == "0":
+        return jsonify(
+            error="Die Seite ist zurzeit nicht freigeschaltet. Bitte versuchen Sie es später erneut."
+        ), 503
     questions = db_manager.get_questions()
     logger.debug("Got questions: " + str(questions))
 
@@ -180,7 +184,7 @@ def admin_route(destination="nav1"):
         )
     email_texts = db_manager.get_all_emails()
     print(email_texts)
-    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination)
+    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"))
 
 
 @admin.route("/loader/<page>")
@@ -235,6 +239,22 @@ def admin_api():
         case "emailText4":
             if not db_manager.update_email_text(4,value):
                 return jsonify({"error": "Failed to update email text 4"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText5":
+            if not db_manager.update_email_text(5,value):
+                return jsonify({"error": "Failed to update email text 5"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText10":
+            if not db_manager.update_email_text(10,value):
+                return jsonify({"error": "Failed to update email text 10"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText10S":
+            if not db_manager.update_email_text(10,value,do_broadcast=True):
+                return jsonify({"error": "Failed to update email text 10"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "pageStatus":
+            if not db_manager.update_status_action("enabled", value):
+                return jsonify({"error": "Failed to update page status"}), 400
             return jsonify({"ok": "ok"}), 200
         case _:
             return jsonify({"error": "Invalid action"}), 400

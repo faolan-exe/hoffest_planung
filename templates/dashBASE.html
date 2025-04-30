@@ -13,6 +13,8 @@
       data = {{ data | tojson }}
       questionIdLookup = {{ questionIdLookup | tojson }}
       emailTexts = {{ email_texts | tojson }}
+      enabled = "{{ enabled }}"
+      console.log("enabled: " + enabled);
       currentID = undefined;
       console.log("currentID: " + currentID);
     </script>

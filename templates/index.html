@@ -279,6 +279,7 @@
     <script>
       allowedToDraw = false;
       foreignMapData = {{ foreignMapData | tojson }}
+
     </script>
   </head>
 
@@ -541,8 +542,8 @@
                 rect.classList.remove("selected-rect");
                 rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
               } else {
-                if (selectedCells.length >= 10) {
-                  alert("Maximal 10 Kästchen auswählbar!");
+                if (selectedCells.length >= 2) {
+                  alert("Maximal 2 Kästchen auswählbar!");
                   return;
                 }
                 if (usedCells.includes(`cell-${row}-${col}`)) {
@@ -629,7 +630,7 @@
           <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
           <input type="text" id="email" placeholder="example@email.com" />
 
-          <label for="projektBeschreibung">Beschreibung des Projektes:</label>
+          <label for="projektBeschreibung">Beschreibung und wichtige Hinweise zum Projekt:</label>
           <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
       </div>
             `;
@@ -705,7 +706,7 @@
                   updateUI(
                     "Fläche auswählen",
                     "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
-                    "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können bis zu 6 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter orga@schule.de.",
+                    "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können 2 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter orga@schule.de.",
                     "Weiter",
                     "stage3",
                     "start"

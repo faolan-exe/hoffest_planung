@@ -22,6 +22,10 @@ CREATE TABLE public.questions(
 id serial NOT NULL, question text NOT NULL,
   CONSTRAINT questions_pkey PRIMARY KEY(id)
 );
+CREATE TABLE public.status(
+"action" text NOT NULL, "value" text NOT NULL,
+  CONSTRAINT status_pkey PRIMARY KEY(action)
+);
 
 
 CREATE TABLE public.email (

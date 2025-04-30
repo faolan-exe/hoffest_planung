@@ -1,151 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <style>
-        .inner-content {
-            display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-        }
-        .fragen, .email-texte, .account-info {
-            background-color: #ffffff;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 600px;
-            margin-bottom: 30px;
-        }
-        .fragen h2, .email-texte h2, .account-info h2 {
-            font-size: 24px;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        .fragen {
-            background-color: rgba(78, 220, 224, 0.1);
-        }
-        .email-texte {
-            background-color: rgba(183, 78, 224, 0.1);
-        }
-        .account-info {
-            background-color: rgba(90, 224, 78, 0.1);
-        }
-        table {
-            border-collapse: collapse;
-        }
-        td {
-            padding: 8px;
-            text-align: left;
-        }
+      .inner-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      .fragen,
+      .email-texte,
+      .account-info {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 600px;
+        margin-bottom: 30px;
+      }
+      .fragen h2,
+      .email-texte h2,
+      .account-info h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+        color: #333;
+      }
+      .fragen {
+        background-color: rgba(78, 220, 224, 0.1);
+      }
+      .email-texte {
+        background-color: rgba(183, 78, 224, 0.1);
+      }
+      .account-info {
+        background-color: rgba(90, 224, 78, 0.1);
+      }
+      table {
+        border-collapse: collapse;
+      }
+      td {
+        padding: 8px;
+        text-align: left;
+      }
 
-        button:hover {
-            opacity: 0.7;
-        }
-        .fragen button::before {
-            content: "✖";
-            font-size: 20px;
-            color: red;
-        }
-        .add-list-option button::before {
-            content: "✔";
-            font-size: 20px;
-            color: green;
-        }
-        #pwd-field button::before {
-            content: "✔";
-            font-size: 20px;
-            color: green;
-        }
-        .add-list-option input[type="text"] {
-            width: 80%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .add-list-option {
-            display: flex;
-            align-items: center;
-            margin-top: 15px;
-        }
-        .email-texte textarea {
-            width: 100%;
-            height: 150px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            resize: vertical;
-            font-size: 16px;
-        }
-        .account-info input[type="password"] {
-            width: 80%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .account-info button {
-            font-size: 20px;
-            color: green;
-            margin-left: 10px;
-        }
+      button:hover {
+        opacity: 0.7;
+      }
+      .fragen button::before {
+        content: "✖";
+        font-size: 20px;
+        color: red;
+      }
+      .add-list-option button::before {
+        content: "✔";
+        font-size: 20px;
+        color: green;
+      }
+      #pwd-field button::before {
+        content: "✔";
+        font-size: 20px;
+        color: green;
+      }
+      .add-list-option input[type="text"] {
+        width: 80%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .add-list-option {
+        display: flex;
+        align-items: center;
+        margin-top: 15px;
+      }
+      .email-texte textarea {
+        width: 100%;
+        height: 150px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        resize: vertical;
+        font-size: 16px;
+      }
+      .account-info input[type="password"] {
+        width: 80%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      .account-info button {
+        font-size: 20px;
+        color: green;
+        margin-left: 10px;
+      }
     </style>
-</head>
-<body>
+    <style>
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: 0.4s;
+        transition: 0.4s;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: 0.4s;
+        transition: 0.4s;
+      }
+
+      input:checked + .slider {
+        background-color: #2196f3;
+      }
+
+      input:focus + .slider {
+        box-shadow: 0 0 1px #2196f3;
+      }
+
+      input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+      }
+
+      /* Rounded sliders */
+      .slider.round {
+        border-radius: 34px;
+      }
+
+      .slider.round:before {
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
     <div class="inner-content">
-        <div class="fragen">
-            <h2>Prüfliste für die Stände</h2>
-            <table id="questionsTable">
-                <tr>
-                    <td><button id="delElementNrXBtn"></button></td>
-                    <td><p>Error</p></td>
-                </tr>
-                <!-- repeating rows -->
-            </table>
-            <div class="add-list-option">
-                <input type="text" placeholder="Neue Frage" id="newQuestion">
-                <button id="submitNewQuestionBtn"></button>
-            </div>
+      <div class="fragen" style="background-color: rgba(78, 224, 161, 0.3);">
+        <h2>Registrierungen aktivieren/deaktivieren</h2>
+        <label class="switch">
+          <input id="pageStatusToggle" type="checkbox" />
+          <span class="slider"></span>
+        </label>
+        <p>Registrierungen sind zurzeit <span id="pageStatusText">...</span></p>
+      </div>
+      <div class="fragen">
+        <h2>Prüfliste für die Stände</h2>
+        <table id="questionsTable">
+          <tr>
+            <td><button id="delElementNrXBtn"></button></td>
+            <td><p>Error</p></td>
+          </tr>
+          <!-- repeating rows -->
+        </table>
+        <div class="add-list-option">
+          <input type="text" placeholder="Neue Frage" id="newQuestion" />
+          <button id="submitNewQuestionBtn"></button>
         </div>
-        <div class="email-texte">
-            <h2>Texte für die E-Mail</h2>
-            <div id="email1">
-                <h3>[An Lehrkraft] Stand Registratur erfolgreich übermittelt</h3>
-                <textarea id="emailText1" placeholder="Text für email XYZ"></textarea>
-                <button id="submitEmailText1Btn">Übernehmen</button>
-            </div>
-            <hr>
-            <div id="email2">
-                <h3>[An Lehrkraft] Stand wurde unter vorbehalt genehmigt</h3>
-                <textarea id="emailText2" placeholder="Text für email XYZ"></textarea>
-                <button id="submitEmailText2Btn">Übernehmen</button>
-                <p>Variablen: |kommentar|</p>
-            </div>
-            <hr>
-            <div id="email3">
-                <h3>[An Lehrkraft] Stand wurde abgelehnt</h3>
-                <textarea id="emailText3" placeholder="Text für email XYZ"></textarea>
-                <button id="submitEmailText3Btn">Übernehmen</button>
-                <p>Variablen: |kommentar|</p>
-            </div>
-            <hr>
-            <div id="email4">
-                <h3>[An Orga] Neuer Stand wurde übermittelt</h3>
-                <textarea id="emailText4" placeholder="Text für email XYZ"></textarea>
-                <button id="submitEmailText4Btn">Übernehmen</button>
-            </div>
+      </div>
+      <div class="email-texte">
+        <h2>Texte für die E-Mail</h2>
+        <div id="email1">
+          <h3>[An Lehrkraft] Stand Registratur erfolgreich übermittelt</h3>
+          <textarea id="emailText1" placeholder="Text für email XYZ"></textarea>
+          <button id="submitEmailText1Btn">Übernehmen</button>
         </div>
-        <div class="account-info">
-            <h2>Account Einstellungen</h2>
-            <div id="pwd-field">
-                <h3>Passwort</h3>
-                <input type="password" id="newPwd">
-                <button id="submitNewPwdBtn"></button>
-            </div>
+        <hr />
+        <div id="email2">
+          <h3>[An Lehrkraft] Stand wurde unter vorbehalt genehmigt</h3>
+          <textarea id="emailText2" placeholder="Text für email XYZ"></textarea>
+          <button id="submitEmailText2Btn">Übernehmen</button>
+          <p>Variablen: |kommentar|</p>
         </div>
+        <hr />
+        <div id="email3">
+          <h3>[An Lehrkraft] Stand wurde abgelehnt</h3>
+          <textarea id="emailText3" placeholder="Text für email XYZ"></textarea>
+          <button id="submitEmailText3Btn">Übernehmen</button>
+          <p>Variablen: |kommentar|</p>
+        </div>
+        <hr />
+        <div id="email5">
+          <h3>[An Lehrkraft] Stand wurde verschoben</h3>
+          <textarea id="emailText5" placeholder="Text für email XYZ"></textarea>
+          <button id="submitEmailText5Btn">Übernehmen</button>
+        </div>
+        <hr />
+        <div id="email4">
+          <h3>[An Orga] Neuer Stand wurde übermittelt</h3>
+          <textarea id="emailText4" placeholder="Text für email XYZ"></textarea>
+          <button id="submitEmailText4Btn">Übernehmen</button>
+        </div>
+      </div>
+      <div
+        id="email10"
+        class="email-texte"
+        style="background-color: rgba(220, 139, 252, 0.5)"
+      >
+        <h3>[An alle Lehrkäfte] Direktnachricht</h3>
+        <h4>Sendet sofort eine E-Mail an alle regestrierten Lehrkräfte</h4>
+        <textarea
+          id="emailText10"
+          placeholder="z.B. eine Erinnerungsnachricht"
+        ></textarea>
+        <button id="sendEmailText10Btn">Übernehmen (ohne Senden)</button>
+        <button id="submitEmailText10Btn">Übernehmen und Senden</button>
+      </div>
+      <div class="account-info">
+        <h2>Account Einstellungen</h2>
+        <div id="pwd-field">
+          <h3>Passwort</h3>
+          <input type="password" id="newPwd" />
+          <button id="submitNewPwdBtn"></button>
+        </div>
+      </div>
     </div>
-    
-</body>
+  </body>
 </html>
