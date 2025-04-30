@@ -56,6 +56,7 @@ def check_auth():
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 CORS(app)
+CORS(app, resources={r"/register": {"origins": "*"}})
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
 app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
@@ -101,17 +102,15 @@ def index():
             ),
             401,
         )
-
+    enabled = True
     if db_manager.get_status_action("enabled") == "0":
-        return jsonify(
-            error="Die Seite ist zurzeit nicht freigeschaltet. Bitte versuchen Sie es später erneut."
-        ), 503
+        enabled = False
     questions = db_manager.get_questions()
     logger.debug("Got questions: " + str(questions))
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
     return render_template(
-        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue)
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled
     )
 
 

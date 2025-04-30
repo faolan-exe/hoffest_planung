@@ -279,7 +279,7 @@
     <script>
       allowedToDraw = false;
       foreignMapData = {{ foreignMapData | tojson }}
-
+      enabled = "{{enabled}}"
     </script>
   </head>
 
@@ -932,7 +932,19 @@
             submittedData = {{already_submitted_data | tojson}};
 
             if (submittedData == null) {
+              if (enabled === "False") {
+              updateUI(
+                    "Nicht verfügbar",
+                    "Die Anmeldung ist zur Zeit nicht verfügbar.",
+                    "",
+                    "",
+                    "",
+                    ""
+                  );
+            } else {
               stageManager("start");
+
+            }
             } else if (submittedData[7] === true) {
               stageManager("confirmed");
             } else if (submittedData[7] === false) {
@@ -977,6 +989,8 @@
               });
             }
             drawForeignMap()
+
+            
     </script>
   </body>
 </html>
