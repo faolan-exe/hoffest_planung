@@ -2,6 +2,7 @@ import ast
 import random
 import time
 import traceback
+import uuid
 import logger
 import psycopg2
 import smtplib
@@ -111,7 +112,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             self.conn.commit()
-            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
+            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")  # TODO: change email adress
             self.add_question("Strom und geräte?")
             self.add_question("Lebensmittel?")
             query = "INSERT INTO email (id, email) VALUES (%s, %s)"
@@ -319,7 +320,7 @@ class DatabaseManager:
         Returns:
         bool: True if the stand was successfully added, False otherwise.
         """
-                
+        
         logger.debug("addNewStand is called")
         reedit = data.get("reedit", False)
         ### check for race conditions
@@ -328,10 +329,7 @@ class DatabaseManager:
         for map in existingMaps:
             if map[2] == "none":
                 continue
-            print("ERRROROROROR")
-            print(f"map[2]: {map[2]}")
             allMaps.append(ast.literal_eval(map[2]))
-        logger.warning(f"allMaps: {allMaps}")
         seen = set()
         overlap_found = False
 
@@ -347,9 +345,6 @@ class DatabaseManager:
         if overlap_found:
             logger.error("Overlap found in selected areas")
             return False  # TODO: Auto Update Map Of The User
-        
-        
-        
         
         query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -399,7 +394,92 @@ class DatabaseManager:
             logger.error(f"Error adding stand: {e}")
             self.conn.rollback()
             return False
+    
+    def addNewAdminStand(self, data):
+        """
+        Adds a new stand to the database.
 
+        Parameters:
+        data (dict): The data of the stand to be added.
+
+        Returns:
+        bool: True if the stand was successfully added, False otherwise.
+        """
+                ### check for race conditions
+        existingMaps = self.getAllSelectedAreas()
+        allMaps = [data["mapSelection"] if data["baseLocation"] == "h" else data["raumnummer"], ]
+        for map in existingMaps:
+            if map[2] == "none":
+                continue
+            allMaps.append(ast.literal_eval(map[2]))
+        seen = set()
+        overlap_found = False
+
+        for lst in allMaps:
+            for item in lst:
+                if item in seen:
+                    overlap_found = True
+                    break
+                seen.add(item)
+            if overlap_found:
+                break
+
+        if overlap_found:
+            logger.error("Overlap found in selected areas")
+            return False
+        
+        logger.debug("addNewAdminStand is called")
+        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;"""
+
+        values = (
+            "adminAuth" + str(uuid.uuid4()),
+            data["baseLocation"],
+            str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"],
+            data["lehrername"],
+            data["klasse"],
+            data["projektName"],
+            data["projektBeschreibung"],
+            data["email"],
+        )
+
+        try:
+            logger.debug(f"Executing SQL query: {query}")
+            logger.debug(f"with data: {values}")
+            self.cursor.execute(query, values)
+            self.conn.commit()
+            last_id = self.cursor.fetchone()[0]
+            logger.info(f"Stand added successfully")
+            delete_query = "DELETE FROM standQuestions WHERE stand_id = %s"
+            self.cursor.execute(delete_query, (last_id,))
+            self.conn.commit()
+            query = "INSERT INTO standQuestions (stand_id, question_id) VALUES (%s, %s)"
+            for key, value in data["questions"].items():
+                if value:
+                    logger.debug(f"Executing SQL query: {query}")
+                    logger.debug(f"with data: {last_id}, {key}")
+                    self.cursor.execute(query, (last_id, int(key)))
+            self.conn.commit()
+            
+            
+            query = "INSERT INTO genehmigungen (id, genehmigt, kommentar) VALUES (%s, %s, %s)"
+            logger.debug(f"Executing SQL query: {query}")
+            logger.debug(f"with data: {(last_id, True, 'Genehmigung vom System automatisch erteilt, da eine administrative Autorisierung vorliegt!')}")
+
+            self.cursor.execute(query, (last_id, True, 'Genehmigung vom System automatisch erteilt, da eine administrative Autorisierung vorliegt!'))
+            self.conn.commit()
+            logger.info(
+                f"Genehmigungs_entry created successfully for stand_id: {last_id}"
+            )
+ 
+            return True
+        except Exception as e:
+            logger.error(f"Error adding stand: {e}")
+            self.conn.rollback()
+            return False    
+    
+    
     def get_email_from_stand_id(self, stand_id):
         """
         Retrieves the email address associated with a given stand ID.

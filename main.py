@@ -116,11 +116,22 @@ def index():
 
 @app.route("/commitStand", methods=["POST"])
 def commitStand():
+    if db_manager.get_status_action("enabled") == "0":
+        return jsonify({"error": "forbidden"}), 403
     data = request.json
     print(data)
     if db_manager.addNewStand(data, auth_id=session.get("id")):
         return jsonify({"ok": "ok"}), 200
-    return jsonify({"error": "error"}), 401
+    return jsonify({"error": "error"}), 500
+
+
+@admin.route("/commitStand", methods=["POST"])
+def commitStand():
+    data = request.json
+    print(data)
+    if db_manager.addNewAdminStand(data):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "error"}), 500
 
 
 @app.route("/test")
@@ -140,6 +151,15 @@ def register():
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
 
+
+@admin.route("/register")
+def register_admin_stand():
+    questions = db_manager.get_questions()
+    logger.debug("Got questions: " + str(questions))
+
+    return render_template(
+        "indexForAdmin.html", questions=questions, foreignMapData=db_manager.getAllSelectedAreas()
+    )
 
 @admin.route("/", methods=["POST", "GET"])
 def admin_route(destination="nav1"):

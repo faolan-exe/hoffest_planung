@@ -59,7 +59,12 @@ html {
     height: 50px;
     margin-right: 70px;
     border-radius: 10px;
+    cursor: pointer;
   }
+  .add-btn:hover {
+    color: #0abbf1;
+  }
+
 }
 
 .item-sidebar {

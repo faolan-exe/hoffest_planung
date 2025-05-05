@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoffest Planer | © Tobias Auer</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      .list-item-end {
+        margin-left: 15px;
+        overflow: visible;
+        text-align: left;
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        padding-top: 2px;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+      input[type="checkbox"] + label {
+        vertical-align: middle;
+      }
+      input[type="checkbox"] {
+        accent-color: green;
+      }
+
+      #page {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100vh;
+      }
+
+      #information {
+        grid-area: 1 / 5 / 6 / 7;
+        background-color: rgb(0, 255, 0, 0.3);
+        overflow: scroll;
+      }
+
+      #schulhof-selector {
+        grid-area: 1 / 1 / 6 / 5;
+        background-color: white;
+        width: 100%;
+
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #schulhof-selector {
+        position: relative;
+      }
+
+      #schulhof-selector h1 {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
+      }
+
+      #image-container {
+        position: relative;
+
+        /* overflow: hidden; */
+      }
+
+      .screenRes1 {
+        width: 100%;
+        height: fit-content;
+      }
+
+      .screenRes2 {
+        width: fit-content;
+        height: 100%;
+      }
+
+      #image-container svg {
+        max-width: 100%;
+        height: 100%;
+      }
+
+      .noDisplay {
+        display: none !important;
+      }
+    </style>
+    <style>
+      #actionTitle {
+        text-align: center;
+        margin: 12px 0;
+      }
+      #actionSubtext {
+        margin: 12px 0;
+      }
+      #additionalText {
+        margin: 12px 0;
+        text-align: justify;
+      }
+      #information {
+        padding: 25px;
+        padding-bottom: 0;
+      }
+      .arrow {
+        border: solid rgb(0, 0, 0);
+        border-width: 0 3px 3px 0;
+        display: inline-block;
+        padding: 4px;
+      }
+      .left {
+        transform: rotate(135deg);
+        -webkit-transform: rotate(135deg);
+      }
+      #lastStage {
+        padding: 3px;
+      }
+    </style>
+    <style>
+      .small {
+        font: 13px sans-serif;
+      }
+
+      .heavy {
+        font: bold 30px sans-serif;
+      }
+    </style>
+    <style>
+      .start-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        will-change: box-shadow, transform;
+        background: radial-gradient(
+          100% 100% at 100% 0%,
+          #89e5ff 0%,
+          #5468ff 100%
+        );
+        box-shadow: 0px 2px 4px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%),
+          inset 0px -3px 0px rgb(58 65 111 / 50%);
+        padding: 0 28px;
+        border-radius: 6px;
+        color: #fff;
+        height: 44px;
+        font-size: 18px;
+        text-shadow: 0 1px 0 rgb(0 0 0 / 40%);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        align-self: center;
+      }
+      .start-btn:hover {
+        box-shadow: 0px 4px 8px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%), inset 0px -3px 0px #3c4fe0;
+        transform: translateY(-2px);
+      }
+      .start-btn:active {
+        box-shadow: inset 0px 3px 7px #3c4fe0;
+        transform: translateY(2px);
+      }
+
+      .normal-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: #fff;
+        font-size: 14px;
+        height: 38px;
+        padding: 8px 24px;
+        border-radius: 50px;
+        background-image: linear-gradient(180deg, #7c8aff, #3c4fe0);
+        box-shadow: 0 4px 11px 0 rgb(37 44 97 / 15%),
+          0 1px 3px 0 rgb(93 100 148 / 20%);
+        transition: all 0.1s linear;
+      }
+      .normal-btn:hover {
+        box-shadow: 0 8px 22px 0 rgb(37 44 97 / 15%),
+          0 4px 6px 0 rgb(93 100 148 / 20%);
+        transform: scale(1.09);
+      }
+      .normal-btn:disabled {
+        background-image: linear-gradient(180deg, #848abd, #535779);
+        box-shadow: none;
+      }
+      .normal-btn:disabled:hover {
+        box-shadow: none;
+        transform: scale(1);
+        cursor: default;
+      }
+    </style>
+    <style>
+      .form-container {
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+        max-width: 100%;
+      }
+      .form-container label {
+        font-size: 1rem;
+        color: black;
+        margin-bottom: 4px;
+        display: block;
+      }
+      .form-container input[type="text"],
+      .form-container textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 4px 0 12px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+      .form-container textarea {
+        resize: vertical;
+      }
+      input[type="text"]:focus,
+      textarea:focus {
+        border-color: #66a3ff;
+        outline: none;
+      }
+      .form-container button {
+        background-color: #66a3ff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        font-size: 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s ease;
+      }
+      .form-container button:hover {
+        background-color: #5588cc;
+      }
+
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        border-radius: 50%;
+        background-color: #3498db;
+        color: white;
+        padding: 0.75px 3px;
+        font-size: 70%;
+        text-align: center;
+        font-weight: bold;
+        line-height: 1;
+        vertical-align: middle;
+      }
+
+      .credits {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        z-index: 9999;
+        padding: 1rem;
+        text-align: center;
+        pointer-events: none;
+        font-size: 0.8rem;
+      }
+      .credits a {
+        pointer-events: all;
+        cursor: pointer;
+        color: black;
+      }
+    </style>
+
+    <script>
+      allowedToDraw = false;
+      foreignMapData = {{ foreignMapData | tojson }}
+      enabled = "{{enabled}}"
+    </script>
+  </head>
+
+  <body>
+    <div id="page">
+      <div id="information">
+        <button
+          id="lastStage"
+          onclick="stageManager(document.getElementById('lastAction').value)"
+        >
+          <i class="arrow left" id="disabledArrow"></i> Zurück
+        </button>
+        <h1 id="actionTitle"></h1>
+        <h2 id="actionSubtext"></h2>
+        <div id="additionalText"></div>
+        <div class="form-container">
+          <div id="inputBoxes"></div>
+          <div id="questions"></div>
+        </div>
+
+        <input type="hidden" name="" id="nextAction" />
+        <input type="hidden" name="" id="lastAction" />
+
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            margin: 45px;
+            margin-bottom: 0;
+            padding: 20px;
+          "
+        >
+          <button
+            id="nextStage"
+            onclick="stageManager(document.getElementById('nextAction').value)"
+          ></button>
+        </div>
+        <div class="credits">
+          <hr />
+
+          Made by
+          <a target="_blank" href="https://www.t-auer.com">Tobias Auer</a>
+        </div>
+      </div>
+
+      <div id="schulhof-selector" onmousedown="">
+        <div id="image-container" class="screenRes1">
+          <svg
+            id="svgCanvas"
+            viewBox="0 0 1478 1037"
+            preserveAspectRatio="xMinYMin meet"
+            draggable="false"
+          >
+            <image
+              href="{{ url_for('static', filename='plan.png') }}"
+              draggable="false"
+              style="pointer-events: none"
+            ></image>
+            <text x="710" y="450" class="heavy">Schulhof</text>
+            <text x="710" y="60" class="heavy">F-Gebäude</text>
+            <text x="710" y="930" class="heavy">C-Gebäude</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function getScreenRatio() {
+        let imageContainer = document.getElementById("image-container");
+        if (
+          imageContainer.clientHeight < window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
+        }
+        if (
+          imageContainer.clientHeight == window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
+        }
+        if (
+          imageContainer.clientHeight >= window.innerHeight &&
+          imageContainer.classList.contains("screenRes1")
+        ) {
+          imageContainer.classList.remove("screenRes1");
+          imageContainer.classList.add("screenRes2");
+          console.log("changed to screenRes2");
+        }
+        console.log(imageContainer.clientHeight + ":" + window.innerHeight);
+      }
+      getScreenRatio();
+      window.addEventListener("resize", () => {
+        getScreenRatio();
+      });
+    </script>
+
+    <script defer>
+      var svg = document.getElementById("svgCanvas");
+      let isMouseDown = false;
+      var selectedCells = [];
+      usedCells = [];
+      var blacklistCells = [
+        "cell-0-0",
+        "cell-1-0",
+        "cell-2-0",
+        "cell-3-0",
+        "cell-4-0",
+        "cell-5-0",
+        "cell-6-0",
+        "cell-7-0",
+        "cell-8-0",
+        "cell-9-0",
+        "cell-10-0",
+        "cell-11-0",
+        "cell-12-0",
+        "cell-13-0",
+        "cell-13-1",
+        "cell-13-1",
+        "cell-13-2",
+        "cell-13-3",
+        "cell-13-4",
+        "cell-13-5",
+        "cell-12-5",
+        "cell-11-5",
+        "cell-11-6",
+        "cell-11-7",
+        "cell-11-8",
+        "cell-11-9",
+        "cell-11-10",
+        "cell-11-11",
+        "cell-11-12",
+        "cell-12-12",
+        "cell-13-12",
+        "cell-13-11",
+        "cell-12-11",
+        "cell-12-10",
+        "cell-13-10",
+        "cell-13-9",
+        "cell-12-9",
+        "cell-12-8",
+        "cell-13-8",
+        "cell-13-7",
+        "cell-12-7",
+        "cell-13-6",
+        "cell-12-6",
+        "cell-11-13",
+        "cell-11-14",
+        "cell-11-15",
+        "cell-11-16",
+        "cell-12-16",
+        "cell-12-15",
+        "cell-12-13",
+        "cell-12-13",
+        "cell-13-13",
+        "cell-13-14",
+        "cell-11-14",
+        "cell-13-15",
+        "cell-12-14",
+        "cell-13-16",
+        "cell-10-13",
+        "cell-10-14",
+        "cell-10-15",
+        "cell-10-16",
+        "cell-9-16",
+        "cell-9-15",
+        "cell-8-16",
+        "cell-8-15",
+        "cell-8-14",
+        "cell-8-13",
+        "cell-9-13",
+        "cell-9-14",
+        "cell-7-12",
+        "cell-6-12",
+        "cell-5-12",
+        "cell-4-12",
+        "cell-3-12",
+        "cell-2-12",
+        "cell-2-13",
+        "cell-2-14",
+        "cell-2-15",
+        "cell-2-16",
+        "cell-3-15",
+        "cell-3-14",
+        "cell-3-13",
+        "cell-4-13",
+        "cell-4-14",
+        "cell-4-15",
+        "cell-4-15",
+        "cell-3-16",
+        "cell-4-16",
+        "cell-5-16",
+        "cell-6-16",
+        "cell-7-16",
+        "cell-7-15",
+        "cell-6-15",
+        "cell-5-15",
+        "cell-5-14",
+        "cell-6-14",
+        "cell-6-13",
+        "cell-5-13",
+        "cell-7-13",
+        "cell-7-14",
+        "cell-1-16",
+        "cell-0-16",
+        "cell-0-15",
+        "cell-1-15",
+        "cell-0-14",
+        "cell-1-14",
+        "cell-1-13",
+        "cell-0-13",
+        "cell-0-12",
+        "cell-0-11",
+        "cell-0-10",
+        "cell-0-8",
+        "cell-0-9",
+        "cell-0-7",
+        "cell-0-6",
+        "cell-0-5",
+        "cell-0-4",
+        "cell-0-3",
+      ];
+      function drawGrid(rows = 14, cols = 17, gap = 5, borderRadius = 10) {
+        const viewBox = svg.viewBox.baseVal;
+        const totalWidth = viewBox.width;
+        const totalHeight = viewBox.height;
+
+        const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
+        const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const x = gap + col * (cellWidth + gap);
+            const y = gap + row * (cellHeight + gap);
+
+            const rect = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "rect"
+            );
+            rect.setAttribute("x", x);
+            rect.setAttribute("y", y);
+            rect.setAttribute("width", cellWidth);
+            rect.setAttribute("height", cellHeight);
+            rect.setAttribute("rx", borderRadius);
+            rect.setAttribute("ry", borderRadius);
+            rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+            rect.setAttribute("id", `cell-${row}-${col}`);
+            rect.addEventListener("mousedown", function () {
+              if (!allowedToDraw) {
+                return;
+              }
+              isMouseDown = true;
+              console.log(`Mouse down on cell at row ${row}, col ${col}`);
+              if (selectedCells.includes(`cell-${row}-${col}`)) {
+                selectedCells = selectedCells.filter(
+                  (cell) => cell !== `cell-${row}-${col}`
+                );
+                rect.classList.remove("selected-rect");
+                rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+              } else {
+                if (usedCells.includes(`cell-${row}-${col}`)) {
+                  alert("Dieser Bereich ist bereits belegt!");
+                  return;
+                }
+                selectedCells.push(`cell-${row}-${col}`);
+                rect.classList.add("selected-rect");
+                rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+              }
+            });
+
+            // Wenn die Maustaste losgelassen wird
+            rect.addEventListener("mouseup", function () {
+              isMouseDown = false;
+              console.log(`Mouse up on cell at row ${row}, col ${col}`);
+            });
+
+            // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist
+            rect.addEventListener("mouseover", function () {
+              if (
+                isMouseDown &&
+                !selectedCells.includes(`cell-${row}-${col}`)
+              ) {
+                if (selectedCells.includes(`cell-${row}-${col}`)) {
+                  selectedCells = selectedCells.filter(
+                    (cell) => cell !== `cell-${row}-${col}`
+                  );
+                  rect.classList.remove("selected-rect");
+                  rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+                } else {
+                  if (usedCells.includes(`cell-${row}-${col}`)) {
+                    return;
+                  }
+                  selectedCells.push(`cell-${row}-${col}`);
+                  rect.classList.add("selected-rect");
+                  rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+                }
+              }
+            });
+            if (!blacklistCells.includes(`cell-${row}-${col}`)) {
+              svg.appendChild(rect);
+            }
+          }
+        }
+      }
+      drawGrid();
+
+      function getMapSelectionCoords() {
+        return selectedCells;
+      }
+    </script>
+
+    <script id="questions-data" type="application/json">
+      {{ questions | tojson }}
+    </script>
+
+    <script defer>
+      actionTitle = document.getElementById("actionTitle");
+      actionSubText = document.getElementById("actionSubtext");
+      additionaltext = document.getElementById("additionalText");
+      inputBoxes = document.getElementById("inputBoxes");
+      questionsField = document.getElementById("questions");
+      nextAction = document.getElementById("nextAction");
+      lastAction = document.getElementById("lastAction");
+      nextStageBtn = document.getElementById("nextStage");
+      lastStageBtn = document.getElementById("lastStage");
+      formContent = document.querySelector(".form-container");
+      arrow = document.querySelector(".arrow");
+      rectangleSelectionActive = false;
+      questionHTML1 = `
+      <div class="">
+          <input type="hidden" id="lehrername" value="Orga-Team" />
+
+          <input type="hidden" id="klasse" value="-" />
+
+          <label for="projektName">Name des Projekts/Stands:</label>
+          <input type="text" id="projektName" placeholder="Projekt XY" />
+
+          <input type="hidden" id="email" placeholder="example@email.com" value="" />
+
+          <label for="projektBeschreibung">Beschreibung und wichtige Hinweise zum Projekt:</label>
+          <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
+      </div>
+            `;
+      questionTemplate = `
+            <div style="display: inline-flex;">
+              <input type="checkbox" id="|questionID|">
+              <label for="|questionID|" style="display:inline">|questionText|</label>
+              <br>
+              </div>
+              `;
+
+      const questions = JSON.parse(
+        document.getElementById("questions-data").textContent
+      );
+
+      function stageManager(stage) {
+        // Grundlegende UI-Elemente zurücksetzen
+        [inputBoxes, questionsField, formContent].forEach(
+          (el) => (el.style.display = "none")
+        );
+        [additionaltext, actionTitle, actionSubText].forEach(
+          (el) => (el.innerHTML = "")
+        );
+        [additionaltext, lastStageBtn, nextStageBtn].forEach(
+          (el) => (el.style.display = "block")
+        );
+
+        allowedToDraw = false;
+        nextStageBtn.disabled = false;
+        lastStageBtn.disabled = true;
+        nextStageBtn.classList.remove("start-btn");
+        nextStageBtn.classList.add("normal-btn");
+        arrow.style.borderColor = "black";
+        console.log(stage);
+
+        const stages = {
+          start: () => {
+            allowedToDraw = true;
+            [inputBoxes, questionsField, formContent].forEach(
+              (el) => (el.style.display = "block")
+            );
+            initQuestionBlock();
+            updateUI(
+              "Administrative Standregistrierung",
+              "Bitte füllen Sie die folgenden Felder aus.",
+              "Der Stand wird sofort und ohne weitere Bestätigung eingetragen. Bitte achten sie darauf, dass alle Angaben korrekt sind.",
+              "Eintragen",
+              "processAdminStand",
+              ""
+            );
+          },
+          processAdminStand: () => {
+            submitData();
+          },
+          end: () => {
+            allowedToDraw = false;
+            updateUI(
+              "Erfolgreiche Registrierung",
+              "Der Stand wurde erfolgreich registriert.",
+              "Es kann ein weiterer Stand hinzugefügt werden. Klicken sie dafür auf den untenstehenden Button.<br><br>Wenn sie zurück zur Administrationsoberfläche möchten, klicken sie <a href='/admin'>hier</a>.",
+              "Weiteren Stand hinzufügen",
+              "start",
+              ""
+            );
+          },
+          error: () => {
+            updateUI(
+              "Fehler",
+              "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.<br><br>Wenn das Problem weiterhin besteht, wenden Sie sich bitte an den Site-Administrator: hoffestService@t-auer.com",
+              "",
+              "Seite neuladen",
+              "reboot",
+              ""
+            );
+          },
+          reboot: () => {
+            location.reload();
+          },
+        };
+        if (stages[stage]) stages[stage]();
+      }
+
+      function updateUI(
+        title,
+        subtitle,
+        addText,
+        nextText,
+        nextActionValue,
+        lastActionValue
+      ) {
+        actionTitle.innerHTML = title;
+        actionSubText.innerHTML = subtitle;
+        additionaltext.innerHTML = addText;
+        nextStageBtn.innerText = nextText;
+        nextAction.value = nextActionValue;
+        lastAction.value = lastActionValue;
+      }
+
+      initedQuestionBlock = false;
+      function initQuestionBlock() {
+        console.log("initQuestionBlock");
+        if (initedQuestionBlock) {
+          return;
+        }
+        initedQuestionBlock = true;
+        inputBoxes.innerHTML = questionHTML1;
+        console.log("questions", questions);
+        for (const key in questions) {
+          questionsField.innerHTML += questionTemplate
+            .replaceAll("|questionID|", key)
+            .replaceAll("|questionText|", questions[key]);
+        }
+      }
+
+      function gatherData() {
+        data = {};
+        data.lehrername = document.getElementById("lehrername").value;
+        data.klasse = document.getElementById("klasse").value;
+        data.baseLocation = "h";
+        data.raumnummer = "";
+        data.projektName = document.getElementById("projektName").value;
+        data.projektBeschreibung = document.getElementById(
+          "projektBeschreibung"
+        ).value;
+        data.email = document.getElementById("email").value;
+        data.mapSelection = getMapSelectionCoords();
+        data.questions = {};
+        for (const key in questions) {
+          const questionID = key;
+          const questionElement = document.getElementById(`${questionID}`);
+          data.questions[questionID] = questionElement.checked;
+        }
+       
+        return data;
+      }
+
+      function submitData() {
+        fetch("/admin/commitStand", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(gatherData()),
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            console.log("Success:", result);
+            if (result.ok == "ok") {
+              stageManager("end");
+            } else {
+              stageManager("error");
+            }
+          })
+          .catch((error) => {console.error("Error:", error);stageManager("error");});
+      }
+
+      stageManager("start");
+
+      function drawForeignMap() {
+        foreignMapData.forEach((element) => {
+          console.log("element", element);
+          const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
+          console.log("mapSelection", mapSelection);
+          for (const cell of mapSelection) {
+            console.log("cell", cell);
+            const rect = document.getElementById(cell);
+            rect.classList.add("selected-rect");
+            rect.setAttribute("fill", "rgba(200, 30, 0, 0.3)");
+            usedCells.push(cell);
+          }
+        });
+      }
+      drawForeignMap();
+    </script>
+  </body>
+</html>
