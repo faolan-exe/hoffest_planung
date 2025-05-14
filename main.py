@@ -210,6 +210,11 @@ def admin_route(destination="nav1"):
 def loader(page):
     return app.send_static_file(f"loader/{page}")
 
+@admin.route("/api/foreignMapData")
+def returnForeignMapData():
+    data = db_manager.getAllSelectedAreas()
+    return jsonify(data), 200
+
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
     if request.method == "POST":
