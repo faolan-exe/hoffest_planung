@@ -3,6 +3,8 @@ import random
 import time
 import traceback
 import uuid
+
+from flask import json
 import logger
 import psycopg2
 import smtplib
@@ -1055,6 +1057,60 @@ class DatabaseManager:
             self.conn.rollback()
             return None
 
+    def getCurrentBlacklistCells(self):
+        """
+        Retrieves the current blacklist cells from the database.
+
+        Returns:
+        list: A list of tuples containing the blacklist cells.
+        """
+        logger.debug(f"getCurrentBlacklistCells is called")
+        query = "SELECT cell FROM blacklistedCells"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info(f"Data retrieved successfully")
+            print(result)
+            return [result[0] for result in result]
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
+
+    def update_blacklist_cells(self, cells):
+        """
+        Updates the blacklist cells in the database.
+
+        Parameters:
+        cells (list): A list of blacklist cells to be updated.
+
+        Returns:
+        bool: True if the blacklist cells were successfully updated, False otherwise.
+        """
+        logger.debug(f"update_blacklist_cells is called")
+        query = "DELETE FROM blacklistedCells"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {type(cells)}")
+        cells = json.loads(cells)
+        print(cells)
+        try:
+            self.cursor.execute(query)
+            self.conn.commit()
+            logger.info(f"Blacklist cells deleted successfully")
+            for cell in cells:
+                query = "INSERT INTO blacklistedCells (cell) VALUES (%s)"
+                logger.debug(f"Executing SQL query: {query}")
+                logger.debug(f"with data: {(cell,)}")
+                self.cursor.execute(query, (cell,))
+                self.conn.commit()
+            logger.info(f"Blacklist cells updated successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating blacklist cells: {e}")
+            self.conn.rollback()
+            return False
 
 # db_manager = DatabaseManager()
 # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")

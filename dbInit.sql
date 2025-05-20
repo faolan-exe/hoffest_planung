@@ -48,6 +48,12 @@ CREATE TABLE public.stand(
   CONSTRAINT stand_pkey PRIMARY KEY(id),
   CONSTRAINT stand_auth_id_key UNIQUE(auth_id)
 );
+CREATE TABLE public.blacklistedCells(
+  id serial NOT NULL,
+  cell text NOT NULL,
+  CONSTRAINT blacklistedCells_pkey PRIMARY KEY(id),
+  CONSTRAINT blacklistedCells_cell_key UNIQUE(cell)
+);
 
 CREATE TABLE public.standQuestions(
 stand_id integer NOT NULL, question_id integer NOT NULL,

@@ -215,6 +215,11 @@ def returnForeignMapData():
     data = db_manager.getAllSelectedAreas()
     return jsonify(data), 200
 
+@admin.route("/api/currentBlacklistCells")
+def returnCurrentBlacklistCells():
+    data = db_manager.getCurrentBlacklistCells()
+    return jsonify(data), 200
+
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
     if request.method == "POST":
@@ -279,6 +284,10 @@ def admin_api():
         case "pageStatus":
             if not db_manager.update_status_action("enabled", value):
                 return jsonify({"error": "Failed to update page status"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "blacklistCellsUpdate":
+            if not db_manager.update_blacklist_cells(value):
+                return jsonify({"error": "Failed to update blacklist cells"}), 400
             return jsonify({"ok": "ok"}), 200
         case _:
             return jsonify({"error": "Invalid action"}), 400

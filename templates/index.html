@@ -393,7 +393,9 @@
 
         const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
         const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
-
+    window.addEventListener("mouseup", function () {
+          isMouseDown = false;
+        });
         for (let row = 0; row < rows; row++) {
           for (let col = 0; col < cols; col++) {
             const x = gap + col * (cellWidth + gap);
@@ -438,17 +440,11 @@
               }
             });
 
-            // Wenn die Maustaste losgelassen wird
-            rect.addEventListener("mouseup", function () {
-              isMouseDown = false;
-              console.log(`Mouse up on cell at row ${row}, col ${col}`);
-            });
-
             // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist
             rect.addEventListener("mouseover", function () {
               if (
                 isMouseDown &&
-                selectedCells.length < 10 &&
+                selectedCells.length < 2 &&
                 !selectedCells.includes(`cell-${row}-${col}`)
               ) {
                 if (selectedCells.includes(`cell-${row}-${col}`)) {
