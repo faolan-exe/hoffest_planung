@@ -2,6 +2,11 @@ statusText = "<h3>Übersicht aller Stände</h3>";
 
 bigDiv = document.getElementById("inner-grid");
 function init() {
+
+  window.addEventListener("mouseup", function () {});
+  window.addEventListener("mousedown", function () {});
+  window.addEventListener("mousemove", function () {});
+
   bigDiv.innerHTML = '<div class="spacer" id="heading">ERROR</div>';
   document.getElementById("status-text").innerHTML = statusText;
   fetch("/admin/loader/overview.html")
@@ -12,38 +17,46 @@ function init() {
     })
     .catch((err) => console.error(err));
 }
-allowedToDraw = false;
-var blacklistCells = [];
 
+var allowedToDraw = false;
+var blacklistCells = [];
 var rows;
 var cols;
 var gap;
 var borderRadius;
+var svg;
+var mode = "";
+var isMouseDown = false;
+
+var dragData = {
+  active: false,
+  offsetX: [],
+  offsetY: [],
+  className: "",
+  rects: [],
+  svg: null,
+};
 
 function setup() {
+  // listeners
   document
     .getElementById("blackListBtnToggle")
     .addEventListener("click", configureBlacklistCells);
 
-  var svg = document.getElementById("svgCanvas");
-  let isMouseDown = false;
-  usedCells = [];
+  window.addEventListener("mouseup", function () {
+    isMouseDown = false;
+  });
 
-  var mode = "";
+  
+  var svg = document.getElementById("svgCanvas");
+  var blackListBtnToggle = document.getElementById("blackListBtnToggle")
+
+  // get blacklisted cells from server
   fetch("/admin/api/currentBlacklistCells")
     .then((response) => response.json())
     .then((data) => {
-      console.log("blacklistCells:: ", data);
       blacklistCells = data;
       drawGrid();
-      fetch("/admin/api/foreignMapData")
-        .then((response) => response.json())
-        .then((data) => {
-          console.log("foreignMapData:: ", data);
-          foreignMapData = data;
-
-          drawForeignMap();
-        });
     });
 
   function drawGrid(rowsP = 33, colsP = 40, gapP = 5, borderRadiusP = 10) {
@@ -51,33 +64,31 @@ function setup() {
     cols = colsP;
     gap = gapP;
     borderRadius = borderRadiusP;
-    const oldRects = svg.querySelectorAll("rect");
 
-    oldRects.forEach((rect) => rect.remove());
-
-    window.addEventListener("mouseup", function () {
-      isMouseDown = false;
-    });
-
+    // create the grid
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         drawRect(col, row);
       }
     }
+
+    // draw the existing stands
+    fetch("/admin/api/foreignMapData")
+      .then((response) => response.json())
+      .then((foreignMapData) => {
+        drawForeignMap(foreignMapData);
+      });
   }
-  function drawForeignMap() {
-    foreignMapData.forEach((element) => {
+
+  function drawForeignMap(foreignMapDataP) {
+    foreignMapDataP.forEach((element) => {
       try {
-        console.log("element", element[2].replaceAll("'", '"'));
         const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
-        console.log("mapSelection", mapSelection);
         for (const cell of mapSelection) {
-          console.log("cell", cell);
           const rect = document.getElementById(cell);
           rect.classList.add("selected-rect");
           rect.classList.add(`foreign-rect-${colorGenerator.getCounter()}`);
           rect.setAttribute("fill", colorGenerator.getColor());
-          usedCells.push(cell);
         }
         colorGenerator.nextColor();
       } catch (error) {
@@ -87,11 +98,112 @@ function setup() {
     makeRectsDraggable();
   }
 
+  function makeRectsDraggable() {
+    document
+      .querySelectorAll('rect[class*="foreign-rect-"]')
+      .forEach((rect) => {
+        rect.addEventListener("mousedown", (e) => {
+          const classList = Array.from(rect.classList).find((cls) =>
+            cls.startsWith("foreign-rect-")
+          );
+          if (!classList) return;
+          const mousePos = getMousePosition(e, svg);
+          dragData.rects = [];
+          dragData.offsetX = [];
+          dragData.offsetY = [];
+
+          document.querySelectorAll(`rect.${classList}`).forEach((r) => {
+            const x = parseFloat(r.getAttribute("x") || "0");
+            const y = parseFloat(r.getAttribute("y") || "0");
+
+            dragData.rects.push(r);
+            dragData.offsetX.push(mousePos.x - x);
+            dragData.offsetY.push(mousePos.y - y);
+
+            r.style.cursor = "grabbing";
+            r.style.opacity = "0.8";
+            const viewBox = svg.viewBox.baseVal;
+            const totalWidth = viewBox.width;
+            const totalHeight = viewBox.height;
+
+            const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
+            const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
+
+            cellX = Math.round(
+              (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap)
+            );
+            cellY = Math.round(
+              (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap)
+            );
+            existingCellId = `cell-${cellY}-${cellX}`;
+            if (
+              document.querySelectorAll(`[id="${existingCellId}"]`).length <= 1
+            ) {
+              drawRect(cellX, cellY);
+            }
+          });
+
+          dragData.className = classList;
+          dragData.active = true;
+        });
+      });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!dragData.active) return;
+      const mousePos = getMousePosition(e, svg);
+
+      dragData.rects.forEach((r, index) => {
+        const newX = mousePos.x - dragData.offsetX[index];
+        const newY = mousePos.y - dragData.offsetY[index];
+        r.setAttribute("x", newX);
+        r.setAttribute("y", newY);
+      });
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (!dragData.active) return;
+      dragData.rects.forEach((r) => {
+        const x = parseFloat(r.getAttribute("x"));
+        const y = parseFloat(r.getAttribute("y"));
+
+        const viewBox = svg.viewBox.baseVal;
+        const totalWidth = viewBox.width;
+        const totalHeight = viewBox.height;
+        const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
+        const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
+
+        const snappedX = snapToGrid(x, cellWidth, gap);
+        const snappedY = snapToGrid(y, cellHeight, gap);
+
+        r.setAttribute("x", snappedX);
+        r.setAttribute("y", snappedY);
+
+        const col = Math.round((snappedX - gap) / (cellWidth + gap));
+        const row = Math.round((snappedY - gap) / (cellHeight + gap));
+
+        const cellId = `cell-${row}-${col}`;
+        document.querySelectorAll(`[id=${cellId}]`).forEach((el) => {
+          if (el && !el.classList.contains("selected-rect")) el.remove();
+        });
+
+        r.id = cellId;
+        r.style.cursor = "pointer";
+        r.style.opacity = "1";
+      });
+
+      dragData.active = false;
+      dragData.rects = [];
+      dragData.offsetX = [];
+      dragData.offsetY = [];
+    });
+  }
+
+  //button action 1
   function configureBlacklistCells() {
     if (
-      document.getElementById("blackListBtnToggle").textContent === "Speichern"
+      blackListBtnToggle.textContent === "Speichern"
     ) {
-      document.getElementById("blackListBtnToggle").textContent =
+      blackListBtnToggle.textContent =
         "Zellen ausblenden";
 
       blacklistCells.forEach((cell) => {
@@ -108,7 +220,7 @@ function setup() {
     mode = "blacklist";
     selectedCells = [];
     allowedToDraw = true;
-    document.getElementById("blackListBtnToggle").textContent = "Speichern";
+    blackListBtnToggle.textContent = "Speichern";
     blacklistCells.forEach((cell) => {
       const rect = document.getElementById(cell);
       rect.setAttribute("fill", "rgba(255, 0, 0, 0.8)");
@@ -150,7 +262,7 @@ function setup() {
           255 *
             (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
         );
-      return `rgb(${f(0)}, ${f(8)}, ${f(4)}, 0.3)`;
+      return `rgba(${f(0)}, ${f(8)}, ${f(4)}, 0.3)`;
     }
 
     function getColor() {
@@ -173,128 +285,11 @@ function setup() {
     };
   })();
 
-  let dragData = {
-    active: false,
-    offsetX: [],
-    offsetY: [],
-    className: "",
-    rects: [],
-    svg: null,
-  };
-
   function getMousePosition(evt, svg) {
     const pt = svg.createSVGPoint();
     pt.x = evt.clientX;
     pt.y = evt.clientY;
     return pt.matrixTransform(svg.getScreenCTM().inverse());
-  }
-
-  function makeRectsDraggable() {
-    const svg = document.querySelector("svg");
-    dragData.svg = svg;
-
-    document
-      .querySelectorAll('rect[class*="foreign-rect-"]')
-      .forEach((rect) => {
-        rect.addEventListener("mousedown", (e) => {
-          const classList = Array.from(rect.classList).find((cls) =>
-            cls.startsWith("foreign-rect-")
-          );
-          if (!classList) return;
-          const mousePos = getMousePosition(e, svg);
-          dragData.rects = [];
-          dragData.offsetX = [];
-          dragData.offsetY = [];
-
-          document.querySelectorAll(`rect.${classList}`).forEach((r) => {
-            const x = parseFloat(r.getAttribute("x") || "0");
-            const y = parseFloat(r.getAttribute("y") || "0");
-
-            dragData.rects.push(r);
-            dragData.offsetX.push(mousePos.x - x);
-            dragData.offsetY.push(mousePos.y - y);
-
-            r.style.cursor = "grabbing";
-            r.style.opacity = "0.8";
-            const viewBox = svg.viewBox.baseVal;
-            const totalWidth = viewBox.width;
-            const totalHeight = viewBox.height;
-
-            const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
-            const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
-
-            cellX = Math.round(
-              (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap)
-            );
-            cellY = Math.round(
-              (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap)
-            );
-            existingCellId = `cell-${cellY}-${cellX}`;
-            const el = document.getElementById(existingCellId);
-            //if (!el.classList.contains("selected-rect")) {
-            if (document.querySelectorAll(`[id="${existingCellId}"]`).length <= 1) {
-              drawRect(cellX, cellY);
-            }
-            //}
-          });
-
-          dragData.className = classList;
-          dragData.active = true;
-        });
-      });
-
-    document.addEventListener("mousemove", (e) => {
-      if (!dragData.active) return;
-      const mousePos = getMousePosition(e, dragData.svg);
-
-      dragData.rects.forEach((r, index) => {
-        const newX = mousePos.x - dragData.offsetX[index];
-        const newY = mousePos.y - dragData.offsetY[index];
-        r.setAttribute("x", newX);
-        r.setAttribute("y", newY);
-      });
-    });
-
-    document.addEventListener("mouseup", () => {
-      if (!dragData.active) return;
-      dragData.rects.forEach((r) => {
-        const x = parseFloat(r.getAttribute("x"));
-        const y = parseFloat(r.getAttribute("y"));
-
-        const viewBox = svg.viewBox.baseVal;
-        const totalWidth = viewBox.width;
-        const totalHeight = viewBox.height;
-        const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
-        const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
-
-        const snappedX = snapToGrid(x, cellWidth, gap);
-        const snappedY = snapToGrid(y, cellHeight, gap);
-
-        r.setAttribute("x", snappedX);
-        r.setAttribute("y", snappedY);
-
-        const col = Math.round((snappedX - gap) / (cellWidth + gap));
-        const row = Math.round((snappedY - gap) / (cellHeight + gap));
-
-        const cellId = `cell-${row}-${col}`;
-        document.querySelectorAll(`[id=${cellId}]`).forEach((el) => {
-          if (el && !el.classList.contains("selected-rect")) el.remove();
-        });
-
-        // const el = document.getElementById(cellId);
-        //   if (el && !el.classList.contains("selected-rect")) el.remove();
-
-        r.id = cellId;
-
-        r.style.cursor = "pointer";
-        r.style.opacity = "1";
-      });
-
-      dragData.active = false;
-      dragData.rects = [];
-      dragData.offsetX = [];
-      dragData.offsetY = [];
-    });
   }
 
   function snapToGrid(value, size, gap) {
