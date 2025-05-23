@@ -63,7 +63,7 @@ function setup() {
       drawGrid();
     });
 
-  function drawGrid(rowsP = 33, colsP = 40, gapP = 5, borderRadiusP = 10) {
+  function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) { //33 40
     rows = rowsP;
     cols = colsP;
     gap = gapP;
