@@ -1111,7 +1111,42 @@ class DatabaseManager:
             logger.error(f"Error updating blacklist cells: {e}")
             self.conn.rollback()
             return False
+        
+        
+    def update_stand_positions(self, data):
+        """
+        Updates the positions of the stands in the database.
 
+        Parameters:
+        data (list): A list of dictionaries containing the stand IDs and their new positions.
+
+        Returns:
+        bool: True if the positions were successfully updated, False otherwise.
+        """
+        logger.debug(f"updateStandPositions is called")
+        print(data)
+        data = json.loads(data)
+        sorted_data = {}
+        for entry in data:
+            uid = entry["uid"]
+            if uid in sorted_data:
+                sorted_data[uid].append(entry["id"])
+            else:
+                sorted_data[uid] = [entry["id"]]
+        print(sorted_data)
+        query = "UPDATE stand SET ort_spezifikation = %s WHERE id = %s"
+        try:
+            for key, value in sorted_data.items():
+                logger.debug(f"Executing SQL query: {query}")
+                logger.debug(f"with data: {(key, value)}")
+                self.cursor.execute(query, (json.dumps(value), key))
+                self.conn.commit()
+            logger.info(f"Stand positions updated successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating stand positions: {e}")
+            self.conn.rollback()
+            return False
 # db_manager = DatabaseManager()
 # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
 # db_manager.add_question("Strom und geräte?")

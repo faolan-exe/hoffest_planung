@@ -289,6 +289,11 @@ def admin_api():
             if not db_manager.update_blacklist_cells(value):
                 return jsonify({"error": "Failed to update blacklist cells"}), 400
             return jsonify({"ok": "ok"}), 200
+        case "standPositionsUpdate":
+            if not db_manager.update_stand_positions(value):
+                return jsonify({"error": "Failed to update stand postions"}), 400
+            return jsonify({"ok": "ok"}), 200
+        
         case _:
             return jsonify({"error": "Invalid action"}), 400
     

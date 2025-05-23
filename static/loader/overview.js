@@ -2,7 +2,6 @@ statusText = "<h3>Übersicht aller Stände</h3>";
 
 bigDiv = document.getElementById("inner-grid");
 function init() {
-
   window.addEventListener("mouseup", function () {});
   window.addEventListener("mousedown", function () {});
   window.addEventListener("mousemove", function () {});
@@ -19,6 +18,7 @@ function init() {
 }
 
 var allowedToDraw = false;
+var allowedToDrag = false;
 var blacklistCells = [];
 var rows;
 var cols;
@@ -27,7 +27,7 @@ var borderRadius;
 var svg;
 var mode = "";
 var isMouseDown = false;
-
+var standCount = 0;
 var dragData = {
   active: false,
   offsetX: [],
@@ -43,13 +43,17 @@ function setup() {
     .getElementById("blackListBtnToggle")
     .addEventListener("click", configureBlacklistCells);
 
+  document
+    .getElementById("draggableBtnToggle")
+    .addEventListener("click", enableDraggableCells);
+
   window.addEventListener("mouseup", function () {
     isMouseDown = false;
   });
 
-  
   var svg = document.getElementById("svgCanvas");
-  var blackListBtnToggle = document.getElementById("blackListBtnToggle")
+  var blackListBtnToggle = document.getElementById("blackListBtnToggle");
+  var draggableBtnToggle = document.getElementById("draggableBtnToggle");
 
   // get blacklisted cells from server
   fetch("/admin/api/currentBlacklistCells")
@@ -76,18 +80,23 @@ function setup() {
     fetch("/admin/api/foreignMapData")
       .then((response) => response.json())
       .then((foreignMapData) => {
+        standCount = foreignMapData.length;
         drawForeignMap(foreignMapData);
       });
   }
 
   function drawForeignMap(foreignMapDataP) {
+    console.log("foreignMapDataP", foreignMapDataP);
     foreignMapDataP.forEach((element) => {
       try {
+        const uID = element[0];
+        console.log("uID", uID);
         const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
         for (const cell of mapSelection) {
           const rect = document.getElementById(cell);
           rect.classList.add("selected-rect");
           rect.classList.add(`foreign-rect-${colorGenerator.getCounter()}`);
+          rect.classList.add(`uid-${uID}`);
           rect.setAttribute("fill", colorGenerator.getColor());
         }
         colorGenerator.nextColor();
@@ -102,6 +111,8 @@ function setup() {
     document
       .querySelectorAll('rect[class*="foreign-rect-"]')
       .forEach((rect) => {
+        rect.style.opacity = "1";
+        rect.classList.remove("blacklist-rect");
         rect.addEventListener("mousedown", (e) => {
           const classList = Array.from(rect.classList).find((cls) =>
             cls.startsWith("foreign-rect-")
@@ -120,7 +131,6 @@ function setup() {
             dragData.offsetX.push(mousePos.x - x);
             dragData.offsetY.push(mousePos.y - y);
 
-            r.style.cursor = "grabbing";
             r.style.opacity = "0.8";
             const viewBox = svg.viewBox.baseVal;
             const totalWidth = viewBox.width;
@@ -149,7 +159,7 @@ function setup() {
       });
 
     document.addEventListener("mousemove", (e) => {
-      if (!dragData.active) return;
+      if (!dragData.active || !allowedToDrag) return;
       const mousePos = getMousePosition(e, svg);
 
       dragData.rects.forEach((r, index) => {
@@ -187,7 +197,6 @@ function setup() {
         });
 
         r.id = cellId;
-        r.style.cursor = "pointer";
         r.style.opacity = "1";
       });
 
@@ -200,11 +209,8 @@ function setup() {
 
   //button action 1
   function configureBlacklistCells() {
-    if (
-      blackListBtnToggle.textContent === "Speichern"
-    ) {
-      blackListBtnToggle.textContent =
-        "Zellen ausblenden";
+    if (blackListBtnToggle.textContent === "Speichern") {
+      blackListBtnToggle.textContent = "Zellen ausblenden";
 
       blacklistCells.forEach((cell) => {
         const rect = document.getElementById(cell);
@@ -228,6 +234,41 @@ function setup() {
     });
   }
 
+  //button action 2
+  function enableDraggableCells() {
+    if (draggableBtnToggle.textContent === "Speichern") {
+      console.log("Speichern");
+      console.log("draggableBtnToggle", draggableBtnToggle);
+      draggableBtnToggle.textContent = "Stände verschieben";
+      allowedToDrag = false;
+      const selectedRects = document.querySelectorAll('rect[class*="uid-"]');
+      collection = [];
+
+      selectedRects.forEach((rect) => {
+        rect.style.cursor = "default";
+      const classList = Array.from(rect.classList);
+      const uidClass = classList.find(cls => cls.startsWith('uid-'));
+      const id = uidClass?.split('-')[1];        
+      collection.push({
+          id: rect.id,
+          uid: id,
+        });
+      });
+      console.log(collection);
+
+      mode = "";
+      sendNewStandPositions(collection);
+      return;
+    }
+    draggableBtnToggle.textContent = "Speichern";
+    document
+      .querySelectorAll('rect[class*="foreign-rect-"]')
+      .forEach((rect) => {
+        rect.style.cursor = "grabbing";
+      });
+    allowedToDrag = true;
+  }
+
   function sendNewBlacklistCells() {
     fetch("/admin/api", {
       method: "POST",
@@ -248,9 +289,30 @@ function setup() {
       });
   }
 
+  function sendNewStandPositions(data) {
+    fetch("/admin/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "standPositionsUpdate",
+        value: JSON.stringify(data),
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Success:", data);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  }
+
   const colorGenerator = (function () {
     let counter = 0;
-    const totalColors = 20; //TODO: introduce global STAND_COUNT variable
+    let totalColors = 20; //TODO: introduce global STAND_COUNT variable
+    console.log("totalColors", totalColors);
 
     function hslToRgb(h, s, l) {
       s /= 100;
@@ -266,6 +328,7 @@ function setup() {
     }
 
     function getColor() {
+      totalColors = standCount;
       const hue = (counter % totalColors) * (360 / totalColors);
       return hslToRgb(hue, 90, 60);
     }
