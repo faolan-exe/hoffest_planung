@@ -106,11 +106,11 @@ def index():
     if db_manager.get_status_action("enabled") == "0":
         enabled = False
     questions = db_manager.get_questions()
-    logger.debug("Got questions: " + str(questions))
+    blacklistCells = db_manager.getCurrentBlacklistCells()
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
     return render_template(
-        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells
     )
 
 

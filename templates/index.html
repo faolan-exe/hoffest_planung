@@ -384,9 +384,9 @@
       let isMouseDown = false;
       var selectedCells = [];
       usedCells = [];
-      var blacklistCells = [
-      ];
-      function drawGrid(rows = 33, cols = 40, gap = 5, borderRadius = 10) {
+      var blacklistCells = {{ blacklistCells | tojson }};
+
+      function drawGrid(rows = 29, cols = 40, gap = 5, borderRadius = 10) {
         const viewBox = svg.viewBox.baseVal;
         const totalWidth = viewBox.width;
         const totalHeight = viewBox.height;
