@@ -520,11 +520,16 @@
             `;
             verifyTemplate = `
             <p>Name: |name|</p>
+            <br>
             <p>Klasse: |klasse|</p>
+            <br>
             <p>Projektname: |projektName|</p>
+            <br>
             <p>Projektbeschreibung: |projektBeschreibung|</p>
+            <br>
             <p>E-Mail: |email|</p>
-            <p>Angekreuzete Aufgaben: |checked|</p>
+            <br>
+            <p>Angekreuzte Angaben: |checked|</p>
             `;
             questionTemplate = `
             <div style="display: inline-flex;">
@@ -579,7 +584,7 @@
                   updateUI(
                     "Willkommen!",
                     "Bearbeiten sie im folgenden Ihren Eintrag.",
-                    "Für die Bearbeitung Ihres Eintrages gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Eintrag entsprechend an. <br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
+                    "Für die Bearbeitung Ihres Eintrages gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Eintrag entsprechend an. <br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
                     "Los geht's!",
                     "selectRectangle",
                     "notConfirmed"
@@ -669,7 +674,7 @@
                   updateUI(
                     "Registrierung abgeschlossen",
                     "Ihr Stand wurde erfolgreich registriert! ",
-                    "Sie erhalten in Kürze weitere Informationen. Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
+                    "Sie erhalten in Kürze weitere Informationen. Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
                     "",
                     "",
                     ""
@@ -684,7 +689,7 @@
                   updateUI(
                     "Registrierung abgeschlossen",
                     "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
-                    `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}`,
+                    `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}`,
                     "",
                     "",
                     ""
@@ -699,7 +704,7 @@
                   updateUI(
                     "Registrierung abgeschlossen",
                     "<span style=\"color: red\">Ihr Stand wurde abgelehnt</span>",
-                    `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden! <h3>Begründung:</h3>${submittedData[8]}.<br><br> Falls Sie noch Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
+                    `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden! <h3>Begründung:</h3>${submittedData[8]}.<br><br> Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
                     "Bearbeiten",
                     "start2",
                     ""
