@@ -45,8 +45,8 @@ def check_auth():
         "/",
         "/favicon.ico",
         "/moodleApi",
-    ] or request.path.startswith("/admin"):
-        print("ok")
+        "/register"
+    ] or request.path.startswith("/admin") or request.path.startswith("/static/"):
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
     if not checkAuth(session.get("id")):
         print("not ok")
