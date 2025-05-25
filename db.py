@@ -265,10 +265,15 @@ class DatabaseManager:
         bool: True if the ID was successfully added, False otherwise.
         """
         logger.debug(f"addNewTrustedId is called")
-        query = "INSERT INTO trusted_ids (trusted) VALUES (%s);"
+        query = """INSERT INTO trusted_ids (trusted)
+                    SELECT %s
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM trusted_ids WHERE trusted = %s
+                    );
+                """
         logger.debug(f"Executing SQL query: {query}")
         try:
-            self.cursor.execute(query, (id,))
+            self.cursor.execute(query, (id,id))
             self.conn.commit()
             logger.info(f"ID {id} added successfully")
         except Exception as e:
