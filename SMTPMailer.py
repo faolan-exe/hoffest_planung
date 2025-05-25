@@ -44,8 +44,12 @@ class SMTPMailer:
         msg = MIMEMultipart()
         msg["From"] = sender_email
         msg["To"] = recipient
-        msg["Subject"] = "Test HTML E-Mail"
-        msg.attach(MIMEText(text, "html"))
+        msg["Subject"] = "Hoffest | Wichtige Mitteilung"
+        with open("emailFooter.html", "r", encoding="utf-8") as f:
+            footer = f.read()
+
+        full_html = text + footer
+        msg.attach(MIMEText(full_html, "html"))
 
         try:
             server.sendmail(sender_email, recipient, msg.as_string())
