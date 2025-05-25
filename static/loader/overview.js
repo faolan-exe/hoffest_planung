@@ -311,7 +311,7 @@ function setup() {
 
   const colorGenerator = (function () {
     let counter = 0;
-    let totalColors = 20; //TODO: introduce global STAND_COUNT variable
+    let totalColors = 20;
     console.log("totalColors", totalColors);
 
     function hslToRgb(h, s, l) {
