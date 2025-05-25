@@ -19,24 +19,44 @@ class SMTPMailer:
         self.worker_thread.start()
 
     def _smtp_worker(self):
-        """SMTP-Worker, der eine persistente Verbindung aufbaut und Mails verarbeitet."""
-        try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.username, self.password)
+        """SMTP-Worker mit persistentem Server, der sich bei Leerlauf nach X Sekunden trennt."""
+        server = None
+        connected = False
+        idle_timeout = 5  # Sekunden ohne neue E-Mails, dann trennen
 
-                while self.running:
+        while self.running:
+            try:
+                # Auf neue Mail warten (mit Timeout)
+                recipient, text = self.email_queue.get(timeout=idle_timeout)
+
+                # Verbindung aufbauen, falls nicht verbunden
+                if not connected:
                     try:
-                        recipient, text = self.email_queue.get(timeout=2)
-                        if recipient is None:
-                            continue 
-                        self._send_email(server, recipient, text)
-                        time.sleep(0.5) 
+                        server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
+                        server.starttls()
+                        server.login(self.username, self.password)
+                        connected = True
+                        print("SMTP verbunden.")
+                    except Exception as e:
+                        print(f"Verbindungsfehler: {e}")
                         self.email_queue.task_done()
-                    except queue.Empty:
-                        pass  # Keine Mails -> Warten
-        except Exception as e:
-            print(f"SMTP-Worker Fehler: {e}")
+                        continue
+
+                # Mail senden
+                self._send_email(server, recipient, text)
+                self.email_queue.task_done()
+                time.sleep(0.8)  # Rate-Limit beachten
+
+            except queue.Empty:
+                # Nichts mehr zu tun, Verbindung schließen
+                if connected:
+                    try:
+                        server.quit()
+                    except Exception:
+                        pass
+                    connected = False
+                    print("SMTP-Verbindung wegen Leerlauf geschlossen.")
+
 
     def _send_email(self, server, recipient, text):
         """Sendet eine E-Mail über eine bestehende SMTP-Verbindung."""
