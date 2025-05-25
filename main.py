@@ -61,10 +61,10 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
 app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
 
-def checkAuth(user_id):  # TODO: IMPORTANT!! REMOVE BYPASS USER ON PRODUCTION
+def checkAuth(user_id): 
     """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
-    if user_id == "bypass" or user_id == "bypass2":
-        return True  # Erlaubt Bypass-Benutzer
+    #if user_id == "bypass" or user_id == "bypass2":
+    #    return True  # Erlaubt Bypass-Benutzer
 
     if not validate_auth(user_id):
         return False  # Ungültige Authentifizierung
@@ -86,7 +86,6 @@ def index():
         return (
             jsonify(
                 error="Invalid authentication",
-                bypass="https://hoffest.t-auer.com/?id=bypass",
             ),
             401,
         )
@@ -98,7 +97,6 @@ def index():
         return (
             jsonify(
                 error="Invalid authentication",
-                bypass="https://hoffest.t-auer.com/?id=bypass",
             ),
             401,
         )
@@ -328,7 +326,7 @@ def login_route(data=None):
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):
             session["adminName"] = username
-            session["id"] = "bypass"  # isAdmin=True
+            # session["id"] = "bypass"  # isAdmin=True
             logger.info("New user session")
             return "ok", 200
         else:
