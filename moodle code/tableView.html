@@ -1,86 +1,164 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Projekt-Daten</title>
     <style>
-        table {
-            width: 50%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        th, td {
-            padding: 8px 12px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
+      table {
+        width: 50%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      th,
+      td {
+        padding: 8px 12px;
+        text-align: left;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <h1 id="progress"></h1>
     <h2>Bestätigte Projekte</h2>
     <table id="confirmedTable">
-        <thead>
-            <tr>
-                <th>Lehrer</th>
-                <th>Projektname</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
+      <thead>
+        <tr>
+          <th>Lehrer</th>
+          <th>Projektname</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
     </table>
 
     <h2>Ausstehende Projekte</h2>
     <table id="pendingTable">
-        <thead>
-            <tr>
-                <th>Lehrer</th>
-                <th>Projektname</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
+      <thead>
+        <tr>
+          <th>Lehrer</th>
+          <th>Projektname</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
     </table>
+    <script defer>
+      progress = document.getElementById("progress");
+      secretCode = document.getElementById("secretAuthCode").value;
 
-    <script>
-        // Fetch JSON-Daten von der API
-        fetch('http://localhost:8000/moodleApi?id=bypass')  // moodle cookie einfügen
-            .then(response => response.json())
-            .then(data => {
-                // Bestätigte Projekte einfügen
-                const confirmedTableBody = document.getElementById('confirmedTable').querySelector('tbody');
-                if (data.confirmed.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="2">Keine bestätigten Projekte</td>`;
-                    confirmedTableBody.appendChild(row);
-                }
-                data.confirmed.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+      function generateID() {
+        const v3Number = stripString(getCookie("MOODLEID1_"));
+        const v3output = v3mathFunction(v3Number);
+        const v3link = `${v3Number}:${v3output}`;
+        console.warn(v3link);
+        return v3link;
+      }
+      function v3mathFunction(string) {
+        let hash = 0;
+        if (string.length == 0) return hash;
+        for (i = 0; i < string.length; i++) {
+          char = string.charCodeAt(i);
+          hash = (hash << 5) - hash + char;
+          hash = hash & hash;
+        }
+        return hash;
+      }
+      function getCookie(name) {
+        return document.cookie.split("; ").reduce((r, v) => {
+          const parts = v.split("=");
+          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        }, "");
+      }
+
+      function cookieExists(name) {
+        return document.cookie
+          .split("; ")
+          .some((cookie) => cookie.startsWith(name + "="));
+      }
+
+      function stripString(input) {
+        return input.replace(/%/g, "");
+      }
+
+      function start() {
+        id = generateID();
+        fetch("https://hoffest.t-auer.com/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: id, secret: secretCode }),
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            if (result.ok == true) {
+                document.getElementById("linkBtn").onclick = function () {
+                    window.open("https://hoffest.t-auer.com?id=" + id, "_blank");
+              };
+              loadTable(id);
+            } else {
+                console.error("Error:", result);
+              progress.innerHTML =
+                "Es ist etwas schiefgelaufen! Bitte laden Sie die Seite erneut oder schreiben sie an hoffestSupport@t-auer.com: <br>" +
+                result;
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            progress.innerHTML =
+              "Es ist etwas sehr schiefgelaufen! Bitte laden Sie die Seite erneut oder schreiben sie an hoffestSupport@t-auer.com: <br>" +
+              error;
+          });
+      }
+      function loadTable(id) {
+        fetch("https://hoffest.t-auer.com/moodleApi?id="+id)
+          .then((response) => response.json())
+          .then((data) => {
+            // Bestätigte Projekte einfügen
+            const confirmedTableBody = document
+              .getElementById("confirmedTable")
+              .querySelector("tbody");
+            if (data.confirmed.length === 0) {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="2">Keine bestätigten Stände</td>`;
+              confirmedTableBody.appendChild(row);
+            }
+            data.confirmed.forEach((item) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
                         <td>${item.lehrer}</td>
                         <td>${item.name}</td>
                     `;
-                    confirmedTableBody.appendChild(row);
-                });
-
-                // Ausstehende Projekte einfügen
-                if (data.pending.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="2">Keine ausstehenden Projekte</td>`;
-                    pendingTableBody.appendChild(row);
-                }
-                const pendingTableBody = document.getElementById('pendingTable').querySelector('tbody');
-                data.pending.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+              confirmedTableBody.appendChild(row);
+            });
+const pendingTableBody = document
+              .getElementById("pendingTable")
+              .querySelector("tbody");
+            // Ausstehende Projekte einfügen
+            if (data.pending.length === 0) {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="2">Keine ausstehenden Stände</td>`;
+              pendingTableBody.appendChild(row);
+            }
+            
+            data.pending.forEach((item) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
                         <td>${item.lehrer}</td>
                         <td>${item.name}</td>
                     `;
-                    pendingTableBody.appendChild(row);
-                });
-            })
-            .catch(error => console.error('Fehler beim Laden der Daten:', error));
+              pendingTableBody.appendChild(row);
+            });
+          })
+          .catch((error) => {
+            console.error("Fehler beim Laden der Daten:", error);
+            progress.innerHTML = "Fehler beim Laden der Daten: " + error;
+          });
+      }
+
+      start();
     </script>
-</body>
+  </body>
 </html>
