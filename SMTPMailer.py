@@ -3,6 +3,7 @@ import threading
 import queue
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import time
 
 class SMTPMailer:
     def __init__(self, smtp_server, smtp_port, username, password):
@@ -30,6 +31,7 @@ class SMTPMailer:
                         if recipient is None:
                             break  # Beenden, wenn None empfangen wird
                         self._send_email(server, recipient, text)
+                        time.sleep(1.1) 
                         self.email_queue.task_done()
                     except queue.Empty:
                         pass  # Keine Mails -> Warten
@@ -53,6 +55,7 @@ class SMTPMailer:
 
     def send_email(self, recipient, text):
         """Fügt eine E-Mail zur Warteschlange hinzu."""
+        print(f"Füge E-Mail an Warteschlange für {recipient} hinzu.")
         self.email_queue.put((recipient, text))
 
     def stop(self):
@@ -73,7 +76,6 @@ if __name__ == "__main__":
 
     # Mehrere E-Mails versenden (asynchron)
     mailer.send_email("test1@t-auer.com", "Hallo, dies ist eine Nachricht.")
-    mailer.send_email("test2@t-auer.com", "Noch eine Nachricht.")
     mailer.send_email("balu.safemail@gmail.com", "Dritte Nachricht.")
 
     # Warten, bis alle E-Mails versendet wurden
