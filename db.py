@@ -114,7 +114,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             self.conn.commit()
-            self.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")  # TODO: change email adress
+            self.add_admin_account("Admin", "1234", "akhoffest@gmx.de")
             self.add_question("Strom und geräte?")
             self.add_question("Lebensmittel?")
             query = "INSERT INTO email (id, email) VALUES (%s, %s)"
