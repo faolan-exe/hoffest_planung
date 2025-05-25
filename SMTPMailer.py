@@ -29,9 +29,9 @@ class SMTPMailer:
                     try:
                         recipient, text = self.email_queue.get(timeout=2)
                         if recipient is None:
-                            break  # Beenden, wenn None empfangen wird
+                            continue 
                         self._send_email(server, recipient, text)
-                        time.sleep(1.1) 
+                        time.sleep(0.5) 
                         self.email_queue.task_done()
                     except queue.Empty:
                         pass  # Keine Mails -> Warten
