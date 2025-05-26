@@ -45,6 +45,7 @@ def check_auth():
         "/",
         "/favicon.ico",
         "/moodleApi",
+        "/moodleApi/dienste",
         "/register"
     ] or request.path.startswith("/admin") or request.path.startswith("/static/"):
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
@@ -290,12 +291,6 @@ def admin_api():
             if not db_manager.update_stand_positions(value):
                 return jsonify({"error": "Failed to update stand postions"}), 400
             return jsonify({"ok": "ok"}), 200
-        
-        case "addDienst":
-            if not db_manager.add_dienst(*value):
-                return jsonify({"error": "Failed to add dienst"}), 400
-            return jsonify({"ok": "ok"}), 200
-        
         case _:
             return jsonify({"error": "Invalid action"}), 400
     
@@ -319,8 +314,19 @@ def moodleApi():
         pending.append({"lehrer": data[2], "name": data[4]})
     return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
-@app.route("/moodleApi/dienste")
+@app.route("/moodleApi/dienste", methods=["GET", "POST"])
 def moodleApiDienste():
+    if request.method == "POST":
+        data = request.json
+        if data["action"] == "getDienste":
+            returnedDienste = db_manager.get_all_dienste()
+            logger.info(f"Returning Dienste: {returnedDienste}")
+            return jsonify({"dienste": returnedDienste}), 200
+            
+            
+        if not db_manager.add_dienst(*data["value"]):
+            return jsonify({"error": "Failed to add dienst"}), 400
+        return jsonify({"ok": "ok"}), 200
     id = request.args.get("id", "nothing")
 
     if not checkAuth(id):
