@@ -7,7 +7,6 @@ import uuid
 from flask import json
 import logger
 import psycopg2
-import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
@@ -18,10 +17,6 @@ from logger import get_logger
 
 from SMTPMailer import SMTPMailer
 
-with open("./credentials.txt", "r") as file:
-        SMTP_USER = file.readline().strip()
-        SMTP_PASS = file.readline().strip()
-mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS)
 
 logger = get_logger("databaseManager", logging.DEBUG)
 RESET_DATABASE = False
@@ -486,7 +481,6 @@ class DatabaseManager:
             self.conn.rollback()
             return False    
     
-    
     def get_email_from_stand_id(self, stand_id):
         """
         Retrieves the email address associated with a given stand ID.
@@ -883,9 +877,13 @@ class DatabaseManager:
             email = result[0]
             logger.debug(f"Email retrieved successfully")
             if status == "accepted":
-                email_text = self.get_email_text(2).replace("|kommentar|", comment) # email: lehrkraft, genehmigung erteilt
+                email_text = self.get_email_text(2)
+                if comment != "" and comment != None:
+                    email_text = email_text.replace("|kommentar|", "<span style=\"text-decoration: underline\">Anmerkung:</span><br>"+comment+"<br>")
+                else:
+                    email_text = email_text.replace("|kommentar|", "")
             else:
-                email_text = self.get_email_text(3).replace("|kommentar|", comment)  
+                email_text = self.get_email_text(3).replace("|kommentar|", "<span style=\"text-decoration: underline\">Begründung:</span><br>"+comment)  
             print(email_text)
             mailer.send_email(email, email_text)
         except Exception as e:
@@ -894,7 +892,6 @@ class DatabaseManager:
             return False
         logger.info(f"notify_approval executed successfully")
         return True 
-    
     
     def update_email_text(self, email_id, email_text, do_broadcast=False):
         """
@@ -1020,6 +1017,7 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    
     def getAllSelectedAreas(self):
         """
         Retrieves all selected areas from the database.
@@ -1116,8 +1114,7 @@ class DatabaseManager:
             logger.error(f"Error updating blacklist cells: {e}")
             self.conn.rollback()
             return False
-        
-        
+          
     def update_stand_positions(self, data):
         """
         Updates the positions of the stands in the database.
@@ -1152,6 +1149,43 @@ class DatabaseManager:
             logger.error(f"Error updating stand positions: {e}")
             self.conn.rollback()
             return False
+
+    def get_name_from_email(self, email):
+        """
+        Retrieves the name associated with a given email address.
+
+        Parameters:
+        email (str): The email address to search for.
+
+        Returns:
+        str: The name associated with the email address.
+        """
+        logger.debug(f"get_name_from_email is called")
+        query = "SELECT lehrer FROM stand WHERE LOWER(email) = LOWER(%s)"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(email,)}")
+        try:
+            self.cursor.execute(query, (email,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return None
+            name = result[0]
+            logger.info(f"Name retrieved successfully")
+            return name
+        except Exception as e:
+            logger.error(f"Error retrieving name: {e}")
+            self.conn.rollback()
+            return None
+    
+    
+with open("./credentials.txt", "r") as file:
+        SMTP_USER = file.readline().strip()
+        SMTP_PASS = file.readline().strip()
+mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS, DatabaseManager())
+
+
+
 # db_manager = DatabaseManager()
 # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
 # db_manager.add_question("Strom und geräte?")

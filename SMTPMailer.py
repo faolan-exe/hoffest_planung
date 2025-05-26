@@ -6,13 +6,14 @@ from email.mime.text import MIMEText
 import time
 
 class SMTPMailer:
-    def __init__(self, smtp_server, smtp_port, username, password):
+    def __init__(self, smtp_server, smtp_port, username, password, db_manager):
         self.smtp_server = smtp_server
         self.smtp_port = smtp_port
         self.username = username
         self.password = password
         self.email_queue = queue.Queue()
         self.running = True
+        self.db_manager = db_manager 
 
         # Starte den SMTP-Worker-Thread
         self.worker_thread = threading.Thread(target=self._smtp_worker, daemon=True)
@@ -67,8 +68,10 @@ class SMTPMailer:
         msg["Subject"] = "Hoffest | Wichtige Mitteilung"
         with open("emailFooter.html", "r", encoding="utf-8") as f:
             footer = f.read()
+        
+        greeting = f"<p>Hallo {self.db_manager.get_name_from_email(recipient)},</p><br>"
 
-        full_html = text + footer
+        full_html = greeting + text + footer
         msg.attach(MIMEText(full_html, "html"))
 
         try:
