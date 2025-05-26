@@ -248,9 +248,8 @@ def admin_api():
             if not db_manager.update_password(value):
                 return jsonify({"error": "Failed to update password"}), 400
             logger.warning("Password updated-->Secret Key changed")
-            #session["adminName"] = username
             app.secret_key = os.urandom(64)
-            return redirect(url_for("login_route"))
+            return jsonify({"ok": "ok"}), 200
         case "emailText1":
             if not db_manager.update_email_text(1, value):
                 return jsonify({"error": "Failed to update email text 1"}), 400
@@ -292,6 +291,11 @@ def admin_api():
                 return jsonify({"error": "Failed to update stand postions"}), 400
             return jsonify({"ok": "ok"}), 200
         
+        case "addDienst":
+            if not db_manager.add_dienst(*value):
+                return jsonify({"error": "Failed to add dienst"}), 400
+            return jsonify({"ok": "ok"}), 200
+        
         case _:
             return jsonify({"error": "Invalid action"}), 400
     
@@ -315,6 +319,16 @@ def moodleApi():
         pending.append({"lehrer": data[2], "name": data[4]})
     return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
+@app.route("/moodleApi/dienste")
+def moodleApiDienste():
+    id = request.args.get("id", "nothing")
+
+    if not checkAuth(id):
+        return jsonify({"error": "Invalid authentication"}), 401
+    dienste = db_manager.get_all_dienste() 
+    logger.info(f"Returning Dienste: {dienste}")
+
+    return jsonify({"dienste": dienste}), 200
 
 @app.route("/login", methods=["POST", "GET"])
 def login_route(data=None):

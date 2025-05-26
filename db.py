@@ -1178,6 +1178,54 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
+    def get_all_dienste(self):
+        """
+        Retrieves all dienst entries from the database.
+
+        Returns:
+        list: A list of dictionaries containing the dienst entries.
+        """
+        logger.debug(f"get_all_dienste is called")
+        query = "SELECT name, klasse, dienst FROM dienste"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info(f"Data retrieved successfully")
+            return [dict(zip([column[0] for column in self.cursor.description], row)) for row in result]
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
+    
+    def add_dienst(self, auth_id, name, klasse, dienst):
+        """
+        Adds a new dienst entry to the database.
+
+        Parameters:
+        name (str): The name of the person.
+        klasse (str): The class of the person.
+        dienst (str): The dienst of the person.
+
+        Returns:
+        bool: True if the dienst was successfully added, False otherwise.
+        """
+        logger.debug(f"add_dienst is called")
+        query = "INSERT INTO dienste (auth_id, name, klasse, dienst) VALUES (%s, %s, %s, %s)"
+        logger.debug(f"Executing SQL query: {query}")
+        values = (auth_id, name, klasse, dienst)
+        logger.debug(f"with data: {values}")
+        try:
+            self.cursor.execute(query, values)
+            self.conn.commit()
+            logger.info(f"Dienst added successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error adding dienst: {e}")
+            self.conn.rollback()
+            return False
+    
     
 with open("./credentials.txt", "r") as file:
         SMTP_USER = file.readline().strip()
