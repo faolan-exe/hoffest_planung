@@ -65,6 +65,14 @@ id serial NOT NULL, "trusted" text NOT NULL,
   CONSTRAINT trusted_ids_pkey PRIMARY KEY(id)
 );
 
+CREATE TABLE public.dienste(
+"auth_id" text PRIMARY KEY,
+ "name" text NOT NULL,
+ "klasse" text NOT NULL,
+ "dienst" text NOT NULL
+);
+
+
 ALTER TABLE public.standQuestions
   ADD CONSTRAINT "standQuestions_stand_id_fkey"
     FOREIGN KEY (stand_id) REFERENCES public.stand (id);
