@@ -1078,7 +1078,7 @@ class DatabaseManager:
             self.conn.rollback()
             return None
 
-    def update_blacklist_cells(self, cells):
+    def update_blacklist_cells(self, cells_json):
         """
         Updates the blacklist cells in the database.
 
@@ -1089,27 +1089,27 @@ class DatabaseManager:
         bool: True if the blacklist cells were successfully updated, False otherwise.
         """
         logger.debug(f"update_blacklist_cells is called")
-        query = "DELETE FROM blacklistedCells"
-        logger.debug(f"Executing SQL query: {query}")
-        logger.debug(f"with data: {type(cells)}")
-        cells = json.loads(cells)
+        
+        cells = json.loads(cells_json)              # Liste der Strings
+
         try:
-            self.cursor.execute(query)
-            self.conn.commit()
-            logger.info(f"Blacklist cells deleted successfully")
-            for cell in cells:
-                query = "INSERT INTO blacklistedCells (cell) VALUES (%s)"
-                logger.debug(f"Executing SQL query: {query}")
-                logger.debug(f"with data: {(cell,)}")
-                self.cursor.execute(query, (cell,))
-                self.conn.commit()
-            logger.info(f"Blacklist cells updated successfully")
+            # ▸ Transaktion explizit starten (autocommit MUSS aus sein)
+            self.cursor.execute("TRUNCATE blacklistedCells")  # TRUNCATE ist schneller als DELETE
+
+            # Alle Werte in einem Rutsch einfügen
+            self.cursor.executemany(
+                "INSERT INTO blacklistedCells (cell) VALUES (%s)",
+                [(c,) for c in cells]
+            )
+
+            self.conn.commit()                      # Einmal am Ende
+            logger.info("Blacklist aktualisiert")
             return True
         except Exception as e:
-            logger.error(f"Error updating blacklist cells: {e}")
             self.conn.rollback()
+            logger.error(f"Fehler: {e}")
             return False
-          
+
     def update_stand_positions(self, data):
         """
         Updates the positions of the stands in the database.
