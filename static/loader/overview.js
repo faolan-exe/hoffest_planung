@@ -54,6 +54,37 @@ function setup() {
   var svg = document.getElementById("svgCanvas");
   var blackListBtnToggle = document.getElementById("blackListBtnToggle");
   var draggableBtnToggle = document.getElementById("draggableBtnToggle");
+  var resetBtn = document.getElementById("resetBtn");
+  resetBtnActive = false;
+
+  // reset button
+  blackListBtnToggle.addEventListener("click", function () {
+    if (resetBtnActive) {
+      draggableBtnToggle.style.display = "initial";
+      resetBtnActive = false;
+      resetBtn.style.display = "none";
+    }
+    else {
+      draggableBtnToggle.style.display = "none";
+      resetBtnActive = true;
+      resetBtn.style.display = "initial";
+      resetBtn.textContent = "Aktion abbrechen";
+    }
+  });
+    draggableBtnToggle.addEventListener("click", function () {
+    if (resetBtnActive) {
+      blackListBtnToggle.style.display = "initial";
+      resetBtnActive = false;
+      resetBtn.style.display = "none";
+    }
+    else {
+      blackListBtnToggle.style.display = "none";
+      resetBtnActive = true;
+      resetBtn.style.display = "initial";
+      resetBtn.textContent = "Aktion abbrechen";
+    }
+  });
+
 
   // get blacklisted cells from server
   fetch("/admin/api/currentBlacklistCells")
@@ -90,7 +121,6 @@ function setup() {
     foreignMapDataP.forEach((element) => {
       try {
         const uID = element[0];
-        console.log("uID", uID);
         const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
         for (const cell of mapSelection) {
           const rect = document.getElementById(cell);
@@ -324,7 +354,7 @@ function setup() {
           255 *
             (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
         );
-      return `rgba(${f(0)}, ${f(8)}, ${f(4)}, 0.3)`;
+      return `rgba(${f(0)}, ${f(8)}, ${f(4)}, 0.7)`;
     }
 
     function getColor() {
