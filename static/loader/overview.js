@@ -16,6 +16,11 @@ function init() {
     })
     .catch((err) => console.error(err));
 }
+var infoTemplate = `
+Lehrer: |teacher| <br>
+Klasse: |class| <br>
+Beschreibung: |description|
+`
 
 var allowedToDraw = false;
 var allowedToDrag = false;
@@ -52,6 +57,7 @@ function setup() {
   });
 
   var svg = document.getElementById("svgCanvas");
+  var standInfo = document.getElementById("standList");
   var blackListBtnToggle = document.getElementById("blackListBtnToggle");
   var draggableBtnToggle = document.getElementById("draggableBtnToggle");
   var resetBtn = document.getElementById("resetBtn");
@@ -144,6 +150,36 @@ function setup() {
         rect.style.opacity = "1";
         rect.classList.remove("blacklist-rect");
         rect.addEventListener("mousedown", (e) => {
+          const uidClass = Array.from(rect.classList).find(cls => cls.startsWith("uid-"));
+          if (!uidClass) {
+            console.warn("No uid class found on rect", rect);
+          }
+
+          uid = uidClass?.split('-')[1];
+          var cellData = data.completed.find(item => item.id == uid)
+          if (!cellData) {
+            cellData = data.pending.find(item => item.id == uid);
+          }
+          if (!cellData) {
+            console.warn("No cell data found for ", uidClass);
+            return;
+          }
+          console.log("cellData", cellData);
+          standInfo.innerHTML = infoTemplate.replace(
+            "|teacher|",
+            cellData.lehrer || "Unbekannt"
+          ).replace(
+            "|class|",
+            cellData.klasse || "Unbekannt"
+          ).replace(
+            "|description|",
+            cellData.beschreibung || "Keine Beschreibung"
+          );
+          
+          
+
+
+
           const classList = Array.from(rect.classList).find((cls) =>
             cls.startsWith("foreign-rect-")
           );
@@ -342,7 +378,6 @@ function setup() {
   const colorGenerator = (function () {
     let counter = 0;
     let totalColors = 20;
-    console.log("totalColors", totalColors);
 
     function hslToRgb(h, s, l) {
       s /= 100;
