@@ -680,7 +680,6 @@ class DatabaseManager:
             query = "SELECT email FROM admin"
             self.cursor.execute(query)
             emails = self.cursor.fetchall()
-            print(emails)
             for email in emails: # emails from all admins
                 mailer.send_email(email[0], email_text)
             mailer.send_email(teacher_email, email_text_teacher)
@@ -713,7 +712,6 @@ class DatabaseManager:
 
             pwd_hash = result[0]
             if ph.verify(pwd_hash, password):
-                print("verify password")
                 logger.info(f"Admin account authenticated successfully")
                 return True
             else:
@@ -884,7 +882,6 @@ class DatabaseManager:
                     email_text = email_text.replace("|kommentar|", "")
             else:
                 email_text = self.get_email_text(3).replace("|kommentar|", "<span style=\"text-decoration: underline\">Begründung:</span><br>"+comment)  
-            print(email_text)
             mailer.send_email(email, email_text)
         except Exception as e:
             logger.error(f"Error sending email: {e}\n{traceback.format_exc()}")
@@ -1074,7 +1071,6 @@ class DatabaseManager:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
             logger.info(f"Data retrieved successfully")
-            print(result)
             return [result[0] for result in result]
 
         except Exception as e:
@@ -1097,7 +1093,6 @@ class DatabaseManager:
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {type(cells)}")
         cells = json.loads(cells)
-        print(cells)
         try:
             self.cursor.execute(query)
             self.conn.commit()
@@ -1126,7 +1121,6 @@ class DatabaseManager:
         bool: True if the positions were successfully updated, False otherwise.
         """
         logger.debug(f"updateStandPositions is called")
-        print(data)
         data = json.loads(data)
         sorted_data = {}
         for entry in data:
@@ -1135,7 +1129,6 @@ class DatabaseManager:
                 sorted_data[uid].append(entry["id"])
             else:
                 sorted_data[uid] = [entry["id"]]
-        print(sorted_data)
         query = "UPDATE stand SET ort_spezifikation = %s WHERE id = %s"
         try:
             for key, value in sorted_data.items():
