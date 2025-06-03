@@ -1,919 +1,1078 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoffest Planer | © Tobias Auer</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hoffest Planer | © Tobias Auer</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
+      .list-item-end {
+        margin-left: 15px;
+        overflow: visible;
+        text-align: left;
+      }
 
-    .list-item-end {
-      margin-left: 15px;
-      overflow: visible;
-      text-align: left;
-    }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        padding-top: 2px;
+        margin-right: 5px;
+        vertical-align: middle;
+      }
 
-    input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      padding-top: 2px;
-      margin-right: 5px;
-      vertical-align: middle;
-    }
+      input[type="checkbox"] + label {
+        vertical-align: middle;
+      }
 
-    input[type="checkbox"]+label {
-      vertical-align: middle;
-    }
+      input[type="checkbox"] {
+        accent-color: green;
+      }
 
-    input[type="checkbox"] {
-      accent-color: green;
-    }
+      #page {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100vh;
+      }
 
-    #page {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      grid-template-rows: repeat(5, 1fr);
-      grid-column-gap: 0px;
-      grid-row-gap: 0px;
-      height: 100vh;
-    }
+      #information {
+        grid-area: 1 / 5 / 6 / 7;
+        background-color: rgb(0, 255, 0, 0.3);
+        overflow: scroll;
+      }
 
-    #information {
-      grid-area: 1 / 5 / 6 / 7;
-      background-color: rgb(0, 255, 0, 0.3);
-      overflow: scroll;
-    }
+      #schulhof-selector {
+        grid-area: 1 / 1 / 6 / 5;
+        background-color: white;
+        width: 100%;
 
-    #schulhof-selector {
-      grid-area: 1 / 1 / 6 / 5;
-      background-color: white;
-      width: 100%;
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+      }
 
-      display: flex;
-      flex-direction: column;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-    }
+      #schulhof-selector {
+        position: relative;
+      }
 
-    #schulhof-selector {
-      position: relative;
-    }
+      #schulhof-selector h1 {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
+      }
 
-    #schulhof-selector h1 {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.7);
-      padding: 5px 10px;
-      border-radius: 5px;
-    }
+      #image-container {
+        position: relative;
 
-    #image-container {
-      position: relative;
+        /* overflow: hidden; */
+      }
 
-      /* overflow: hidden; */
-    }
+      .screenRes1 {
+        width: 100%;
+        height: fit-content;
+      }
 
-    .screenRes1 {
-      width: 100%;
-      height: fit-content;
-    }
+      .screenRes2 {
+        width: fit-content;
+        height: 100%;
+      }
 
-    .screenRes2 {
-      width: fit-content;
-      height: 100%;
-    }
+      #image-container svg {
+        max-width: 100%;
+        height: 100%;
+      }
 
-    #image-container svg {
-      max-width: 100%;
-      height: 100%;
-    }
+      .noDisplay {
+        display: none !important;
+      }
+    </style>
+    <style>
+      #actionTitle {
+        text-align: center;
+        margin: 12px 0;
+      }
 
-    .noDisplay {
-      display: none !important;
-    }
-  </style>
-  <style>
-    #actionTitle {
-      text-align: center;
-      margin: 12px 0;
-    }
+      #actionSubtext {
+        margin: 12px 0;
+      }
 
-    #actionSubtext {
-      margin: 12px 0;
-    }
+      #additionalText {
+        margin: 12px 0;
+        text-align: justify;
+      }
 
-    #additionalText {
-      margin: 12px 0;
-      text-align: justify;
-    }
+      #information {
+        padding: 25px;
+        padding-bottom: 0;
+      }
 
-    #information {
-      padding: 25px;
-      padding-bottom: 0;
-    }
+      .arrow {
+        border: solid rgb(0, 0, 0);
+        border-width: 0 3px 3px 0;
+        display: inline-block;
+        padding: 4px;
+      }
 
-    .arrow {
-      border: solid rgb(0, 0, 0);
-      border-width: 0 3px 3px 0;
-      display: inline-block;
-      padding: 4px;
-    }
+      .left {
+        transform: rotate(135deg);
+        -webkit-transform: rotate(135deg);
+      }
 
-    .left {
-      transform: rotate(135deg);
-      -webkit-transform: rotate(135deg);
-    }
+      #lastStage {
+        padding: 3px;
+      }
+    </style>
+    <style>
+      .small {
+        font: 13px sans-serif;
+      }
 
-    #lastStage {
-      padding: 3px;
-    }
-  </style>
-  <style>
-    .small {
-      font: 13px sans-serif;
-    }
-
-    .heavy {
-      font: bold 30px sans-serif;
-    }
-  </style>
-  <style>
-    .start-btn {
-      display: inline-block;
-      outline: 0;
-      border: 0;
-      cursor: pointer;
-      will-change: box-shadow, transform;
-      background: radial-gradient(100% 100% at 100% 0%,
+      .heavy {
+        font: bold 30px sans-serif;
+      }
+    </style>
+    <style>
+      .start-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        will-change: box-shadow, transform;
+        background: radial-gradient(
+          100% 100% at 100% 0%,
           #89e5ff 0%,
-          #5468ff 100%);
-      box-shadow: 0px 2px 4px rgb(45 35 66 / 40%),
-        0px 7px 13px -3px rgb(45 35 66 / 30%),
-        inset 0px -3px 0px rgb(58 65 111 / 50%);
-      padding: 0 28px;
-      border-radius: 6px;
-      color: #fff;
-      height: 44px;
-      font-size: 18px;
-      text-shadow: 0 1px 0 rgb(0 0 0 / 40%);
-      transition: box-shadow 0.15s ease, transform 0.15s ease;
-      align-self: center;
-    }
+          #5468ff 100%
+        );
+        box-shadow: 0px 2px 4px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%),
+          inset 0px -3px 0px rgb(58 65 111 / 50%);
+        padding: 0 28px;
+        border-radius: 6px;
+        color: #fff;
+        height: 44px;
+        font-size: 18px;
+        text-shadow: 0 1px 0 rgb(0 0 0 / 40%);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+        align-self: center;
+      }
 
-    .start-btn:hover {
-      box-shadow: 0px 4px 8px rgb(45 35 66 / 40%),
-        0px 7px 13px -3px rgb(45 35 66 / 30%), inset 0px -3px 0px #3c4fe0;
-      transform: translateY(-2px);
-    }
+      .start-btn:hover {
+        box-shadow: 0px 4px 8px rgb(45 35 66 / 40%),
+          0px 7px 13px -3px rgb(45 35 66 / 30%), inset 0px -3px 0px #3c4fe0;
+        transform: translateY(-2px);
+      }
 
-    .start-btn:active {
-      box-shadow: inset 0px 3px 7px #3c4fe0;
-      transform: translateY(2px);
-    }
+      .start-btn:active {
+        box-shadow: inset 0px 3px 7px #3c4fe0;
+        transform: translateY(2px);
+      }
 
-    .normal-btn {
-      display: inline-block;
-      outline: 0;
-      border: 0;
-      cursor: pointer;
-      font-weight: 600;
-      color: #fff;
-      font-size: 14px;
-      height: 38px;
-      padding: 8px 24px;
-      border-radius: 50px;
-      background-image: linear-gradient(180deg, #7c8aff, #3c4fe0);
-      box-shadow: 0 4px 11px 0 rgb(37 44 97 / 15%),
-        0 1px 3px 0 rgb(93 100 148 / 20%);
-      transition: all 0.1s linear;
-    }
+      .normal-btn {
+        display: inline-block;
+        outline: 0;
+        border: 0;
+        cursor: pointer;
+        font-weight: 600;
+        color: #fff;
+        font-size: 14px;
+        height: 38px;
+        padding: 8px 24px;
+        border-radius: 50px;
+        background-image: linear-gradient(180deg, #7c8aff, #3c4fe0);
+        box-shadow: 0 4px 11px 0 rgb(37 44 97 / 15%),
+          0 1px 3px 0 rgb(93 100 148 / 20%);
+        transition: all 0.1s linear;
+      }
 
-    .normal-btn:hover {
-      box-shadow: 0 8px 22px 0 rgb(37 44 97 / 15%),
-        0 4px 6px 0 rgb(93 100 148 / 20%);
-      transform: scale(1.09);
-    }
+      .normal-btn:hover {
+        box-shadow: 0 8px 22px 0 rgb(37 44 97 / 15%),
+          0 4px 6px 0 rgb(93 100 148 / 20%);
+        transform: scale(1.09);
+      }
 
-    .normal-btn:disabled {
-      background-image: linear-gradient(180deg, #848abd, #535779);
-      box-shadow: none;
-    }
+      .normal-btn:disabled {
+        background-image: linear-gradient(180deg, #848abd, #535779);
+        box-shadow: none;
+      }
 
-    .normal-btn:disabled:hover {
-      box-shadow: none;
-      transform: scale(1);
-      cursor: default;
-    }
-  </style>
-  <style>
-    .form-container {
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-      max-width: 100%;
-    }
+      .normal-btn:disabled:hover {
+        box-shadow: none;
+        transform: scale(1);
+        cursor: default;
+      }
+    </style>
+    <style>
+      .form-container {
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+        max-width: 100%;
+      }
 
-    .form-container label {
-      font-size: 1rem;
-      color: black;
-      margin-bottom: 4px;
-      display: block;
-    }
+      .form-container label {
+        font-size: 1rem;
+        color: black;
+        margin-bottom: 4px;
+        display: block;
+      }
 
-    .form-container input[type="text"],
-    .form-container textarea {
-      width: 100%;
-      padding: 10px;
-      margin: 4px 0 12px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+      .form-container input[type="text"],
+      .form-container textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 4px 0 12px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
 
-    .form-container textarea {
-      resize: vertical;
-    }
+      .form-container textarea {
+        resize: vertical;
+      }
 
-    input[type="text"]:focus,
-    textarea:focus {
-      border-color: #66a3ff;
-      outline: none;
-    }
+      input[type="text"]:focus,
+      textarea:focus {
+        border-color: #66a3ff;
+        outline: none;
+      }
 
-    .form-container button {
-      background-color: #66a3ff;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      font-size: 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      width: 100%;
-      transition: background-color 0.3s ease;
-    }
+      .form-container button {
+        background-color: #66a3ff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        font-size: 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s ease;
+      }
 
-    .form-container button:hover {
-      background-color: #5588cc;
-    }
+      .form-container button:hover {
+        background-color: #5588cc;
+      }
 
-    .tooltip {
-      position: relative;
-      display: inline-block;
-      border-radius: 50%;
-      background-color: #3498db;
-      color: white;
-      padding: 0.75px 3px;
-      font-size: 70%;
-      text-align: center;
-      font-weight: bold;
-      line-height: 1;
-      vertical-align: middle;
-    }
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        border-radius: 50%;
+        background-color: #3498db;
+        color: white;
+        padding: 0.75px 3px;
+        font-size: 70%;
+        text-align: center;
+        font-weight: bold;
+        line-height: 1;
+        vertical-align: middle;
+      }
 
-    .credits {
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      z-index: 9999;
-      padding: 1rem;
-      text-align: center;
-      pointer-events: none;
-      font-size: 0.8rem;
-    }
+      .credits {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        z-index: 9999;
+        padding: 1rem;
+        text-align: center;
+        pointer-events: none;
+        font-size: 0.8rem;
+      }
 
-    .credits a {
-      pointer-events: all;
-      cursor: pointer;
-      color: black;
-    }
-  </style>
+      .credits a {
+        pointer-events: all;
+        cursor: pointer;
+        color: black;
+      }
+    </style>
 
-  <script>
-    allowedToDraw = false;
-    foreignMapData = {{ foreignMapData | tojson }}
-    enabled = "{{enabled}}"
-  </script>
-</head>
+    <style>
+      .feedback-form-container {
+        margin: 25px;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #a2ffa2;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        width: 25vw;
+      }
 
-<body>
-  <div id="page">
-    <div id="information">
-      <button id="lastStage" onclick="stageManager(document.getElementById('lastAction').value)">
-        <i class="arrow left" id="disabledArrow"></i> Zurück
-      </button>
-      <h1 id="actionTitle"></h1>
-      <h2 id="actionSubtext"></h2>
-      <div id="additionalText"></div>
-      <div class="form-container">
-        <div id="inputBoxes"></div>
-        <div id="questions"></div>
-      </div>
+      .feedback-form-container .form {
+        background: #fff;
+      }
 
-      <input type="hidden" name="" id="nextAction" />
-      <input type="hidden" name="" id="lastAction" />
+      .feedback-form-container h2 {
+        margin: 0 0 1.5rem;
+        text-align: center;
+      }
 
-      <div style="
+      .rating {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: center;
+        gap: 0.25rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .rating input {
+        display: none;
+      }
+
+      .rating label {
+        font-size: 2rem;
+        color: #ffffff;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .rating label:hover,
+      .rating label:hover ~ label,
+      .rating input:checked ~ label {
+        color: #ffca28;
+        transform: scale(1.15);
+      }
+
+      .feedback-form-container textarea {
+        width: 100%;
+        height: 120px;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        resize: vertical;
+        font-size: 1rem;
+      }
+
+      .feedback-form-container button {
+        margin-top: 1.5rem;
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #3b82f6;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .feedback-form-container button:hover {
+        background: #2563eb;
+      }
+    </style>
+
+    <script>
+      allowedToDraw = false;
+      foreignMapData = {{ foreignMapData | tojson }}
+      enabled = "{{enabled}}"
+    </script>
+  </head>
+
+  <body>
+    <div id="page">
+      <div id="information">
+        <button
+          id="lastStage"
+          onclick="stageManager(document.getElementById('lastAction').value)"
+        >
+          <i class="arrow left" id="disabledArrow"></i> Zurück
+        </button>
+        <h1 id="actionTitle"></h1>
+        <h2 id="actionSubtext"></h2>
+        <div id="additionalText"></div>
+        <div class="form-container">
+          <div id="inputBoxes"></div>
+          <div id="questions"></div>
+        </div>
+
+        <input type="hidden" name="" id="nextAction" />
+        <input type="hidden" name="" id="lastAction" />
+
+        <div
+          style="
             display: flex;
             justify-content: center;
             margin: 45px;
             margin-bottom: 0;
             padding: 20px;
-          ">
-        <button id="nextStage" onclick="stageManager(document.getElementById('nextAction').value)"></button>
+          "
+        >
+          <button
+            id="nextStage"
+            onclick="stageManager(document.getElementById('nextAction').value)"
+          ></button>
+        </div>
+        <div class="credits">
+          <hr />
+          Made by
+          <a target="_blank" href="https://www.t-auer.com">Tobias Auer</a>
+        </div>
       </div>
-      <div class="credits">
-        <hr />
-        Made by
-        <a target="_blank" href="https://www.t-auer.com">Tobias Auer</a>
+
+      <div id="schulhof-selector" onmousedown="">
+        <div id="image-container" class="screenRes1">
+          <svg
+            id="svgCanvas"
+            viewBox="0 0 1478 940"
+            preserveAspectRatio="xMinYMin meet"
+            draggable="false"
+          >
+            <image
+              width="100%"
+              href="{{ url_for('static', filename='plan.jpg') }}"
+              draggable="false"
+              style="pointer-events: none"
+            ></image>
+            <text x="710" y="450" class="heavy">Schulhof</text>
+            <text x="710" y="60" class="heavy">F-Gebäude</text>
+            <text x="710" y="930" class="heavy">C-Gebäude</text>
+          </svg>
+        </div>
       </div>
     </div>
 
-    <div id="schulhof-selector" onmousedown="">
-      <div id="image-container" class="screenRes1">
-        <svg id="svgCanvas" viewBox="0 0 1478 940" preserveAspectRatio="xMinYMin meet" draggable="false">
-          <image width="100%" href="{{ url_for('static', filename='plan.jpg') }}" draggable="false"
-            style="pointer-events: none"></image>
-          <text x="710" y="450" class="heavy">Schulhof</text>
-          <text x="710" y="60" class="heavy">F-Gebäude</text>
-          <text x="710" y="930" class="heavy">C-Gebäude</text>
-        </svg>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function getScreenRatio() {
-      let imageContainer = document.getElementById("image-container");
-      if (
-        imageContainer.clientHeight < window.innerHeight &&
-        imageContainer.classList.contains("screenRes2")
-      ) {
-        imageContainer.classList.remove("screenRes2");
-        imageContainer.classList.add("screenRes1");
+    <script>
+      function getScreenRatio() {
+        let imageContainer = document.getElementById("image-container");
+        if (
+          imageContainer.clientHeight < window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
+        }
+        if (
+          imageContainer.clientHeight == window.innerHeight &&
+          imageContainer.classList.contains("screenRes2")
+        ) {
+          imageContainer.classList.remove("screenRes2");
+          imageContainer.classList.add("screenRes1");
+        }
+        if (
+          imageContainer.clientHeight >= window.innerHeight &&
+          imageContainer.classList.contains("screenRes1")
+        ) {
+          imageContainer.classList.remove("screenRes1");
+          imageContainer.classList.add("screenRes2");
+          console.log("changed to screenRes2");
+        }
+        console.log(imageContainer.clientHeight + ":" + window.innerHeight);
       }
-      if (
-        imageContainer.clientHeight == window.innerHeight &&
-        imageContainer.classList.contains("screenRes2")
-      ) {
-        imageContainer.classList.remove("screenRes2");
-        imageContainer.classList.add("screenRes1");
-      }
-      if (
-        imageContainer.clientHeight >= window.innerHeight &&
-        imageContainer.classList.contains("screenRes1")
-      ) {
-        imageContainer.classList.remove("screenRes1");
-        imageContainer.classList.add("screenRes2");
-        console.log("changed to screenRes2");
-      }
-      console.log(imageContainer.clientHeight + ":" + window.innerHeight);
-    }
-    getScreenRatio();
-    window.addEventListener("resize", () => {
       getScreenRatio();
-    });
-  </script>
-
-  <script defer>
-    var svg = document.getElementById("svgCanvas");
-    let isMouseDown = false;
-    var selectedCells = [];
-    usedCells = [];
-    var blacklistCells = {{ blacklistCells | tojson }};
-
-    function drawGrid(rows = 29, cols = 40, gap = 5, borderRadius = 10) {
-      const viewBox = svg.viewBox.baseVal;
-      const totalWidth = viewBox.width;
-      const totalHeight = viewBox.height;
-
-      const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
-      const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
-      window.addEventListener("mouseup", function () {
-        isMouseDown = false;
+      window.addEventListener("resize", () => {
+        getScreenRatio();
       });
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = gap + col * (cellWidth + gap);
-          const y = gap + row * (cellHeight + gap);
+    </script>
 
-          const rect = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "rect"
-          );
-          rect.setAttribute("x", x);
-          rect.setAttribute("y", y);
-          rect.setAttribute("width", cellWidth);
-          rect.setAttribute("height", cellHeight);
-          rect.setAttribute("rx", borderRadius);
-          rect.setAttribute("ry", borderRadius);
-          rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
-          rect.setAttribute("id", `cell-${row}-${col}`);
-          rect.addEventListener("mousedown", function () {
-            if (!allowedToDraw) {
-              return;
-            }
-            isMouseDown = true;
-            nextStageBtn = document.getElementById("nextStage");
-            nextStageBtn.disabled = false;
-            console.log(`Mouse down on cell at row ${row}, col ${col}`);
-            if (selectedCells.includes(`cell-${row}-${col}`)) {
-              selectedCells = selectedCells.filter(
-                (cell) => cell !== `cell-${row}-${col}`
-              );
-              rect.classList.remove("selected-rect");
-              rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+    <script defer>
+      var svg = document.getElementById("svgCanvas");
+      let isMouseDown = false;
+      var selectedCells = [];
+      usedCells = [];
+      var blacklistCells = {{ blacklistCells | tojson }};
+
+      function drawGrid(rows = 29, cols = 40, gap = 5, borderRadius = 10) {
+        const viewBox = svg.viewBox.baseVal;
+        const totalWidth = viewBox.width;
+        const totalHeight = viewBox.height;
+
+        const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
+        const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
+        window.addEventListener("mouseup", function () {
+          isMouseDown = false;
+        });
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const x = gap + col * (cellWidth + gap);
+            const y = gap + row * (cellHeight + gap);
+
+            const rect = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "rect"
+            );
+            rect.setAttribute("x", x);
+            rect.setAttribute("y", y);
+            rect.setAttribute("width", cellWidth);
+            rect.setAttribute("height", cellHeight);
+            rect.setAttribute("rx", borderRadius);
+            rect.setAttribute("ry", borderRadius);
+            rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+            rect.setAttribute("id", `cell-${row}-${col}`);
+            rect.addEventListener("mousedown", function () {
+              if (!allowedToDraw) {
+                return;
+              }
+              isMouseDown = true;
               nextStageBtn = document.getElementById("nextStage");
-              if (selectedCells.length < 1) {
-                nextStageBtn.disabled = true;
-              }
-            } else {
-              if (selectedCells.length >= 2) {
-                alert("Maximal 2 Kästchen auswählbar!");
-                return;
-              }
-              if (usedCells.includes(`cell-${row}-${col}`)) {
-                alert("Dieser Bereich ist bereits belegt!");
-                return;
-              }
-              selectedCells.push(`cell-${row}-${col}`);
-              rect.classList.add("selected-rect");
-              rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
-            }
-          });
-
-          // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist
-          rect.addEventListener("mouseover", function () {
-            if (
-              isMouseDown &&
-              selectedCells.length < 2 &&
-              !selectedCells.includes(`cell-${row}-${col}`)
-            ) {
+              nextStageBtn.disabled = false;
+              console.log(`Mouse down on cell at row ${row}, col ${col}`);
               if (selectedCells.includes(`cell-${row}-${col}`)) {
                 selectedCells = selectedCells.filter(
                   (cell) => cell !== `cell-${row}-${col}`
                 );
                 rect.classList.remove("selected-rect");
                 rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+                nextStageBtn = document.getElementById("nextStage");
+                if (selectedCells.length < 1) {
+                  nextStageBtn.disabled = true;
+                }
               } else {
+                if (selectedCells.length >= 2) {
+                  alert("Maximal 2 Kästchen auswählbar!");
+                  return;
+                }
                 if (usedCells.includes(`cell-${row}-${col}`)) {
+                  alert("Dieser Bereich ist bereits belegt!");
                   return;
                 }
                 selectedCells.push(`cell-${row}-${col}`);
                 rect.classList.add("selected-rect");
                 rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
               }
+            });
+
+            // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist
+            rect.addEventListener("mouseover", function () {
+              if (
+                isMouseDown &&
+                selectedCells.length < 2 &&
+                !selectedCells.includes(`cell-${row}-${col}`)
+              ) {
+                if (selectedCells.includes(`cell-${row}-${col}`)) {
+                  selectedCells = selectedCells.filter(
+                    (cell) => cell !== `cell-${row}-${col}`
+                  );
+                  rect.classList.remove("selected-rect");
+                  rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+                } else {
+                  if (usedCells.includes(`cell-${row}-${col}`)) {
+                    return;
+                  }
+                  selectedCells.push(`cell-${row}-${col}`);
+                  rect.classList.add("selected-rect");
+                  rect.setAttribute("fill", "rgba(200, 130, 0, 0.3)");
+                }
+              }
+            });
+            if (!blacklistCells.includes(`cell-${row}-${col}`)) {
+              svg.appendChild(rect);
             }
-          });
-          if (!blacklistCells.includes(`cell-${row}-${col}`)) {
-            svg.appendChild(rect);
           }
         }
       }
-    }
-    drawGrid();
+      drawGrid();
 
-    function getMapSelectionCoords() {
-      return selectedCells;
-    }
-  </script>
+      function getMapSelectionCoords() {
+        return selectedCells;
+      }
+    </script>
 
-  <script id="questions-data" type="application/json">
+    <script id="questions-data" type="application/json">
       {{ questions | tojson }}
     </script>
 
-  <script defer>
-    actionTitle = document.getElementById("actionTitle");
-    actionSubText = document.getElementById("actionSubtext");
-    additionaltext = document.getElementById("additionalText");
-    inputBoxes = document.getElementById("inputBoxes");
-    questionsField = document.getElementById("questions");
-    nextAction = document.getElementById("nextAction");
-    lastAction = document.getElementById("lastAction");
-    nextStageBtn = document.getElementById("nextStage");
-    lastStageBtn = document.getElementById("lastStage");
-    formContent = document.querySelector(".form-container");
-    arrow = document.querySelector(".arrow");
-    rectangleSelectionActive = false;
-    questionHTML1 = `
+    <script defer>
+      actionTitle = document.getElementById("actionTitle");
+      actionSubText = document.getElementById("actionSubtext");
+      additionaltext = document.getElementById("additionalText");
+      inputBoxes = document.getElementById("inputBoxes");
+      questionsField = document.getElementById("questions");
+      nextAction = document.getElementById("nextAction");
+      lastAction = document.getElementById("lastAction");
+      nextStageBtn = document.getElementById("nextStage");
+      lastStageBtn = document.getElementById("lastStage");
+      formContent = document.querySelector(".form-container");
+      arrow = document.querySelector(".arrow");
+      rectangleSelectionActive = false;
+      questionHTML1 = `
 
-      <div class="">
-          <label for="lehrername">Name:</label>
-          <input type="text" id="lehrername" placeholder="Max Mustermann" />
+                 <div class="">
+                     <label for="lehrername">Name:</label>
+                     <input type="text" id="lehrername" placeholder="Max Mustermann" />
 
-          <label for="klasse">Klasse:</label>
-          <input type="text" id="klasse" placeholder="5e" />
+                     <label for="klasse">Klasse:</label>
+                     <input type="text" id="klasse" placeholder="5e" />
 
-          <label for="projektName">Name des Projekts/Stands:</label>
-          <input type="text" id="projektName" placeholder="Projekt XY" />
+                     <label for="projektName">Name des Projekts/Stands:</label>
+                     <input type="text" id="projektName" placeholder="Projekt XY" />
 
-          <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
-          <input type="text" id="email" placeholder="example@email.com" />
+                     <label for="email">E-Mail Adresse: <span class="tooltip" title="Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet." onclick="alert('Die E-Mail Adresse wird ausschließlich für die Übermittlung von Informationen an Sie bezüglich Ihres Standes verwendet.')">?</span></label>
+                     <input type="text" id="email" placeholder="example@email.com" />
 
-          <label for="projektBeschreibung">Beschreibung und wichtige Hinweise zum Projekt:</label>
-          <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
-      </div>
-            `;
-    verifyTemplate = `
-            <p>Name: |name|</p>
-            <br>
-            <p>Klasse: |klasse|</p>
-            <br>
-            <p>Projektname: |projektName|</p>
-            <br>
-            <p>Projektbeschreibung: |projektBeschreibung|</p>
-            <br>
-            <p>E-Mail: |email|</p>
-            <br>
-            <p>Angekreuzte Angaben: |checked|</p>
-            `;
-    questionTemplate = `
-            <div style="display: inline-flex;">
-              <input type="checkbox" id="|questionID|">
-              <label for="|questionID|" style="display:inline">|questionText|</label>
-              <br>
-              </div>
-              `;
+                     <label for="projektBeschreibung">Beschreibung und wichtige Hinweise zum Projekt:</label>
+                     <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
+                 </div>
+                       `;
+      verifyTemplate = `
+                       <p>Name: |name|</p>
+                       <br>
+                       <p>Klasse: |klasse|</p>
+                       <br>
+                       <p>Projektname: |projektName|</p>
+                       <br>
+                       <p>Projektbeschreibung: |projektBeschreibung|</p>
+                       <br>
+                       <p>E-Mail: |email|</p>
+                       <br>
+                       <p>Angekreuzte Angaben: |checked|</p>
+                       `;
+      questionTemplate = `
+                       <div style="display: inline-flex;">
+                         <input type="checkbox" id="|questionID|">
+                         <label for="|questionID|" style="display:inline">|questionText|</label>
+                         <br>
+                         </div>
+                         `;
 
-    const questions = JSON.parse(document.getElementById("questions-data").textContent);
+      feedbackTemplate = `
+                 <div class="feedback-form-container">
+                       <form id="feedbackForm" action="/submitFeedback" method="post">
+             <h2>Feeback bezüglich der neuen Hoffest-Anmeldung</h2>
+           <p>Mit dieser freiwilligen und anonymen Umfrage können Sie uns Feedback geben. <br>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern – sei es durch eine einfache Bewertung oder konkrete Anregungen, Kritik oder Wünsche.</p>
 
-    function stageManager(stage) {
-      // Grundlegende UI-Elemente zurücksetzen
-      [inputBoxes, questionsField, formContent].forEach(
-        (el) => (el.style.display = "none")
-      );
-      [additionaltext, actionTitle, actionSubText].forEach(
-        (el) => (el.innerHTML = "")
-      );
-      [additionaltext, lastStageBtn, nextStageBtn].forEach(
-        (el) => (el.style.display = "block")
-      );
 
-      allowedToDraw = false;
-      nextStageBtn.disabled = false;
-      lastStageBtn.disabled = false;
-      nextStageBtn.classList.remove("start-btn");
-      nextStageBtn.classList.add("normal-btn");
-      arrow.style.borderColor = "black";
-      console.log(stage);
+             <div class="rating">
+               <input type="radio" id="star5" name="rating" value="5">
+               <label for="star5">★</label>
+               <input type="radio" id="star4" name="rating" value="4">
+               <label for="star4">★</label>
+               <input type="radio" id="star3" name="rating" value="3">
+               <label for="star3">★</label>
+               <input type="radio" id="star2" name="rating" value="2">
+               <label for="star2">★</label>
+               <input type="radio" id="star1" name="rating" value="1" checked>
+               <label for="star1">★</label>
+             </div>
 
-      const stages = {
-        start: () => {
-          nextStageBtn.classList.remove("normal-btn");
-          nextStageBtn.classList.add("start-btn");
+             <textarea name="comments" placeholder="Ideen, Kritik, Lob oder Anmerkungen (optional)"></textarea>
 
-          updateUI(
-            "Willkommen!",
-            "Sie haben sich noch für keinen Stand registriert.",
-            "Auf diese Seite können Sie sich für einen Stand auf dem Hoffest regestrieren!",
-            "Jetzt starten!",
-            "selectRectangle",
-            ""
-          );
-          lastStageBtn.disabled = true;
-          arrow.style.borderColor = "grey";
-        },
-        start2: () => {
-          nextStageBtn.classList.remove("normal-btn");
-          nextStageBtn.classList.add("start-btn");
+             <button type="submit">Senden</button>
+           </form>
+           </div>
+                       `;
 
-          updateUI(
-            "Willkommen!",
-            "Bearbeiten sie im folgenden Ihren Antrag.",
-            "Für die Bearbeitung Ihres Antrags gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Antrag entsprechend an. <br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
-            "Los geht's!",
-            "selectRectangle",
-            "notConfirmed"
-          );
-        },
-        selectRectangle: () => {
-          allowedToDraw = true;
-          updateUI(
-            "Fläche auswählen",
-            "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
-            "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können 2 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter akhoffest@gmx.de",
-            "Weiter",
-            "stage3",
-            "start"
-          );
-          additionaltext.style.display = "block";
-          nextStageBtn.disabled = true;
-          lastAction.value = "start";
-        },
-        stage3: () => {
-          [inputBoxes, questionsField, formContent].forEach(
-            (el) => (el.style.display = "block")
-          );
-          initQuestionBlock();
-          if (submittedData !== null && submittedData[7] !== "") {
-            loadPreviousData();
-          }
-          updateUI(
-            "Details zu Ihrem Stand",
-            "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
-            "Um die Anmeldung abzuschließen müssen noch folgende Fragen beantworten. Achten Sie bitte darauf, dass bei der Beschreibung des Projektes klar hervorgeht, was geplant ist und in welchem Bezug es zum Motto steht. ",
-            "Abschließen",
-            "verify",
-            "selectRectangle"
-          );
-        },
-        verify: () => {
-          checked = [];
-          for (const key in questions) {
-            const questionID = key;
-            const questionElement = document.getElementById(`${questionID}`);
-            if (questionElement.checked) {
-              checked.push(questions[questionID]);
+      const questions = JSON.parse(document.getElementById("questions-data").textContent);
+
+      function stageManager(stage) {
+        // Grundlegende UI-Elemente zurücksetzen
+        [inputBoxes, questionsField, formContent].forEach(
+          (el) => (el.style.display = "none")
+        );
+        [additionaltext, actionTitle, actionSubText].forEach(
+          (el) => (el.innerHTML = "")
+        );
+        [additionaltext, lastStageBtn, nextStageBtn].forEach(
+          (el) => (el.style.display = "block")
+        );
+
+        allowedToDraw = false;
+        nextStageBtn.disabled = false;
+        lastStageBtn.disabled = false;
+        nextStageBtn.classList.remove("start-btn");
+        nextStageBtn.classList.add("normal-btn");
+        arrow.style.borderColor = "black";
+        console.log(stage);
+
+        const stages = {
+          start: () => {
+            nextStageBtn.classList.remove("normal-btn");
+            nextStageBtn.classList.add("start-btn");
+
+            updateUI(
+              "Willkommen!",
+              "Sie haben sich noch für keinen Stand registriert.",
+              "Auf diese Seite können Sie sich für einen Stand auf dem Hoffest regestrieren!",
+              "Jetzt starten!",
+              "selectRectangle",
+              ""
+            );
+            lastStageBtn.disabled = true;
+            arrow.style.borderColor = "grey";
+          },
+          start2: () => {
+            nextStageBtn.classList.remove("normal-btn");
+            nextStageBtn.classList.add("start-btn");
+
+            updateUI(
+              "Willkommen!",
+              "Bearbeiten sie im folgenden Ihren Antrag.",
+              "Für die Bearbeitung Ihres Antrags gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Antrag entsprechend an. <br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
+              "Los geht's!",
+              "selectRectangle",
+              "notConfirmed"
+            );
+          },
+          selectRectangle: () => {
+            allowedToDraw = true;
+            updateUI(
+              "Fläche auswählen",
+              "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
+              "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können 2 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter akhoffest@gmx.de",
+              "Weiter",
+              "stage3",
+              "start"
+            );
+            additionaltext.style.display = "block";
+            nextStageBtn.disabled = true;
+            lastAction.value = "start";
+          },
+          stage3: () => {
+            [inputBoxes, questionsField, formContent].forEach(
+              (el) => (el.style.display = "block")
+            );
+            initQuestionBlock();
+            if (submittedData !== null && submittedData[7] !== "") {
+              loadPreviousData();
             }
-          }
-          currentData = gatherData();
-          verifyTempl = verifyTemplate
-            .replace("|name|", currentData["lehrername"])
-            .replace("|klasse|", currentData["klasse"])
-            .replace("|projektName|", currentData["projektName"])
-            .replace(
-              "|projektBeschreibung|",
-              currentData["projektBeschreibung"]
-            )
-            .replace("|email|", currentData["email"])
-            .replace(
-              "|checked|",
-              "<ul>" +
-              checked
-                .map((item) => `<li class="list-item-end">${item}</li>`)
-                .join("") +
-              "</ul>"
+            updateUI(
+              "Details zu Ihrem Stand",
+              "Bitte beantworten Sie die folgenden Fragen zu Ihrem Stand",
+              "Um die Anmeldung abzuschließen müssen noch folgende Fragen beantworten. Achten Sie bitte darauf, dass bei der Beschreibung des Projektes klar hervorgeht, was geplant ist und in welchem Bezug es zum Motto steht. ",
+              "Abschließen",
+              "verify",
+              "selectRectangle"
+            );
+          },
+          verify: () => {
+            checked = [];
+            for (const key in questions) {
+              const questionID = key;
+              const questionElement = document.getElementById(`${questionID}`);
+              if (questionElement.checked) {
+                checked.push(questions[questionID]);
+              }
+            }
+            currentData = gatherData();
+            verifyTempl = verifyTemplate
+              .replace("|name|", currentData["lehrername"])
+              .replace("|klasse|", currentData["klasse"])
+              .replace("|projektName|", currentData["projektName"])
+              .replace(
+                "|projektBeschreibung|",
+                currentData["projektBeschreibung"]
+              )
+              .replace("|email|", currentData["email"])
+              .replace(
+                "|checked|",
+                "<ul>" +
+                checked
+                  .map((item) => `<li class="list-item-end">${item}</li>`)
+                  .join("") +
+                "</ul>"
+              );
+
+            updateUI(
+              "Überprüfung Ihrer Angaben",
+              "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
+              "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet.<br> Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.<br><br>" +
+              verifyTempl,
+              "Bestätigen",
+              "confirm",
+              "stage3"
+            );
+          },
+          confirm: () => {
+            if (!submitData()) {
+              stageManager("stage3");
+            }
+          },
+          display: () => {
+            try {
+              drawOwnExistingGrid();
+            } catch (e) {
+            }
+
+
+            updateUI(
+              "Registrierung abgeschlossen",
+              "Ihr Stand wurde erfolgreich registriert! ",
+              "Sie erhalten in Kürze weitere Informationen in einer E-Mail an Ihre E-Mail Adresse. Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können die Seite schließen.",
+              "",
+              "",
+              ""
             );
 
-          updateUI(
-            "Überprüfung Ihrer Angaben",
-            "Bitte prüfen Sie noch einmal Ihre Angaben sorgfältig ",
-            "Falls etwas nicht stimmt, können Sie zurückgehen und Änderungen vornehmen. Nach Ihrer Bestätigung wird Ihr Wunsch registriert und bearbeitet.<br> Bitte beachten Sie, dass die Organisatoren sich auch nach der Bestätigung Änderungen vorbehalten und daher keine Garantie für die endgültige Umsetzung übernehmen können.<br><br>" +
-            verifyTempl,
-            "Bestätigen",
-            "confirm",
-            "stage3"
-          );
-        },
-        confirm: () => {
-          if (!submitData()) {
-            stageManager("stage3");
-          }
-        },
-        display: () => {
-          try {
+            [nextStageBtn, lastStageBtn].forEach(
+              (el) => (el.style.display = "none")
+            );
+          },
+          confirmed: () => {
             drawOwnExistingGrid();
-          } catch (e) {
-          }
+            updateUI(
+              "Registrierung abgeschlossen",
+              "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
+              `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}<br><br><br>` + feedbackTemplate,
+              "",
+              "",
+              ""
+            );
+            [nextStageBtn, lastStageBtn].forEach(
+              (el) => (el.style.display = "none")
+            );
+            document.getElementById('feedbackForm').addEventListener('submit', async e => {
+              e.preventDefault();                       // Seite nicht neu laden
 
+              // --- Daten aus dem Formular lesen ---
+              const form = e.target;
+              const payload = {
+                rating: form.rating.value,              // ausgewählter 1-5-Stern-Wert
+                comments: form.comments.value.trim()    // Textarea (kann leer sein)
+              };
 
-          updateUI(
-            "Registrierung abgeschlossen",
-            "Ihr Stand wurde erfolgreich registriert! ",
-            "Sie erhalten in Kürze weitere Informationen in einer E-Mail an Ihre E-Mail Adresse. Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können die Seite schließen.",
-            "",
-            "",
-            ""
-          );
+              // --- JSON via POST senden ---
+              const res = await fetch('/submitFeedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
 
-          [nextStageBtn, lastStageBtn].forEach(
-            (el) => (el.style.display = "none")
-          );
-        },
-        confirmed: () => {
-          drawOwnExistingGrid();
-          updateUI(
-            "Registrierung abgeschlossen",
-            "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
-            `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}`,
-            "",
-            "",
-            ""
-          );
+              // --- Rückmeldung an den Nutzer ---
+              if (res.ok) {
+                document.querySelector('.feedback-form-container').innerHTML = `
+                  <h2>Vielen Dank für Ihr Feedback!</h2>
+                  <br>
+                  <p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>
+                `;
+                localStorage.setItem("feedback", "1");
+                document.querySelector('.feedback-form-container').style.display = "block"
+              } else {
+                alert('Etwas ist schiefgelaufen – bitte später erneut versuchen.');
+              }
+            });
+            if (localStorage.getItem("feedback") === "1") {
+              document.querySelector('.feedback-form-container').innerHTML = `
+                   <h2>Vielen Dank für Ihr Feedback!</h2>
+                   <br>
+                   <p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>
+                 `;
+              document.querySelector('.feedback-form-container').style.display = "block"
 
-          [nextStageBtn, lastStageBtn].forEach(
-            (el) => (el.style.display = "none")
-          );
-        },
-        notConfirmed: () => {
-          drawOwnExistingGrid();
-          updateUI(
-            "Registrierung abgeschlossen",
-            "<span style=\"color: red\">Ihr Stand wurde abgelehnt</span>",
-            `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden. <h3>Begründung:</h3>${submittedData[8]}.<br><br> Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
-            "Bearbeiten",
-            "start2",
-            ""
-          );
+            }
+          },
+          notConfirmed: () => {
+            drawOwnExistingGrid();
+            updateUI(
+              "Registrierung abgeschlossen",
+              "<span style=\"color: red\">Ihr Stand wurde abgelehnt</span>",
+              `Der Antrag, den Sie gestellt haben wurde überprüft und als nicht passend empfunden. <h3>Begründung:</h3>${submittedData[8]}.<br><br> Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können den Antrag bearbeiten und erneut einreichen.`,
+              "Bearbeiten",
+              "start2",
+              ""
+            );
 
-          [lastStageBtn].forEach(
-            (el) => (el.style.display = "none")
-          );
-        },
-        error: () => {
-          updateUI(
-            "Fehler",
-            "Es ist ein Fehler aufgetreten. Es ist sehr wahrscheinlich, dass gerade eben jemand anderes einen Stand an der gleichen Stelle wie Sie beantragt hat. Bitte versuchen Sie es nochmal mt einem anderem Ort oder laden Sie die Seite erneut.<br><br>Falls dieser Fehler mehrmals auftritt, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
-            "",
-            "Zurück",
-            "start",
-            ""
-          );
-        },
-      };
-      if (stages[stage]) stages[stage]();
-    }
-
-    function updateUI(
-      title,
-      subtitle,
-      addText,
-      nextText,
-      nextActionValue,
-      lastActionValue
-    ) {
-      actionTitle.innerHTML = title;
-      actionSubText.innerHTML = subtitle;
-      additionaltext.innerHTML = addText;
-      nextStageBtn.innerText = nextText;
-      nextAction.value = nextActionValue;
-      lastAction.value = lastActionValue;
-    }
-
-    function loadPreviousData() {
-      document.getElementById("lehrername").value =
-        submittedData[2] || "";
-      document.getElementById("klasse").value = submittedData[3] || "";
-      document.getElementById("projektName").value =
-        submittedData[4] || "";
-      document.getElementById("projektBeschreibung").value =
-        submittedData[5] || "";
-      document.getElementById("email").value = "unverändert (aus Datenschutz weder einsehbar noch editierbar)";
-      document.getElementById("email").disabled = true;
-      for (const [key, value] of Object.entries(submittedData[6])) {
-        console.log(key, value);
-        const questionID = value;
-        const questionElement = document.getElementById(`${questionID}`);
-        questionElement.checked = true;
-      }
-    }
-
-    initedQuestionBlock = false;
-    function initQuestionBlock() {
-      if (initedQuestionBlock) {
-        return;
-      }
-      initedQuestionBlock = true;
-      inputBoxes.innerHTML = questionHTML1;
-      for (const key in questions) {
-        questionsField.innerHTML += questionTemplate
-          .replaceAll("|questionID|", key)
-          .replaceAll("|questionText|", questions[key]);
+            [lastStageBtn].forEach(
+              (el) => (el.style.display = "none")
+            );
+          },
+          error: () => {
+            updateUI(
+              "Fehler",
+              "Es ist ein Fehler aufgetreten. Es ist sehr wahrscheinlich, dass gerade eben jemand anderes einen Stand an der gleichen Stelle wie Sie beantragt hat. Bitte versuchen Sie es nochmal mt einem anderem Ort oder laden Sie die Seite erneut.<br><br>Falls dieser Fehler mehrmals auftritt, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
+              "",
+              "Zurück",
+              "start",
+              ""
+            );
+          },
+        };
+        if (stages[stage]) stages[stage]();
       }
 
-    }
-
-    function gatherData() {
-      data = {};
-      data.lehrername = document.getElementById("lehrername").value;
-      data.klasse = document.getElementById("klasse").value;
-      data.baseLocation = "h";
-      data.raumnummer = "";
-      data.projektName = document.getElementById("projektName").value;
-      data.projektBeschreibung = document.getElementById(
-        "projektBeschreibung"
-      ).value;
-      data.email = document.getElementById("email").value;
-      data.mapSelection = getMapSelectionCoords();
-      data.questions = {};
-      for (const key in questions) {
-        const questionID = key;
-        const questionElement = document.getElementById(`${questionID}`);
-        data.questions[questionID] = questionElement.checked;
-      }
-      if (submittedData !== null) {
-        data.id = submittedData[0];
-        data.reedit = submittedData[7] !== "";
-      }
-
-      return data;
-    }
-
-    function submitData() {
-      // check for empty fields
-      if (
-        data.lehrername === "" ||
-        data.klasse === "" ||
-        data.projektName === "" ||
-        data.projektBeschreibung === "" ||
-        data.email === ""
+      function updateUI(
+        title,
+        subtitle,
+        addText,
+        nextText,
+        nextActionValue,
+        lastActionValue
       ) {
-        alert("Bitte füllen Sie alle Felder aus.");
-        return false;
+        actionTitle.innerHTML = title;
+        actionSubText.innerHTML = subtitle;
+        additionaltext.innerHTML = addText;
+        nextStageBtn.innerText = nextText;
+        nextAction.value = nextActionValue;
+        lastAction.value = lastActionValue;
       }
-      // error correction
-      if (selectedCells.length < 1) {
-        alert("Bitte wählen Sie eine Fläche aus.");
-        return;
-      }
-      if (selectedCells.length > 2) {
-        alert("Bitte wählen Sie maximal 2 Kästchen aus.");
-        return;
-      }
-      fetch("/commitStand", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(gatherData()),
-      })
-        .then((response) => response.json())
-        .then((result) => {
-          console.log("Success:", result);
-          if (result.ok == "ok") {
-            stageManager("display");
-          } else {
-            stageManager("error");
-          }
-        })
-        .catch((error) => console.error("Error:", error));
-    }
 
-    submittedData = {{ already_submitted_data | tojson }};
-
-    if (submittedData == null) {
-      if (enabled === "False") {
-        updateUI(
-          "Nicht verfügbar",
-          "Die Anmeldung ist zur Zeit nicht verfügbar.",
-          "",
-          "",
-          "",
-          ""
-        );
-        document.getElementById("lastStage").disabled = true;
-      } else {
-        stageManager("start");
-
-      }
-    } else if (submittedData[7] === true) {
-      stageManager("confirmed");
-    } else if (submittedData[7] === false) {
-      stageManager("notConfirmed");
-    }
-    else {
-      console.log(submittedData);
-      data = submitData
-      stageManager("display");
-    }
-    function drawOwnExistingGrid() {
-      try {
-        const mapSelection = JSON.parse(submittedData[1]);
-        console.log("mapSelection", mapSelection);
-        for (const cell of mapSelection) {
-          console.log("cell", cell);
-          const rect = document.getElementById(cell);
-          rect.classList.add("selected-rect");
-          rect.setAttribute("fill", "rgba(100, 230, 0, 0.3)");
-          selectedCells.push(cell);
+      function loadPreviousData() {
+        document.getElementById("lehrername").value =
+          submittedData[2] || "";
+        document.getElementById("klasse").value = submittedData[3] || "";
+        document.getElementById("projektName").value =
+          submittedData[4] || "";
+        document.getElementById("projektBeschreibung").value =
+          submittedData[5] || "";
+        document.getElementById("email").value = "unverändert (aus Datenschutz weder einsehbar noch editierbar)";
+        document.getElementById("email").disabled = true;
+        for (const [key, value] of Object.entries(submittedData[6])) {
+          console.log(key, value);
+          const questionID = value;
+          const questionElement = document.getElementById(`${questionID}`);
+          questionElement.checked = true;
         }
-      } catch (e) {
-        return
       }
 
+      initedQuestionBlock = false;
+      function initQuestionBlock() {
+        if (initedQuestionBlock) {
+          return;
+        }
+        initedQuestionBlock = true;
+        inputBoxes.innerHTML = questionHTML1;
+        for (const key in questions) {
+          questionsField.innerHTML += questionTemplate
+            .replaceAll("|questionID|", key)
+            .replaceAll("|questionText|", questions[key]);
+        }
 
-    }
+      }
 
-    function drawForeignMap() {
+      function gatherData() {
+        data = {};
+        data.lehrername = document.getElementById("lehrername").value;
+        data.klasse = document.getElementById("klasse").value;
+        data.baseLocation = "h";
+        data.raumnummer = "";
+        data.projektName = document.getElementById("projektName").value;
+        data.projektBeschreibung = document.getElementById(
+          "projektBeschreibung"
+        ).value;
+        data.email = document.getElementById("email").value;
+        data.mapSelection = getMapSelectionCoords();
+        data.questions = {};
+        for (const key in questions) {
+          const questionID = key;
+          const questionElement = document.getElementById(`${questionID}`);
+          data.questions[questionID] = questionElement.checked;
+        }
+        if (submittedData !== null) {
+          data.id = submittedData[0];
+          data.reedit = submittedData[7] !== "";
+        }
 
-      foreignMapData.forEach((element) => {
-        console.log("element", element);
+        return data;
+      }
+
+      function submitData() {
+        // check for empty fields
+        if (
+          data.lehrername === "" ||
+          data.klasse === "" ||
+          data.projektName === "" ||
+          data.projektBeschreibung === "" ||
+          data.email === ""
+        ) {
+          alert("Bitte füllen Sie alle Felder aus.");
+          return false;
+        }
+        // error correction
+        if (selectedCells.length < 1) {
+          alert("Bitte wählen Sie eine Fläche aus.");
+          return;
+        }
+        if (selectedCells.length > 2) {
+          alert("Bitte wählen Sie maximal 2 Kästchen aus.");
+          return;
+        }
+        fetch("/commitStand", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(gatherData()),
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            console.log("Success:", result);
+            if (result.ok == "ok") {
+              stageManager("display");
+            } else {
+              stageManager("error");
+            }
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+
+      submittedData = {{ already_submitted_data | tojson }};
+
+      if (submittedData == null) {
+        if (enabled === "False") {
+          updateUI(
+            "Nicht verfügbar",
+            "Die Anmeldung ist zur Zeit nicht verfügbar.",
+            "",
+            "",
+            "",
+            ""
+          );
+          document.getElementById("lastStage").disabled = true;
+        } else {
+          stageManager("start");
+
+        }
+      } else if (submittedData[7] === true) {
+        stageManager("confirmed");
+      } else if (submittedData[7] === false) {
+        stageManager("notConfirmed");
+      }
+      else {
+        console.log(submittedData);
+        data = submitData
+        stageManager("display");
+      }
+      function drawOwnExistingGrid() {
         try {
-          const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
+          const mapSelection = JSON.parse(submittedData[1]);
           console.log("mapSelection", mapSelection);
           for (const cell of mapSelection) {
             console.log("cell", cell);
             const rect = document.getElementById(cell);
             rect.classList.add("selected-rect");
-            rect.setAttribute("fill", "rgba(200, 30, 0, 0.3)");
-            usedCells.push(cell);
+            rect.setAttribute("fill", "rgba(100, 230, 0, 0.8)");
+            selectedCells.push(cell);
           }
-
         } catch (e) {
+          return
         }
-      });
 
-    }
-    drawForeignMap()
-  </script>
-</body>
 
+      }
+
+      function drawForeignMap() {
+
+        foreignMapData.forEach((element) => {
+          console.log("element", element);
+          try {
+            const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
+            console.log("mapSelection", mapSelection);
+            for (const cell of mapSelection) {
+              console.log("cell", cell);
+              const rect = document.getElementById(cell);
+              rect.classList.add("selected-rect");
+              rect.setAttribute("fill", "rgba(200, 30, 0, 0.3)");
+              usedCells.push(cell);
+            }
+
+          } catch (e) {
+          }
+        });
+
+      }
+      drawForeignMap()
+    </script>
+  </body>
 </html>

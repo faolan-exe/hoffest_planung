@@ -1219,6 +1219,15 @@ class DatabaseManager:
             self.conn.rollback()
             return False
     
+    def getMailer(self):
+        """
+        Returns the mailer API instance.
+
+        Returns:
+        SMTPMailer: The mailer API instance.
+        """
+        return mailer
+    
     
 with open("./credentials.txt", "r") as file:
         SMTP_USER = file.readline().strip()

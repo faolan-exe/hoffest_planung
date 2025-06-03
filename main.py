@@ -363,6 +363,17 @@ def static_robots():
     return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
 
 
+@app.route("/submitFeedback", methods=["POST"])
+def submitFeedback():
+    if not checkAuth(session.get("id")):
+        return jsonify({"error": "Invalid authentication"}), 401
+    data = request.json
+    comment = data.get("comments", "[KEIN KOMMENTAR]")
+    rating = data.get("rating", -1)
+    db_manager.getMailer().send_email("akhoffest@gmx.de", f"Es wurde eine Bewertung abgegeben:<br><br><br>Kommentar: {comment}<br><br>Bewertung: {rating}")
+    return jsonify({"ok": "ok"}), 200
+
+
 def validate_auth(auth):
     try:
         id, checksum = auth.split(":")

@@ -19,8 +19,11 @@ function init() {
 var infoTemplate = `
 Lehrer: |teacher| <br>
 Klasse: |class| <br>
-Beschreibung: |description|
-`
+Beschreibung: |description| <br>
+<br>
+Checkboxen: 
+|checked_boxes|
+`;
 
 var allowedToDraw = false;
 var allowedToDrag = false;
@@ -69,28 +72,25 @@ function setup() {
       draggableBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
-    }
-    else {
+    } else {
       draggableBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
     }
   });
-    draggableBtnToggle.addEventListener("click", function () {
+  draggableBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       blackListBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
-    }
-    else {
+    } else {
       blackListBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
     }
   });
-
 
   // get blacklisted cells from server
   fetch("/admin/api/currentBlacklistCells")
@@ -100,7 +100,8 @@ function setup() {
       drawGrid();
     });
 
-  function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) { //33 40
+  function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) {
+    //33 40
     rows = rowsP;
     cols = colsP;
     gap = gapP;
@@ -150,35 +151,46 @@ function setup() {
         rect.style.opacity = "1";
         rect.classList.remove("blacklist-rect");
         rect.addEventListener("mousedown", (e) => {
-          const uidClass = Array.from(rect.classList).find(cls => cls.startsWith("uid-"));
+          const uidClass = Array.from(rect.classList).find((cls) =>
+            cls.startsWith("uid-")
+          );
           if (!uidClass) {
             console.warn("No uid class found on rect", rect);
           }
 
-          uid = uidClass?.split('-')[1];
-          var cellData = data.completed.find(item => item.id == uid)
+          uid = uidClass?.split("-")[1];
+          var cellData = data.completed.find((item) => item.id == uid);
           if (!cellData) {
-            cellData = data.pending.find(item => item.id == uid);
+            cellData = data.pending.find((item) => item.id == uid);
           }
           if (!cellData) {
             console.warn("No cell data found for ", uidClass);
             return;
           }
           console.log("cellData", cellData);
-          standInfo.innerHTML = infoTemplate.replace(
-            "|teacher|",
-            cellData.lehrer || "Unbekannt"
-          ).replace(
-            "|class|",
-            cellData.klasse || "Unbekannt"
-          ).replace(
-            "|description|",
-            cellData.beschreibung || "Keine Beschreibung"
-          );
-          
-          
+
+          checked_boxes = cellData.question_ids;
+let checked_Boxes_string = "<ul>";
+for (const box of checked_boxes) {
+  checked_Boxes_string += `<li>${questionIdLookup[box]}</li>`;
+}
+checked_Boxes_string += "</ul>";
 
 
+          standInfo.innerHTML = infoTemplate
+            .replace("|teacher|", cellData.lehrer || "Unbekannt")
+            .replace("|class|", cellData.klasse || "Unbekannt")
+            .replace(
+              "|description|",
+              cellData.beschreibung || "Keine Beschreibung"
+            )
+            .replace(
+              "|checked_boxes|",
+              checked_Boxes_string || "Keine Checkboxen ausgewählt"
+            );
+
+          //TODO: add link to the stand
+          //TODO: style
 
           const classList = Array.from(rect.classList).find((cls) =>
             cls.startsWith("foreign-rect-")
@@ -312,10 +324,10 @@ function setup() {
 
       selectedRects.forEach((rect) => {
         rect.style.cursor = "default";
-      const classList = Array.from(rect.classList);
-      const uidClass = classList.find(cls => cls.startsWith('uid-'));
-      const id = uidClass?.split('-')[1];        
-      collection.push({
+        const classList = Array.from(rect.classList);
+        const uidClass = classList.find((cls) => cls.startsWith("uid-"));
+        const id = uidClass?.split("-")[1];
+        collection.push({
           id: rect.id,
           uid: id,
         });
