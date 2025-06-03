@@ -14,22 +14,18 @@
       questionIdLookup = {{ questionIdLookup | tojson }}
       emailTexts = {{ email_texts | tojson }}
       enabled = "{{ enabled }}"
-      console.log("enabled: " + enabled);
       currentID = undefined;
-      console.log("currentID: " + currentID);
     </script>
-    <link rel="preload" href="/admin/loader/unconfirmed.js" as="script" />
-    <link rel="preload" href="/admin/loader/confirmed.js" as="script" />
-    <link rel="preload" href="/admin/loader/settings.js" as="script" />
-    <link rel="preload" href="/admin/loader/overview.js" as="script" />
+<link rel="prefetch" href="/admin/loader/unconfirmed.js" as="script" />
+<link rel="prefetch" href="/admin/loader/confirmed.js" as="script" />
+<link rel="prefetch" href="/admin/loader/settings.js" as="script" />
+<link rel="prefetch" href="/admin/loader/overview.js" as="script" />
+
 <script>
       function load(nav, setCurrentID) {
         if (setCurrentID) {
           currentID = setCurrentID;
-          console.log("currentID set to: " + currentID);
-        }
-
-        
+        }        
         switch (nav) {
           case "nav1":
             page = "unconfirmed.js";
@@ -120,9 +116,6 @@
           <p>
             <a id="nav4" onclick="load('nav4')">Einstellungen</a>
           </p>
-          <!-- <p>
-          <img src="https://avatars.githubusercontent.com/u/76256754?v=4" alt="" />
-        </p> -->
         </div>
       </div>
       <div id="inner-grid" class="inner-grid">
