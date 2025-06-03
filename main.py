@@ -23,11 +23,17 @@ secretAuthKey = open("./secretAuthCode.txt", "r").readline()
 
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
+TEST_MODE = False
+
+import socket
+if socket.gethostname() == "tobias-linux":
+    TEST_MODE = True
+    logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production!\n\n")
+    input("Press Enter to continue...")  # Wait for user input to continue
 
 # Global admin verification
 @admin.before_request
 def check_admin():
-    print("checking admin")
     if not isinstance(session.get("adminName"), str):
         return redirect(url_for("login_route"))
 
@@ -38,8 +44,6 @@ app = Flask(__name__)
 # Global user verification
 @app.before_request
 def check_auth():
-    print("checking auth............")
-    print(request.path)
     if request.path in [
         "/login",
         "/",
@@ -50,7 +54,6 @@ def check_auth():
     ] or request.path.startswith("/admin") or request.path.startswith("/static/"):
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
     if not checkAuth(session.get("id")):
-        print("not ok")
         session.clear()
         return redirect(url_for("index"))
 
@@ -64,14 +67,14 @@ app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
 def checkAuth(user_id): 
     """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
-    #if user_id == "bypass" or user_id == "bypass2":
-    #    return True  # Erlaubt Bypass-Benutzer
+    if TEST_MODE and user_id != "":
+        logger.warning("Running in TEST_MODE, allowing all users")
+        return True
 
     if not validate_auth(user_id):
         return False  # Ungültige Authentifizierung
 
     if not db_manager.check_trusted_id(user_id):
-        print("User ID is not trusted")
         return False  # Nicht vertrauenswürdig
 
     return True
@@ -92,7 +95,6 @@ def index():
         )
 
     sessionValue = session.get("id", "")
-    print("SESSION VALUE: " + sessionValue)
     if not checkAuth(sessionValue):
         session.clear()
         return (
@@ -118,7 +120,6 @@ def commitStand():
     if db_manager.get_status_action("enabled") == "0":
         return jsonify({"error": "forbidden"}), 403
     data = request.json
-    print(data)
     if db_manager.addNewStand(data, auth_id=session.get("id")):
         return jsonify({"ok": "ok"}), 200
     return jsonify({"error": "error"}), 500
@@ -127,7 +128,6 @@ def commitStand():
 @admin.route("/commitStand", methods=["POST"])
 def commitStand():
     data = request.json
-    print(data)
     if db_manager.addNewAdminStand(data):
         return jsonify({"ok": "ok"}), 200
     return jsonify({"error": "error"}), 500
@@ -135,7 +135,6 @@ def commitStand():
 
 @app.route("/test")
 def test():
-    print("test")
     return jsonify(ok=True), 200
 
 
@@ -146,9 +145,9 @@ def register():
     secret = data["secret"] == secretAuthKey
     if secret and validate_auth(id):
         if db_manager.addNewTrustedId(id):
-            print("success")
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
+    return jsonify(error="Invalid authentication or secret"), 401
 
 
 @admin.route("/register")
@@ -201,7 +200,6 @@ def admin_route(destination="nav1"):
             }
         )
     email_texts = db_manager.get_all_emails()
-    print(email_texts)
     return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"))
 
 
@@ -223,7 +221,6 @@ def returnCurrentBlacklistCells():
 def admin_stand_route(path_id):
     if request.method == "POST":
         data = request.json
-        print(data)
         if not db_manager.approve_stand(path_id, data["status"], data["comment"]):
             logger.error(f"Error approving stand")
             return jsonify({"error": "Error approving stand"}), 500
@@ -341,7 +338,6 @@ def login_route(data=None):
     if request.method == "POST":
         data = request.json
     if data:
-        print("login route")
         username = data["username"]
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):
@@ -357,7 +353,7 @@ def login_route(data=None):
 def set_session():
     name = request.json.get("name")
     value = request.json.get("value")
-    print(f"SETTING SESSION: {name}---{value}")
+    logger.debug(f"SETTING SESSION: {name}---{value}")
     session[name] = value
     return "", 200
 
