@@ -27,12 +27,17 @@
     <div style="background: lightgreen">
       <button id="blackListBtnToggle">Zellen ausblenden</button>
       <button id="draggableBtnToggle">Stände verschieben</button>
+
       <button id ="resetBtn" style="display: none;" onclick="location.reload()">Abbruch</button>
       <hr />
       <div>
         <h3>Stand Information</h3>
-        <div id="standList" style="overflow-y: auto; height: 80vh">
+        <div id="standList" style="overflow-y: auto;">
           <p>Bitte wählen Sie einen Stand aus, um Informationen anzuzeigen.</p>
+        </div>
+        <div id="resizeBtnToggleDiv" style="display: none;">
+                <button id="resizeBtnToggle">Standgröße bearbeiten</button>
+
         </div>
       </div>
     </div>

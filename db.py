@@ -18,7 +18,7 @@ from logger import get_logger
 from SMTPMailer import SMTPMailer
 
 
-logger = get_logger("databaseManager", logging.DEBUG)
+logger = get_logger("databaseManager", logging.INFO)
 RESET_DATABASE = False
 
 
@@ -239,7 +239,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             questions = self.cursor.fetchall()
-            logger.info(f"Questions retrieved: {questions}")
+            logger.debug(f"Questions retrieved: {questions}")
             questionsDict = {}
             for question in questions:
                 questionsDict[question[0]] = question[1]

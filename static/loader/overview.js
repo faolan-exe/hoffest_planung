@@ -19,6 +19,7 @@ function init() {
 var infoTemplate = `
 Lehrer: |teacher| <br>
 Klasse: |class| <br>
+Standname: |name| <br>
 Beschreibung: |description| <br>
 <br>
 Checkboxen: 
@@ -28,6 +29,10 @@ Checkboxen:
 var allowedToDraw = false;
 var allowedToDrag = false;
 var blacklistCells = [];
+var selectedCells = [];
+var currentSelectedCellClass = "";
+var currentSelectedUID = "";
+
 var rows;
 var cols;
 var gap;
@@ -55,14 +60,18 @@ function setup() {
     .getElementById("draggableBtnToggle")
     .addEventListener("click", enableDraggableCells);
 
+  document
+    .getElementById("resizeBtnToggle")
+    .addEventListener("click", enableResizeCells);
+
   window.addEventListener("mouseup", function () {
     isMouseDown = false;
   });
 
   var svg = document.getElementById("svgCanvas");
-  var standInfo = document.getElementById("standList");
   var blackListBtnToggle = document.getElementById("blackListBtnToggle");
   var draggableBtnToggle = document.getElementById("draggableBtnToggle");
+  var resizeBtnToggle = document.getElementById("resizeBtnToggle");
   var resetBtn = document.getElementById("resetBtn");
   resetBtnActive = false;
 
@@ -70,10 +79,12 @@ function setup() {
   blackListBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       draggableBtnToggle.style.display = "initial";
+      resizeBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
     } else {
       draggableBtnToggle.style.display = "none";
+      resizeBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
@@ -82,13 +93,40 @@ function setup() {
   draggableBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       blackListBtnToggle.style.display = "initial";
+      resizeBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
     } else {
       blackListBtnToggle.style.display = "none";
+      resizeBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
+    }
+  });
+  resizeBtnToggle.addEventListener("click", function () {
+    if (resetBtnActive) {
+      blackListBtnToggle.style.display = "initial";
+      draggableBtnToggle.style.display = "initial";
+
+      resetBtnActive = false;
+      resetBtn.style.display = "none";
+    } else {
+      blackListBtnToggle.style.display = "none";
+      draggableBtnToggle.style.display = "none";
+
+      resetBtnActive = true;
+      resetBtn.style.display = "initial";
+      resetBtn.textContent = "Aktion abbrechen";
+
+      document
+        .querySelectorAll(
+          `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+        )
+        .forEach((rect) => {
+          selectedCells.push(rect.id);
+          rect.style.opacity = "1";
+        });
     }
   });
 
@@ -150,90 +188,8 @@ function setup() {
       .forEach((rect) => {
         rect.style.opacity = "1";
         rect.classList.remove("blacklist-rect");
-        rect.addEventListener("mousedown", (e) => {
-          const uidClass = Array.from(rect.classList).find((cls) =>
-            cls.startsWith("uid-")
-          );
-          if (!uidClass) {
-            console.warn("No uid class found on rect", rect);
-          }
 
-          uid = uidClass?.split("-")[1];
-          var cellData = data.completed.find((item) => item.id == uid);
-          if (!cellData) {
-            cellData = data.pending.find((item) => item.id == uid);
-          }
-          if (!cellData) {
-            console.warn("No cell data found for ", uidClass);
-            return;
-          }
-          console.log("cellData", cellData);
-
-          checked_boxes = cellData.question_ids;
-let checked_Boxes_string = "<ul>";
-for (const box of checked_boxes) {
-  checked_Boxes_string += `<li>${questionIdLookup[box]}</li>`;
-}
-checked_Boxes_string += "</ul>";
-
-
-          standInfo.innerHTML = infoTemplate
-            .replace("|teacher|", cellData.lehrer || "Unbekannt")
-            .replace("|class|", cellData.klasse || "Unbekannt")
-            .replace(
-              "|description|",
-              cellData.beschreibung || "Keine Beschreibung"
-            )
-            .replace(
-              "|checked_boxes|",
-              checked_Boxes_string || "Keine Checkboxen ausgewählt"
-            );
-
-          //TODO: add link to the stand
-          //TODO: style
-
-          const classList = Array.from(rect.classList).find((cls) =>
-            cls.startsWith("foreign-rect-")
-          );
-          if (!classList) return;
-          const mousePos = getMousePosition(e, svg);
-          dragData.rects = [];
-          dragData.offsetX = [];
-          dragData.offsetY = [];
-
-          document.querySelectorAll(`rect.${classList}`).forEach((r) => {
-            const x = parseFloat(r.getAttribute("x") || "0");
-            const y = parseFloat(r.getAttribute("y") || "0");
-
-            dragData.rects.push(r);
-            dragData.offsetX.push(mousePos.x - x);
-            dragData.offsetY.push(mousePos.y - y);
-
-            r.style.opacity = "0.8";
-            const viewBox = svg.viewBox.baseVal;
-            const totalWidth = viewBox.width;
-            const totalHeight = viewBox.height;
-
-            const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
-            const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
-
-            cellX = Math.round(
-              (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap)
-            );
-            cellY = Math.round(
-              (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap)
-            );
-            existingCellId = `cell-${cellY}-${cellX}`;
-            if (
-              document.querySelectorAll(`[id="${existingCellId}"]`).length <= 1
-            ) {
-              drawRect(cellX, cellY);
-            }
-          });
-
-          dragData.className = classList;
-          dragData.active = true;
-        });
+        addRectEventListeners(rect);
       });
 
     document.addEventListener("mousemove", (e) => {
@@ -250,6 +206,9 @@ checked_Boxes_string += "</ul>";
 
     document.addEventListener("mouseup", () => {
       if (!dragData.active) return;
+      if (allowedToDrag == false) {
+        return;
+      }
       dragData.rects.forEach((r) => {
         const x = parseFloat(r.getAttribute("x"));
         const y = parseFloat(r.getAttribute("y"));
@@ -302,7 +261,6 @@ checked_Boxes_string += "</ul>";
     }
 
     mode = "blacklist";
-    selectedCells = [];
     allowedToDraw = true;
     blackListBtnToggle.textContent = "Speichern";
     blacklistCells.forEach((cell) => {
@@ -345,6 +303,47 @@ checked_Boxes_string += "</ul>";
         rect.style.cursor = "grabbing";
       });
     allowedToDrag = true;
+  }
+
+  //button action 3
+  function enableResizeCells() {
+    if (resizeBtnToggle.textContent === "Speichern") {
+      resizeBtnToggle.textContent = "Standgröße bearbeiten";
+      currentSelectedCellClass = "";
+      selectedCells = [];
+      allowedToDraw = false;
+      mode = "";
+      const selectedRects = document.querySelectorAll('rect[class*="uid-"]');
+      collection = [];
+
+      selectedRects.forEach((rect) => {
+        rect.style.cursor = "default";
+        const classList = Array.from(rect.classList);
+        const uidClass = classList.find((cls) => cls.startsWith("uid-"));
+        const id = uidClass?.split("-")[1];
+        collection.push({
+          id: rect.id,
+          uid: id,
+        });
+      });
+      sendNewStandPositions(collection);
+
+      document
+        .querySelectorAll('rect[class*="foreign-rect-"]')
+        .forEach((rect) => {
+          rect.style.opacity = "1";
+        });
+      //location.reload(); // not a very elegant solution...
+    } else {
+      resizeBtnToggle.textContent = "Speichern";
+      allowedToDraw = true;
+      mode = "changeStandSize";
+      document
+        .querySelectorAll('rect[class*="foreign-rect-"]')
+        .forEach((rect) => {
+          rect.style.opacity = "0.5";
+        });
+    }
   }
 
   function sendNewBlacklistCells() {
@@ -401,12 +400,18 @@ checked_Boxes_string += "</ul>";
           255 *
             (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
         );
+
       return `rgba(${f(0)}, ${f(8)}, ${f(4)}, 0.7)`;
     }
 
     function getColor() {
       totalColors = standCount;
       const hue = (counter % totalColors) * (360 / totalColors);
+      return hslToRgb(hue, 90, 60);
+    }
+    function getColorByIndex(index) {
+      totalColors = standCount;
+      const hue = (index % totalColors) * (360 / totalColors);
       return hslToRgb(hue, 90, 60);
     }
 
@@ -422,6 +427,7 @@ checked_Boxes_string += "</ul>";
       getColor,
       nextColor,
       getCounter,
+      getColorByIndex,
     };
   })();
 
@@ -459,9 +465,9 @@ checked_Boxes_string += "</ul>";
       if (!allowedToDraw) {
         return;
       }
+      isMouseDown = true;
+      console.log(`Mouse down on cell at row ${row}, col ${col}`);
       if (mode === "blacklist") {
-        isMouseDown = true;
-        console.log(`Mouse down on cell at row ${row}, col ${col}`);
         if (blacklistCells.includes(`cell-${row}-${col}`)) {
           blacklistCells = blacklistCells.filter(
             (cell) => cell !== `cell-${row}-${col}`
@@ -471,11 +477,84 @@ checked_Boxes_string += "</ul>";
           blacklistCells.push(`cell-${row}-${col}`);
           rect.setAttribute("fill", "rgba(255, 0, 0, 0.8)");
         }
+      } else if (mode === "changeStandSize") {
+        const rectClass = Array.from(rect.classList).find((cls) =>
+          cls.startsWith("foreign-rect-")
+        );
+
+        if (
+          rectClass &&
+          currentSelectedCellClass != "" &&
+          rectClass != "foreign-rect-" + currentSelectedCellClass
+        ) {
+          console.warn(
+            "Rect already has a different class, cannot change size"
+          );
+          console.warn("rectClass", rectClass);
+          console.warn("currentSelectedCellClass", currentSelectedCellClass);
+          return;
+        }
+        if (rectClass && currentSelectedCellClass === rectClass.split("-")[2]) {
+          console.warn("Rect already has the current selected class", rect);
+          rect.style.opacity = "1";
+          selectedCells = selectedCells.filter(
+            (id) => id !== `cell-${row}-${col}`
+          );
+          rect.classList.remove("selected-rect");
+          rect.classList.remove(`foreign-rect-${currentSelectedCellClass}`);
+          rect.classList.remove(`uid-${currentSelectedUID.split("-")[1]}`);
+          rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+          
+ // remove event listeners
+          const clone = rect.cloneNode(true);
+          rect.parentNode.replaceChild(clone, rect);
+
+          return;
+        }
+        if (!rectClass && currentSelectedCellClass === "") {
+          console.warn("No uid class found on rect", rect);
+          return;
+        }
+        // else if (rectClass === currentSelectedCellClass && (Array.from(rect.classList).some((cls) => cls.startsWith("foreign-rect-")))) {
+        // console.warn("Rect already has the current selected class", rect);
+        // }
+        else if (rectClass && currentSelectedCellClass === "") {
+          currentSelectedCellClass = rectClass.split("-")[2];
+          document
+            .querySelectorAll(
+              `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+            )
+            .forEach((rect) => {
+              selectedCells.push(rect.id);
+              rect.style.opacity = "1";
+            });
+          currentSelectedUID = Array.from(rect.classList).find((cls) =>
+            cls.startsWith("uid-")
+          );
+
+          console.log("currentSelectedCellClass", currentSelectedCellClass);
+        } else if (currentSelectedCellClass !== "") {
+          selectedCells.push(`cell-${row}-${col}`);
+          rect.classList.add(`foreign-rect-${currentSelectedCellClass}`);
+          rect.classList.add(`uid-${currentSelectedUID.split("-")[1]}`);
+          rect.classList.add("selected-rect");
+          colorGenerator.getColorByIndex(currentSelectedCellClass);
+          rect.setAttribute(
+            "fill",
+            colorGenerator.getColorByIndex(currentSelectedCellClass)
+          );
+          rect.style.opacity = "1";
+          addRectEventListeners(rect);
+
+        }
       }
     });
 
     // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist
     rect.addEventListener("mouseover", function () {
+      if (!allowedToDraw) {
+        return;
+      }
       if (mode === "blacklist") {
         if (isMouseDown && !blacklistCells.includes(`cell-${row}-${col}`)) {
           if (blacklistCells.includes(`cell-${row}-${col}`)) {
@@ -500,4 +579,121 @@ checked_Boxes_string += "</ul>";
       }
     }
   }
+
+function addRectEventListeners(rect) {
+  rect.addEventListener("mousedown", (e) => {
+    // get information about the stand
+    const uidClass = Array.from(rect.classList).find((cls) =>
+      cls.startsWith("uid-")
+    );
+    if (!uidClass) {
+      console.warn("No uid class found on rect", rect);
+    }
+
+    uid = uidClass?.split("-")[1];
+    var cellData = data.completed.find((item) => item.id == uid);
+    if (!cellData) {
+      cellData = data.pending.find((item) => item.id == uid);
+    }
+    if (!cellData) {
+      console.warn("No cell data found for ", uidClass);
+      return;
+    }
+    console.log("cellData", cellData);
+
+    checked_boxes = cellData.question_ids;
+    let checked_Boxes_string = "<ul>";
+    for (const box of checked_boxes) {
+      checked_Boxes_string += `<li>${questionIdLookup[box]}</li>`;
+    }
+    checked_Boxes_string += "</ul>";
+      var standInfo = document.getElementById("standList");
+
+    standInfo.innerHTML = infoTemplate
+      .replace("|teacher|", cellData.lehrer || "Unbekannt")
+      .replace("|class|", cellData.klasse || "Unbekannt")
+      .replace("|description|", cellData.beschreibung || "Keine Beschreibung")
+      .replace(
+        "|checked_boxes|",
+        checked_Boxes_string || "Keine Checkboxen ausgewählt"
+      )
+      .replace("|name|", cellData.titel || "Unbekannt");
+
+    document.getElementById("resizeBtnToggleDiv").style.display = "flex";
+
+    const rectClass = Array.from(rect.classList).find((cls) =>
+      cls.startsWith("foreign-rect-")
+    );
+    currentSelectedCellClass = rectClass.split("-")[2];
+
+    currentSelectedUID = Array.from(rect.classList).find((cls) =>
+      cls.startsWith("uid-")
+    );
+
+    if (currentSelectedCellClass != "") {
+      document
+        .querySelectorAll(`rect[class*="foreign-rect-"]`)
+        .forEach((rect) => {
+          selectedCells.push(rect.id);
+          rect.style.opacity = "0.7";
+        });
+
+      document
+        .querySelectorAll(
+          `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+        )
+        .forEach((rect) => {
+          selectedCells.push(rect.id);
+          rect.style.opacity = "1";
+        });
+    }
+
+    if (allowedToDrag == false) {
+      return;
+    }
+    const classList = Array.from(rect.classList).find((cls) =>
+      cls.startsWith("foreign-rect-")
+    );
+    if (!classList) return;
+    const mousePos = getMousePosition(e, svg);
+    dragData.rects = [];
+    dragData.offsetX = [];
+    dragData.offsetY = [];
+
+    document.querySelectorAll(`rect.${classList}`).forEach((r) => {
+      const x = parseFloat(r.getAttribute("x") || "0");
+      const y = parseFloat(r.getAttribute("y") || "0");
+
+      dragData.rects.push(r);
+      dragData.offsetX.push(mousePos.x - x);
+      dragData.offsetY.push(mousePos.y - y);
+
+      r.style.opacity = "0.8";
+      const viewBox = svg.viewBox.baseVal;
+      const totalWidth = viewBox.width;
+      const totalHeight = viewBox.height;
+
+      const cellWidth = (totalWidth - (cols + 1) * gap) / cols;
+      const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
+
+      cellX = Math.round(
+        (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap)
+      );
+      cellY = Math.round(
+        (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap)
+      );
+      existingCellId = `cell-${cellY}-${cellX}`;
+      if (document.querySelectorAll(`[id="${existingCellId}"]`).length <= 1) {
+        drawRect(cellX, cellY);
+      }
+    });
+
+    dragData.className = classList;
+    dragData.active = true;
+  });
 }
+
+
+
+}
+
