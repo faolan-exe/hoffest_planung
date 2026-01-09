@@ -28,7 +28,7 @@ TEST_MODE = False
 import socket
 if socket.gethostname() == "tobias-linux":
     TEST_MODE = True
-    logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production!\n\n")
+    logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production, as this allows user to skip authentication!\n\n")
     input("Press Enter to continue...")  # Wait for user input to continue
 
 # Global admin verification

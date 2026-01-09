@@ -935,13 +935,37 @@ class DatabaseManager:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
             for email in result:
-                mailer.send_email(email[0], email_text)
+                authID = self.get_auth_id_from_email(email[0])
+                dynamic_email_text = email_text.replace("|authID|", authID)
+                mailer.send_email(email[0], dynamic_email_text)
             logger.info(f"Email text broadcasted successfully")
             return True
         except Exception as e:
             logger.error(f"Error broadcasting email text: {e}")
             self.conn.rollback()
             return False
+    
+    def get_auth_id_from_email(self, email):
+        """
+        gets the auth_id for a given email address.
+        """
+        logger.debug(f"get_auth_id_from_email is called")
+        query = "SELECT auth_id FROM stand WHERE email = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(email,)}")
+        try:
+            self.cursor.execute(query, (email,))
+            result = self.cursor.fetchone()
+            if result == None:
+                logger.debug(f"No results found")
+                return None
+            auth_id = result[0]
+            logger.info(f"Auth ID retrieved successfully")
+            return auth_id
+        except Exception as e:
+            logger.error(f"Error retrieving auth ID: {e}")
+            self.conn.rollback()
+            return None
 
     def get_email_text(self, email_id):
         """

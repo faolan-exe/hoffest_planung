@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import time
 
+
 class SMTPMailer:
     def __init__(self, smtp_server, smtp_port, username, password, db_manager):
         self.smtp_server = smtp_server
@@ -61,6 +62,7 @@ class SMTPMailer:
 
     def _send_email(self, server, recipient, text):
         """Sendet eine E-Mail über eine bestehende SMTP-Verbindung."""
+
         sender_email = self.username
         msg = MIMEMultipart()
         msg["From"] = sender_email
@@ -75,13 +77,17 @@ class SMTPMailer:
         msg.attach(MIMEText(full_html, "html"))
 
         try:
-            server.sendmail(sender_email, recipient, msg.as_string())
+            if "dev.server" in sender_email:
+                print("SKIPPED DEV SERVER MAIL")
+            else:
+                server.sendmail(sender_email, recipient, msg.as_string())
             print(f"E-Mail an {recipient} erfolgreich gesendet!")
         except Exception as e:
             print(f"Fehler beim Senden an {recipient}: {e}")
 
     def send_email(self, recipient, text):
         """Fügt eine E-Mail zur Warteschlange hinzu."""
+
         print(f"Füge E-Mail an Warteschlange für {recipient} hinzu.")
         self.email_queue.put((recipient, text))
 
