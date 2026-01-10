@@ -1103,36 +1103,31 @@ class DatabaseManager:
             return None
 
     def update_blacklist_cells(self, cells_json):
-        """
-        Updates the blacklist cells in the database.
+        logger.debug("update_blacklist_cells is called")
 
-        Parameters:
-        cells (list): A list of blacklist cells to be updated.
-
-        Returns:
-        bool: True if the blacklist cells were successfully updated, False otherwise.
-        """
-        logger.debug(f"update_blacklist_cells is called")
-        
-        cells = json.loads(cells_json)              # Liste der Strings
+        cells = list(dict.fromkeys(json.loads(cells_json)))
 
         try:
-            # ▸ Transaktion explizit starten (autocommit MUSS aus sein)
-            self.cursor.execute("TRUNCATE blacklistedCells")  # TRUNCATE ist schneller als DELETE
+            self.cursor.execute("TRUNCATE blacklistedCells")
 
-            # Alle Werte in einem Rutsch einfügen
             self.cursor.executemany(
-                "INSERT INTO blacklistedCells (cell) VALUES (%s)",
+                """
+                INSERT INTO blacklistedCells (cell)
+                VALUES (%s)
+                ON CONFLICT (cell) DO NOTHING
+                """,
                 [(c,) for c in cells]
             )
 
-            self.conn.commit()                      # Einmal am Ende
+            self.conn.commit()
             logger.info("Blacklist aktualisiert")
             return True
         except Exception as e:
             self.conn.rollback()
             logger.error(f"Fehler: {e}")
             return False
+
+
 
     def update_stand_positions(self, data):
         """

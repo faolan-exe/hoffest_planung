@@ -30,8 +30,13 @@ var allowedToDraw = false;
 var allowedToDrag = false;
 var blacklistCells = [];
 var selectedCells = [];
+var socketList = [];
+
+var arrayCopy = [];
 var currentSelectedCellClass = "";
 var currentSelectedUID = "";
+
+var globalforeignMapData = "";
 
 var rows;
 var cols;
@@ -61,6 +66,10 @@ function setup() {
     .addEventListener("click", enableDraggableCells);
 
   document
+    .getElementById("socketMarkerBtnToggle")
+    .addEventListener("click", enableSocketMarker);
+
+  document
     .getElementById("resizeBtnToggle")
     .addEventListener("click", enableResizeCells);
 
@@ -72,33 +81,91 @@ function setup() {
   var blackListBtnToggle = document.getElementById("blackListBtnToggle");
   var draggableBtnToggle = document.getElementById("draggableBtnToggle");
   var resizeBtnToggle = document.getElementById("resizeBtnToggle");
+  socketMarkerBtnToggle = document.getElementById("socketMarkerBtnToggle");
   var resetBtn = document.getElementById("resetBtn");
   resetBtnActive = false;
+  socketMarkerActive = false;
+
+
+  resetBtn.addEventListener("click", function () {
+    mode = "";
+    allowedToDraw = false;
+
+    draggableBtnToggle.style.display = "initial";
+    resizeBtnToggle.style.display = "initial";
+    socketMarkerBtnToggle.style.display = "initial";
+    blackListBtnToggle.style.display = "initial";
+    resetBtnActive = false;
+    resetBtn.style.display = "none";
+
+    if (blackListBtnToggle.textContent === "Speichern") {
+      blacklistCells = [...arrayCopy];
+      blackListBtnToggle.textContent = "Zellen ausblenden";
+    }
+    if (draggableBtnToggle.textContent === "Speichern") {
+      draggableBtnToggle.textContent = "Stände verschieben";
+    }
+    if (socketMarkerBtnToggle.textContent === "Speichern") {
+      socketList = [...arrayCopy];
+      socketMarkerBtnToggle.textContent = "Steckdosen einzeichnen";
+    }
+    if (resizeBtnToggle.textContent === "Speichern") {
+      resizeBtnToggle.textContent = "Standgröße bearbeiten";
+    }
+
+    drawGrid();
+
+  });
 
   // reset button
   blackListBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       draggableBtnToggle.style.display = "initial";
       resizeBtnToggle.style.display = "initial";
+      socketMarkerBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
     } else {
       draggableBtnToggle.style.display = "none";
       resizeBtnToggle.style.display = "none";
+      socketMarkerBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
     }
   });
+
+  // socketMarker button
+  socketMarkerBtnToggle.addEventListener("click", function () {
+    if (resetBtnActive) {
+      draggableBtnToggle.style.display = "initial";
+      resizeBtnToggle.style.display = "initial";
+      blackListBtnToggle.style.display = "initial";
+
+      resetBtnActive = false;
+      resetBtn.style.display = "none";
+    } else {
+      draggableBtnToggle.style.display = "none";
+      resizeBtnToggle.style.display = "none";
+      blackListBtnToggle.style.display = "none";
+
+      resetBtnActive = true;
+      resetBtn.style.display = "initial";
+      resetBtn.textContent = "Aktion abbrechen";
+    }
+  });
+
   draggableBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       blackListBtnToggle.style.display = "initial";
       resizeBtnToggle.style.display = "initial";
+      socketMarkerBtnToggle.style.display = "initial";
       resetBtnActive = false;
       resetBtn.style.display = "none";
     } else {
       blackListBtnToggle.style.display = "none";
       resizeBtnToggle.style.display = "none";
+      socketMarkerBtnToggle.style.display = "none";
       resetBtnActive = true;
       resetBtn.style.display = "initial";
       resetBtn.textContent = "Aktion abbrechen";
@@ -108,12 +175,14 @@ function setup() {
     if (resetBtnActive) {
       blackListBtnToggle.style.display = "initial";
       draggableBtnToggle.style.display = "initial";
+      socketMarkerBtnToggle.style.display = "initial";
 
       resetBtnActive = false;
       resetBtn.style.display = "none";
     } else {
       blackListBtnToggle.style.display = "none";
       draggableBtnToggle.style.display = "none";
+      socketMarkerBtnToggle.style.display = "none";
 
       resetBtnActive = true;
       resetBtn.style.display = "initial";
@@ -135,11 +204,17 @@ function setup() {
     .then((response) => response.json())
     .then((data) => {
       blacklistCells = data;
+      fetch("/admin/api/currentSocketCells")
+        .then((response) => response.json())
+        .then((data) => {
+          socketList = data;
+        });
       drawGrid();
     });
 
   function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) {
-    //33 40
+    console.log("drawGrid called");
+    svg.innerHTML = '<image href="/static/plan.jpg"width="100%"style="pointer-events: none"preserveAspectRatio="xMinYMin meet"id="svgImage"></image>";' // clear existing grid
     rows = rowsP;
     cols = colsP;
     gap = gapP;
@@ -153,19 +228,27 @@ function setup() {
     }
 
     // draw the existing stands
+    if (globalforeignMapData != "") {
+      drawForeignMap();
+      return;
+    }
     fetch("/admin/api/foreignMapData")
       .then((response) => response.json())
       .then((foreignMapData) => {
-        standCount = foreignMapData.length;
-        drawForeignMap(foreignMapData);
+        globalforeignMapData = foreignMapData;
+        standCount = globalforeignMapData.length;
+        
+        drawForeignMap();
       });
   }
 
-  function drawForeignMap(foreignMapDataP) {
+  function drawForeignMap() {
+    foreignMapDataP = globalforeignMapData;
     console.log("foreignMapDataP", foreignMapDataP);
     foreignMapDataP.forEach((element) => {
       try {
         const uID = element[0];
+        if (element[2] != "none") {
         const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
         for (const cell of mapSelection) {
           const rect = document.getElementById(cell);
@@ -175,6 +258,7 @@ function setup() {
           rect.setAttribute("fill", colorGenerator.getColor());
         }
         colorGenerator.nextColor();
+        }
       } catch (error) {
         console.log("Error parsing foreignMapData:", error);
       }
@@ -257,9 +341,10 @@ function setup() {
       allowedToDraw = false;
       mode = "";
       sendNewBlacklistCells();
+      drawGrid();
       return;
     }
-
+    arrayCopy = [...blacklistCells];
     mode = "blacklist";
     allowedToDraw = true;
     blackListBtnToggle.textContent = "Speichern";
@@ -305,6 +390,31 @@ function setup() {
     allowedToDrag = true;
   }
 
+  function enableSocketMarker() {
+    if (socketMarkerBtnToggle.textContent === "Speichern") {
+      socketMarkerBtnToggle.textContent = "Steckdosen einzeichnen";
+
+      socketList.forEach((cell) => {
+        const rect = document.getElementById(cell);
+        rect.classList.add("socket-rect");
+        //rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
+      });
+      allowedToDraw = false;
+      mode = "";
+      sendNewSockets();
+      return;
+    }
+    arrayCopy = [...socketList];
+    mode = "socketMarker";
+    allowedToDraw = true;
+    socketMarkerBtnToggle.textContent = "Speichern";
+    socketList.forEach((cell) => {
+      const rect = document.getElementById(cell);
+      rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
+      rect.style.opacity = "0.8";
+    });
+  }
+
   //button action 3
   function enableResizeCells() {
     if (resizeBtnToggle.textContent === "Speichern") {
@@ -333,7 +443,8 @@ function setup() {
         .forEach((rect) => {
           rect.style.opacity = "1";
         });
-      //location.reload(); // not a very elegant solution...
+      return;
+        
     } else {
       resizeBtnToggle.textContent = "Speichern";
       allowedToDraw = true;
@@ -355,6 +466,26 @@ function setup() {
       body: JSON.stringify({
         action: "blacklistCellsUpdate",
         value: JSON.stringify(blacklistCells),
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Success:", data);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  }
+
+  function sendNewSockets() {
+    fetch("/admin/api", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "socketCellsUpdate",
+        value: JSON.stringify(socketList),
       }),
     })
       .then((response) => response.json())
@@ -481,14 +612,27 @@ function setup() {
           }
         }
       }
+      if (mode === "socketMarker") {
+        if (isMouseDown && !socketList.includes(`cell-${row}-${col}`)) {
+          if (socketList.includes(`cell-${row}-${col}`)) {
+            socketList = socketList.filter(
+              (cell) => cell !== `cell-${row}-${col}`
+            );
+            rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+          } else {
+            socketList.push(`cell-${row}-${col}`);
+            rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
+          }
+        }
+      }
     });
     svg.appendChild(rect);
 
-    if (blacklistCells.includes(`cell-${row}-${col}`)) {
-      rect.setAttribute("fill", "rgba(255, 0, 0, 0.8)");
-      if (mode !== "blacklist") {
+    if (socketList.includes(`cell-${row}-${col}`)) {
+      rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
+      if (mode !== "socketMarker") {
         rect.style.opacity = "0";
-        rect.classList.add("blacklist-rect");
+        rect.classList.add("socket-rect");
       }
     }
   }
@@ -623,6 +767,16 @@ function setup() {
           blacklistCells.push(`cell-${row}-${col}`);
           rect.setAttribute("fill", "rgba(255, 0, 0, 0.8)");
         }
+      } else if (mode === "socketMarker") {
+        if (socketList.includes(`cell-${row}-${col}`)) {
+          socketList = socketList.filter(
+            (cell) => cell !== `cell-${row}-${col}`
+          );
+          rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
+        } else {
+          socketList.push(`cell-${row}-${col}`);
+          rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
+        }
       } else if (mode === "changeStandSize") {
         const rectClass = Array.from(rect.classList).find((cls) =>
           cls.startsWith("foreign-rect-")
@@ -654,7 +808,7 @@ function setup() {
           // remove event listeners
           const clone = rect.cloneNode(true);
           rect.parentNode.replaceChild(clone, rect);
-          addDefaultRectEventListeners(clone, row, col); //recursive call to re-add event listeners???
+          addDefaultRectEventListeners(clone, row, col); //recursive call to re-add event listeners, a bit weird but works
 
           return;
         }
