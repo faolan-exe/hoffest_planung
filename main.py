@@ -217,6 +217,11 @@ def returnCurrentBlacklistCells():
     data = db_manager.getCurrentBlacklistCells()
     return jsonify(data), 200
 
+@admin.route("/api/currentSocketCells")
+def returnCurrentSocketCells():
+    data = db_manager.getCurrentSocketCells()
+    return jsonify(data), 200
+
 @admin.route("/stand/<path_id>", methods=["GET", "POST"])
 def admin_stand_route(path_id):
     if request.method == "POST":
@@ -283,6 +288,10 @@ def admin_api():
         case "blacklistCellsUpdate":
             if not db_manager.update_blacklist_cells(value):
                 return jsonify({"error": "Failed to update blacklist cells"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "socketCellsUpdate":
+            if not db_manager.update_socket_cells(value):
+                return jsonify({"error": "Failed to update socket cells"}), 400
             return jsonify({"ok": "ok"}), 200
         case "standPositionsUpdate":
             if not db_manager.update_stand_positions(value):

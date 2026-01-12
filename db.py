@@ -1152,20 +1152,40 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+    def getCurrentSocketCells(self):
+        """
+        Retrieves the current socket cells from the database.
+
+        Returns:
+        list: A list of tuples containing the socket cells.
+        """
+        logger.debug(f"getCurrentSocketCells is called")
+        query = "SELECT cell FROM socket_cells"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query)
+            result = self.cursor.fetchall()
+            logger.info(f"Data retrieved successfully")
+            return [result[0] for result in result]
+
+        except Exception as e:
+            logger.error(f"Error retrieving data: {e}")
+            self.conn.rollback()
+            return None
 
     def update_blacklist_cells(self, cells_json):
         logger.debug("update_blacklist_cells is called")
 
-        cells = list(dict.fromkeys(json.loads(cells_json)))
+        cells = set(json.loads(cells_json))
 
         try:
-            self.cursor.execute("TRUNCATE blacklistedCells")
+            self.cursor.execute("BEGIN")
+            self.cursor.execute("DELETE FROM blacklistedCells")
 
             self.cursor.executemany(
                 """
                 INSERT INTO blacklistedCells (cell)
                 VALUES (%s)
-                ON CONFLICT (cell) DO NOTHING
                 """,
                 [(c,) for c in cells]
             )
@@ -1177,6 +1197,34 @@ class DatabaseManager:
             self.conn.rollback()
             logger.error(f"Fehler: {e}")
             return False
+        
+    def update_socket_cells(self, cells_json):
+        logger.debug("update_socket_cells is called")
+
+        cells = set(json.loads(cells_json))
+
+        try:
+            self.cursor.execute("BEGIN")
+            self.cursor.execute("DELETE FROM socket_cells")
+
+            self.cursor.executemany(
+                """
+                INSERT INTO socket_cells (cell)
+                VALUES (%s)
+                """,
+                [(c,) for c in cells]
+            )
+
+            self.conn.commit()
+            logger.info("Socket cells aktualisiert")
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"Fehler: {e}")
+            return False
+
+        
+    
 
 
 
