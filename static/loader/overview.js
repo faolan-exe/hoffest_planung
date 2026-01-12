@@ -117,7 +117,6 @@ function setup() {
 
   });
 
-  // reset button
   blackListBtnToggle.addEventListener("click", function () {
     if (resetBtnActive) {
       draggableBtnToggle.style.display = "initial";
@@ -336,7 +335,7 @@ function setup() {
       blacklistCells.forEach((cell) => {
         const rect = document.getElementById(cell);
         rect.classList.add("blacklist-rect");
-        rect.style.opacity = "0";
+        //rect.style.opacity = "0";
       });
       allowedToDraw = false;
       mode = "";
@@ -402,6 +401,7 @@ function setup() {
       allowedToDraw = false;
       mode = "";
       sendNewSockets();
+      drawGrid();
       return;
     }
     arrayCopy = [...socketList];
@@ -411,7 +411,7 @@ function setup() {
     socketList.forEach((cell) => {
       const rect = document.getElementById(cell);
       rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
-      rect.style.opacity = "0.8";
+      rect.style.opacity = "0.7";
     });
   }
 
@@ -628,13 +628,6 @@ function setup() {
     });
     svg.appendChild(rect);
 
-    if (socketList.includes(`cell-${row}-${col}`)) {
-      rect.setAttribute("fill", "rgba(0, 204, 255, 0.8)");
-      if (mode !== "socketMarker") {
-        rect.style.opacity = "0";
-        rect.classList.add("socket-rect");
-      }
-    }
   }
 
   function addRectEventListeners(rect) {
