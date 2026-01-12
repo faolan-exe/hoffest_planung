@@ -131,6 +131,13 @@ function submitNewPassword() {
 
 function deleteQuestion(questionId) {
     console.log("Deleting question with ID: " + questionId);
+    if (!confirm("Sind Sie sicher, dass Sie diese Frage löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.")) {
+        return;
+    }
+    if (questionId == "4") {
+        alert("Die Frage nach dem Strombedarf kann nicht gelöscht werden.");
+        return;
+    }
     sendFetch("deleteQuestion", questionId);
 }
 

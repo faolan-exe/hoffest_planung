@@ -378,6 +378,12 @@
     <script>
       allowedToDraw = false;
       foreignMapData = {{ foreignMapData | tojson }}
+      {% if socketCells %}
+      socketCells = {{ socketCells | tojson }}
+      {% else %}
+      socketCells = []
+      {% endif %}
+      
       enabled = "{{enabled}}"
     </script>
   </head>
@@ -568,7 +574,11 @@
                 }
               }
             });
-            if (!blacklistCells.includes(`cell-${row}-${col}`)) {
+            if (socketCells.includes(rect.id)) {
+              rect.setAttribute("stroke", "rgba(0, 204, 255, 0.7)");
+              rect.setAttribute("stroke-width", "3");
+            }
+            if (!blacklistCells.includes(rect.id)) {
               svg.appendChild(rect);
             }
           }
@@ -721,7 +731,7 @@
             updateUI(
               "Fläche auswählen",
               "Markieren Sie eine Fläche auf dem Schulhof, die für Ihren Stand reserviert werden soll. ",
-              "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von 2x2 Metern. Sie können 2 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof zu machen, kontaktieren Sie bitte die Organisatoren unter akhoffest@gmx.de",
+              "Klicken Sie dafür auf die Kästchen auf dem Schulhof um die gewünschte Fläche zu markieren. <br><br>Ein Kästchen entspricht einer Fläche von <strong>2x2 Metern</strong>. Sie können bis zu 2 Kästchen markieren.<br><br> Falls ein anderer Stand bereits dort ist, müssen Sie eine andere Position wählen.<br><br> Falls es nicht möglich sein sollte, den Stand auf dem Schulhof aufzustellen, kontaktieren Sie bitte die Organisatoren unter akhoffest@gmx.de<br><br> Sobald Sie eine Fläche ausgewählt haben, können Sie mit dem Button <strong>\"Weiter\"</strong> fortfahren.<br><br>Wenn Ihr Stand <strong>Strom</strong> benötigt, markieren Sie bitte mindestens ein Kästchen mit blauer Umrandung.<br><br>",
               "Weiter",
               "stage3",
               "start"
@@ -954,10 +964,15 @@
         data.email = document.getElementById("email").value;
         data.mapSelection = getMapSelectionCoords();
         data.questions = {};
+        data.needsPower = false;
         for (const key in questions) {
           const questionID = key;
           const questionElement = document.getElementById(`${questionID}`);
           data.questions[questionID] = questionElement.checked;
+          if (questionID == "4" && questionElement.checked) {
+            data.needsPower = true;
+          }
+          
         }
         if (submittedData !== null) {
           data.id = submittedData[0];
@@ -988,6 +1003,21 @@
           alert("Bitte wählen Sie maximal 2 Kästchen aus.");
           return;
         }
+
+        isInSocketRange = false;
+        selectedCells.forEach((cell) => {
+          if (socketCells.includes(cell)) {
+            isInSocketRange = true;
+          }
+        });
+
+        if (data.needsPower && !isInSocketRange) {
+          alert(
+            "Da Sie Strom für Ihren Stand benötigen, müssen Sie mindestens ein Kästchen mit blauer Umrandung auswählen."
+          );
+          return;
+        }
+
         fetch("/commitStand", {
           method: "POST",
           headers: {

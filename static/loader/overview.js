@@ -207,8 +207,8 @@ function setup() {
         .then((response) => response.json())
         .then((data) => {
           socketList = data;
+          drawGrid();
         });
-      drawGrid();
     });
 
   function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) {
@@ -592,6 +592,16 @@ function setup() {
     rect.setAttribute("ry", borderRadius);
     rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
     rect.setAttribute("id", `cell-${row}-${col}`);
+    
+    console.log("socketList", socketList);
+    if (socketList.includes(`cell-${row}-${col}`)) {
+      rect.setAttribute("stroke", "rgba(0, 204, 255, 1)");
+      rect.setAttribute("stroke-width", "2");
+    }
+    if (blacklistCells.includes(`cell-${row}-${col}`)) {
+      rect.setAttribute("stroke", "rgba(255, 0, 0, 0.3)");
+      rect.setAttribute("stroke-width", "2");
+    }
     addDefaultRectEventListeners(rect, row, col);
 
     // Wenn die Maus über das Kästchen fährt und die Maustaste gedrückt ist

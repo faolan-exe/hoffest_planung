@@ -108,10 +108,11 @@ def index():
         enabled = False
     questions = db_manager.get_questions()
     blacklistCells = db_manager.getCurrentBlacklistCells()
+    socketCells = db_manager.getCurrentSocketCells()
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
     return render_template(
-        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells, socketCells=socketCells
     )
 
 
