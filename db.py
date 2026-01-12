@@ -1,5 +1,4 @@
 import ast
-import random
 import time
 import traceback
 import uuid
@@ -7,18 +6,21 @@ import uuid
 from flask import json
 import logger
 import psycopg2
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import logging
+from logging import INFO
+from logger import get_logger
 import argon2
 
-ph = argon2.PasswordHasher()
-from logger import get_logger
+import os
+
+
 
 from SMTPMailer import SMTPMailer
 
+ph = argon2.PasswordHasher()
 
-logger = get_logger("databaseManager", logging.INFO)
+
+
+logger = get_logger("databaseManager", INFO)
 RESET_DATABASE = False
 
 
@@ -46,8 +48,57 @@ class DatabaseManager:
 
         if not self.check_database_integrity() or RESET_DATABASE:
             self.init_tables()
+        
+        self.do_migrations()
 
     ################################ INIT FUNCTIONS ###################################
+    
+    def do_migrations(self):
+        """
+        Applies any pending database migrations.
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
+        logger.debug("do_migrations is called")
+        try:
+            
+            query = read_sql_file("./dbscripts/postgres/migrations/migration_001_init.sql")
+            logger.debug(f"Executing SQL query: {query}")
+            self.cursor.execute(query)
+            self.conn.commit()
+            query = "SELECT migration_name FROM migrations;"
+            logger.debug(f"Executing SQL query: {query}")
+            
+            self.cursor.execute(query)
+            applied_migrations = {row[0] for row in self.cursor.fetchall()}
+
+
+            migration_files = sorted(
+                f
+                for f in os.listdir("./dbscripts/postgres/migrations/")
+                if f.endswith(".sql")
+            )
+
+            for migration_file in migration_files:
+                if migration_file not in applied_migrations:
+                    logger.info(f"Applying migration: {migration_file}")
+                    migration_query = read_sql_file(
+                        f"./dbscripts/postgres/migrations/{migration_file}"
+                    )
+                    logger.debug(f"Executing SQL query: {migration_query}")
+                    self.cursor.execute(migration_query)
+                    self.conn.commit()
+                    logger.info(f"Migration {migration_file} applied successfully")
+        except Exception as e:
+            logger.critical(f"Error applying migrations: {e}")
+            logger.critical(traceback.format_exc())
+            self.conn.rollback()
+    
+    
     def check_database_integrity(self):
         """
         Checks the integrity of the database by comparing the number of tables with the expected count.

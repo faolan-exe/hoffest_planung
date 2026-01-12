@@ -1,0 +1,5 @@
+-- Do stuff...
+
+
+-- Insert migration record
+INSERT INTO migrations (migration_name) VALUES ('migration_XXX_xyzxyz.sql') ON CONFLICT (migration_name) DO NOTHING;
