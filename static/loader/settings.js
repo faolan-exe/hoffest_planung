@@ -25,7 +25,7 @@ function init() {
     })
     .catch((err) => console.error(err));
 }
-
+const quillEditors = {};
 
 function setup() {
     submitNewQuestionBtn = document.getElementById("submitNewQuestionBtn");
@@ -55,6 +55,36 @@ function setup() {
     emailText4.value = emailTexts["4"];
     emailText5.value = emailTexts["5"];
     emailText10.value = emailTexts["10"];
+
+    // Ensure Quill.js is loaded before initializing
+if (typeof Quill === 'undefined') {
+    console.error('Quill.js is not loaded. Ensure the library is included before this script.');
+} else {
+    // Initialize Quill.js editors with color options in the toolbar
+    
+    ['emailText1', 'emailText2', 'emailText3', 'emailText4', 'emailText5', 'emailText10'].forEach(id => {
+        quillEditors[id] = new Quill(`#${id}`, {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ color: [] }, { background: [] }], // Add color and background options
+                    ['link', 'image'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+    });
+
+    // Populate Quill.js editors with database values
+    ['emailText1', 'emailText2', 'emailText3', 'emailText4', 'emailText5', 'emailText10'].forEach(id => {
+        if (quillEditors[id]) {
+            quillEditors[id].root.innerHTML = emailTexts[id.replace('emailText', '')] || '';
+        }
+    });
+}
 
     submitEmailText1Btn.addEventListener("click", function() {
         sendFetch("emailText1", document.getElementById("emailText1").value);
@@ -144,6 +174,7 @@ function deleteQuestion(questionId) {
 
 
 function sendFetch(action, value) {
+    const quillContent = quillEditors[action]?.root.innerHTML || value;
     fetch(`/admin/api`, {
         method: "POST",
         headers: {
@@ -151,7 +182,7 @@ function sendFetch(action, value) {
         },
         body: JSON.stringify({
             "action": action,
-            "value": value,
+            "value": quillContent,
             "origin": "settings"
         })
     })
@@ -161,12 +192,12 @@ function sendFetch(action, value) {
         if (resData.ok === "ok") {
             if (action.includes("emailText")) {
                 alert("Email text updated successfully");
-                return
+                return;
             }
             if (action.includes("pageStatus")) {
-                return
+                return;
             }
-            document.location = "/admin"
+            document.location = "/admin";
         } else {
             alert("Error updating status: " + resData.error);
         }

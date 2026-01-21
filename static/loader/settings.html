@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+   
     <style>
       .inner-content {
         display: flex;
@@ -74,14 +74,12 @@
         align-items: center;
         margin-top: 15px;
       }
-      .email-texte textarea {
+      .quill-editor {
         width: 100%;
         height: 150px;
-        padding: 10px;
         border: 1px solid #ddd;
         border-radius: 5px;
-        resize: vertical;
-        font-size: 16px;
+        margin-top: 10px;
       }
       .account-info input[type="password"] {
         width: 80%;
@@ -186,33 +184,33 @@
         <h2>Texte für die E-Mail</h2>
         <div id="email1">
           <h3>[An Lehrkraft] Stand Registratur erfolgreich übermittelt</h3>
-          <textarea id="emailText1" placeholder="Text für email XYZ"></textarea>
+          <div id="emailText1" class="quill-editor"></div>
           <button id="submitEmailText1Btn">Übernehmen</button>
         </div>
         <hr />
         <div id="email2">
           <h3>[An Lehrkraft] Stand wurde unter vorbehalt genehmigt</h3>
-          <textarea id="emailText2" placeholder="Text für email XYZ"></textarea>
+          <div id="emailText2" class="quill-editor"></div>
           <button id="submitEmailText2Btn">Übernehmen</button>
           <p>Variablen: |kommentar|</p>
         </div>
         <hr />
         <div id="email3">
           <h3>[An Lehrkraft] Stand wurde abgelehnt</h3>
-          <textarea id="emailText3" placeholder="Text für email XYZ"></textarea>
+          <div id="emailText3" class="quill-editor"></div>
           <button id="submitEmailText3Btn">Übernehmen</button>
           <p>Variablen: |kommentar|</p>
         </div>
         <hr />
         <div id="email5">
           <h3>[An Lehrkraft] Stand wurde verschoben</h3>
-          <textarea id="emailText5" placeholder="Text für email XYZ"></textarea>
+          <div id="emailText5" class="quill-editor"></div>
           <button id="submitEmailText5Btn">Übernehmen</button>
         </div>
         <hr />
         <div id="email4">
           <h3>[An Orga] Neuer Stand wurde übermittelt</h3>
-          <textarea id="emailText4" placeholder="Text für email XYZ"></textarea>
+          <div id="emailText4" class="quill-editor"></div>
           <button id="submitEmailText4Btn">Übernehmen</button>
         </div>
       </div>
@@ -223,10 +221,7 @@
       >
         <h3>[An alle Lehrkäfte] Direktnachricht</h3>
         <h4>Sendet sofort eine E-Mail an alle regestrierten Lehrkräfte</h4>
-        <textarea
-          id="emailText10"
-          placeholder="z.B. eine Erinnerungsnachricht"
-        ></textarea>
+        <div id="emailText10" class="quill-editor"></div>
         <button id="sendEmailText10Btn">Übernehmen (ohne Senden)</button>
         <button id="submitEmailText10Btn">Übernehmen und Senden</button>
       </div>
