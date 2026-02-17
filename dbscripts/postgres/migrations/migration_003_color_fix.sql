@@ -10,7 +10,7 @@ ADD COLUMN farbe text DEFAULT (
     '#bfff00', '#7f00ff', '#00bfff', '#ff1493', '#7fff00', '#ff69b4',
     '#1e90ff', '#32cd32', '#ff4500', '#da70d6', '#00fa9a', '#ffd700',
     '#adff2f', '#4b0082', '#ff6347', '#40e0d0', '#9acd32', '#ffb6c1',
-    '#6a5acd', '#20b2aa', '#ff8c00', '#db7093'
+    '#6a5acd', '#20b2aa', '#790a0a', '#db7093'
   ])[floor(random()*50+1)]
 ;
 
@@ -26,7 +26,7 @@ SET farbe = (
     '#bfff00', '#7f00ff', '#00bfff', '#ff1493', '#7fff00', '#ff69b4',
     '#1e90ff', '#32cd32', '#ff4500', '#da70d6', '#00fa9a', '#ffd700',
     '#adff2f', '#4b0082', '#ff6347', '#40e0d0', '#9acd32', '#ffb6c1',
-    '#6a5acd', '#20b2aa', '#ff8c00', '#db7093'
+    '#6a5acd', '#20b2aa', '#790a0a', '#db7093'
   ])[floor(random()*50+1)]
 ;
 
