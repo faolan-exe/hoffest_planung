@@ -1098,7 +1098,7 @@ class DatabaseManager:
         list: A list of tuples containing the selected areas.
         """
         logger.debug(f"getAllSelectedAreas is called")
-        query = "SELECT id, ort, ort_spezifikation FROM stand"
+        query = "SELECT id, ort, ort_spezifikation, farbe FROM stand"
         logger.debug(f"Executing SQL query: {query}")
         try:
             self.cursor.execute(query)

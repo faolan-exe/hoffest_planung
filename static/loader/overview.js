@@ -86,7 +86,6 @@ function setup() {
   resetBtnActive = false;
   socketMarkerActive = false;
 
-
   resetBtn.addEventListener("click", function () {
     mode = "";
     allowedToDraw = false;
@@ -114,7 +113,6 @@ function setup() {
     }
 
     drawGrid();
-
   });
 
   blackListBtnToggle.addEventListener("click", function () {
@@ -189,7 +187,7 @@ function setup() {
 
       document
         .querySelectorAll(
-          `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+          `rect[class*="foreign-rect-${currentSelectedCellClass}"]`,
         )
         .forEach((rect) => {
           selectedCells.push(rect.id);
@@ -213,7 +211,8 @@ function setup() {
 
   function drawGrid(rowsP = 29, colsP = 40, gapP = 5, borderRadiusP = 10) {
     console.log("drawGrid called");
-    svg.innerHTML = '<image href="/static/plan.jpg"width="100%"style="pointer-events: none"preserveAspectRatio="xMinYMin meet"id="svgImage"></image>";' // clear existing grid
+    svg.innerHTML =
+      '<image href="/static/plan.jpg"width="100%"style="pointer-events: none"preserveAspectRatio="xMinYMin meet"id="svgImage"></image>";'; // clear existing grid
     rows = rowsP;
     cols = colsP;
     gap = gapP;
@@ -236,7 +235,7 @@ function setup() {
       .then((foreignMapData) => {
         globalforeignMapData = foreignMapData;
         standCount = globalforeignMapData.length;
-        
+
         drawForeignMap();
       });
   }
@@ -248,15 +247,15 @@ function setup() {
       try {
         const uID = element[0];
         if (element[2] != "none") {
-        const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
-        for (const cell of mapSelection) {
-          const rect = document.getElementById(cell);
-          rect.classList.add("selected-rect");
-          rect.classList.add(`foreign-rect-${colorGenerator.getCounter()}`);
-          rect.classList.add(`uid-${uID}`);
-          rect.setAttribute("fill", colorGenerator.getColor());
-        }
-        colorGenerator.nextColor();
+          const mapSelection = JSON.parse(element[2].replaceAll("'", '"'));
+          for (const cell of mapSelection) {
+            const rect = document.getElementById(cell);
+            rect.classList.add("selected-rect");
+            rect.classList.add(`foreign-rect-${colorGenerator.getCounter()}`);
+            rect.classList.add(`uid-${uID}`);
+            rect.setAttribute("fill", element[3]);
+          }
+          colorGenerator.nextColor();
         }
       } catch (error) {
         console.log("Error parsing foreignMapData:", error);
@@ -444,7 +443,6 @@ function setup() {
           rect.style.opacity = "1";
         });
       return;
-        
     } else {
       resizeBtnToggle.textContent = "Speichern";
       allowedToDraw = true;
@@ -529,7 +527,7 @@ function setup() {
       const f = (n) =>
         Math.round(
           255 *
-            (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
+            (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))),
         );
 
       return `rgba(${f(0)}, ${f(8)}, ${f(4)}, 0.7)`;
@@ -592,7 +590,7 @@ function setup() {
     rect.setAttribute("ry", borderRadius);
     rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
     rect.setAttribute("id", `cell-${row}-${col}`);
-    
+
     console.log("socketList", socketList);
     if (socketList.includes(`cell-${row}-${col}`)) {
       rect.setAttribute("stroke", "rgba(0, 204, 255, 1)");
@@ -613,7 +611,7 @@ function setup() {
         if (isMouseDown && !blacklistCells.includes(`cell-${row}-${col}`)) {
           if (blacklistCells.includes(`cell-${row}-${col}`)) {
             blacklistCells = blacklistCells.filter(
-              (cell) => cell !== `cell-${row}-${col}`
+              (cell) => cell !== `cell-${row}-${col}`,
             );
             rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
           } else {
@@ -626,7 +624,7 @@ function setup() {
         if (isMouseDown && !socketList.includes(`cell-${row}-${col}`)) {
           if (socketList.includes(`cell-${row}-${col}`)) {
             socketList = socketList.filter(
-              (cell) => cell !== `cell-${row}-${col}`
+              (cell) => cell !== `cell-${row}-${col}`,
             );
             rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
           } else {
@@ -637,14 +635,13 @@ function setup() {
       }
     });
     svg.appendChild(rect);
-
   }
 
   function addRectEventListeners(rect) {
     rect.addEventListener("mousedown", (e) => {
       // get information about the stand
       const uidClass = Array.from(rect.classList).find((cls) =>
-        cls.startsWith("uid-")
+        cls.startsWith("uid-"),
       );
       if (!uidClass) {
         console.warn("No uid class found on rect", rect);
@@ -675,19 +672,19 @@ function setup() {
         .replace("|description|", cellData.beschreibung || "Keine Beschreibung")
         .replace(
           "|checked_boxes|",
-          checked_Boxes_string || "Keine Checkboxen ausgewählt"
+          checked_Boxes_string || "Keine Checkboxen ausgewählt",
         )
         .replace("|name|", cellData.titel || "Unbekannt");
 
       document.getElementById("resizeBtnToggleDiv").style.display = "flex";
 
       const rectClass = Array.from(rect.classList).find((cls) =>
-        cls.startsWith("foreign-rect-")
+        cls.startsWith("foreign-rect-"),
       );
       currentSelectedCellClass = rectClass.split("-")[2];
 
       currentSelectedUID = Array.from(rect.classList).find((cls) =>
-        cls.startsWith("uid-")
+        cls.startsWith("uid-"),
       );
 
       if (currentSelectedCellClass != "") {
@@ -700,7 +697,7 @@ function setup() {
 
         document
           .querySelectorAll(
-            `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+            `rect[class*="foreign-rect-${currentSelectedCellClass}"]`,
           )
           .forEach((rect) => {
             selectedCells.push(rect.id);
@@ -712,7 +709,7 @@ function setup() {
         return;
       }
       const classList = Array.from(rect.classList).find((cls) =>
-        cls.startsWith("foreign-rect-")
+        cls.startsWith("foreign-rect-"),
       );
       if (!classList) return;
       const mousePos = getMousePosition(e, svg);
@@ -737,10 +734,10 @@ function setup() {
         const cellHeight = (totalHeight - (rows + 1) * gap) / rows;
 
         cellX = Math.round(
-          (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap)
+          (snapToGrid(x, cellWidth, gap) - gap) / (cellWidth + gap),
         );
         cellY = Math.round(
-          (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap)
+          (snapToGrid(y, cellHeight, gap) - gap) / (cellHeight + gap),
         );
         existingCellId = `cell-${cellY}-${cellX}`;
         if (document.querySelectorAll(`[id="${existingCellId}"]`).length <= 1) {
@@ -763,7 +760,7 @@ function setup() {
       if (mode === "blacklist") {
         if (blacklistCells.includes(`cell-${row}-${col}`)) {
           blacklistCells = blacklistCells.filter(
-            (cell) => cell !== `cell-${row}-${col}`
+            (cell) => cell !== `cell-${row}-${col}`,
           );
           rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
         } else {
@@ -773,7 +770,7 @@ function setup() {
       } else if (mode === "socketMarker") {
         if (socketList.includes(`cell-${row}-${col}`)) {
           socketList = socketList.filter(
-            (cell) => cell !== `cell-${row}-${col}`
+            (cell) => cell !== `cell-${row}-${col}`,
           );
           rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
         } else {
@@ -782,7 +779,7 @@ function setup() {
         }
       } else if (mode === "changeStandSize") {
         const rectClass = Array.from(rect.classList).find((cls) =>
-          cls.startsWith("foreign-rect-")
+          cls.startsWith("foreign-rect-"),
         );
 
         if (
@@ -791,7 +788,7 @@ function setup() {
           rectClass != "foreign-rect-" + currentSelectedCellClass
         ) {
           console.warn(
-            "Rect already has a different class, cannot change size"
+            "Rect already has a different class, cannot change size",
           );
           console.warn("rectClass", rectClass);
           console.warn("currentSelectedCellClass", currentSelectedCellClass);
@@ -801,7 +798,7 @@ function setup() {
           console.warn("Rect already has the current selected class", rect);
           rect.style.opacity = "1";
           selectedCells = selectedCells.filter(
-            (id) => id !== `cell-${row}-${col}`
+            (id) => id !== `cell-${row}-${col}`,
           );
           rect.classList.remove("selected-rect");
           rect.classList.remove(`foreign-rect-${currentSelectedCellClass}`);
@@ -826,14 +823,14 @@ function setup() {
           currentSelectedCellClass = rectClass.split("-")[2];
           document
             .querySelectorAll(
-              `rect[class*="foreign-rect-${currentSelectedCellClass}"]`
+              `rect[class*="foreign-rect-${currentSelectedCellClass}"]`,
             )
             .forEach((rect) => {
               selectedCells.push(rect.id);
               rect.style.opacity = "1";
             });
           currentSelectedUID = Array.from(rect.classList).find((cls) =>
-            cls.startsWith("uid-")
+            cls.startsWith("uid-"),
           );
 
           console.log("currentSelectedCellClass", currentSelectedCellClass);
@@ -845,7 +842,7 @@ function setup() {
           colorGenerator.getColorByIndex(currentSelectedCellClass);
           rect.setAttribute(
             "fill",
-            colorGenerator.getColorByIndex(currentSelectedCellClass)
+            colorGenerator.getColorByIndex(currentSelectedCellClass),
           );
           rect.style.opacity = "1";
           addRectEventListeners(rect);
