@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime, timedelta
 import time
 import traceback
 import uuid
@@ -7,6 +8,7 @@ from flask import json
 import logger
 import psycopg2
 from logging import INFO
+from datetime import datetime, timedelta, timezone
 from logger import get_logger
 import argon2
 
@@ -1152,6 +1154,62 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+        
+    def register_failed_login(self, ip_address):
+        query = """
+        INSERT INTO login_attempts (ip)
+        VALUES (%s)
+        ON CONFLICT (ip)
+        DO UPDATE SET
+            counter = CASE
+                WHEN login_attempts.first_attempt < NOW() - INTERVAL '15 minutes'
+                    THEN 1
+                ELSE login_attempts.counter + 1
+            END,
+            first_attempt = CASE
+                WHEN login_attempts.first_attempt < NOW() - INTERVAL '15 minutes'
+                    THEN NOW()
+                ELSE login_attempts.first_attempt
+            END,
+            last_attempt = NOW();
+        """
+
+        try:
+            self.cursor.execute(query, (ip_address,))
+            self.conn.commit()
+        except Exception as e:
+            logger.error(f"Error registering failed login: {e}")
+            self.conn.rollback()
+            
+            
+    def is_ip_blocked(self, ip_address):
+        query = """
+        SELECT counter, first_attempt
+        FROM login_attempts
+        WHERE ip = %s
+        """
+
+        try:
+            self.cursor.execute(query, (ip_address,))
+            row = self.cursor.fetchone()
+
+            if not row:
+                return False
+
+            counter, first_attempt = row
+
+            now_utc = datetime.now(timezone.utc)
+
+            if counter >= 5:
+                if first_attempt >= now_utc - timedelta(minutes=15):
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking IP block: {e}")
+            return False
+
     def getCurrentSocketCells(self):
         """
         Retrieves the current socket cells from the database.

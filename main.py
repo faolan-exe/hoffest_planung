@@ -348,6 +348,10 @@ def login_route(data=None):
     if request.method == "POST":
         data = request.json
     if data:
+        ip = request.remote_addr
+        if db_manager.is_ip_blocked(ip):
+            logger.warning(f"Blocked login attempt from IP: {ip}")
+            return "blocked", 403
         username = data["username"]
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):
@@ -356,6 +360,7 @@ def login_route(data=None):
             logger.info("New user session")
             return "ok", 200
         else:
+            db_manager.register_failed_login(ip)
             return "failed", 401
     return render_template("/login.html")
 
