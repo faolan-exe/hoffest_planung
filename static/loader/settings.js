@@ -25,7 +25,7 @@ function init() {
     })
     .catch((err) => console.error(err));
 }
-const quillEditors = {};
+var quillEditors = {};
 
 function setup() {
     submitNewQuestionBtn = document.getElementById("submitNewQuestionBtn");
@@ -174,7 +174,7 @@ function deleteQuestion(questionId) {
 
 
 function sendFetch(action, value) {
-    const quillContent = quillEditors[action]?.root.innerHTML || value;
+    var quillContent = quillEditors[action]?.root.innerHTML || value;
     fetch(`/admin/api`, {
         method: "POST",
         headers: {
