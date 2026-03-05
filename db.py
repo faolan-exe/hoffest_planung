@@ -15,12 +15,9 @@ import argon2
 import os
 
 
-
 from SMTPMailer import SMTPMailer
 
 ph = argon2.PasswordHasher()
-
-
 
 logger = get_logger("databaseManager", INFO)
 RESET_DATABASE = False
