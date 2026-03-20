@@ -15,6 +15,8 @@ from logger import get_logger
 from flask_cors import CORS
 import db
 from werkzeug.middleware.proxy_fix import ProxyFix
+import hashlib
+
 
 db_manager = db.DatabaseManager()
 
@@ -65,25 +67,25 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
 app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
 
 
-def checkAuth(user_id): 
+def checkAuth(user_id, hashed_id=None): 
     """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
     if TEST_MODE and user_id != "":
         logger.warning("Running in TEST_MODE, allowing all users")
         return True
 
-    if not validate_auth(user_id):
-        return False  # Ungültige Authentifizierung
+    if  db_manager.check_trusted_id(user_id):
+        return True
 
-    if not db_manager.check_trusted_id(user_id):
-        return False  # Nicht vertrauenswürdig
-
-    return True
+    if validate_auth(user_id, hashed_id):
+        return True  
+    return False
 
 
 @app.route("/")
 def index():
     id = request.args.get("id", "")
     if id != "":
+        logger.info("ID provided in query parameters: " + id)
         if checkAuth(id):  # important local check!
             session["id"] = id
             return redirect("/")
@@ -142,12 +144,17 @@ def test():
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    id = data["id"]
-    secret = data["secret"] == secretAuthKey
-    if secret and validate_auth(id):
-        if db_manager.addNewTrustedId(id):
+    try:
+        id = data["id"]
+        hash = data["hashedID"]
+    except KeyError:
+        return jsonify(error="Missing required fields"), 400
+    if validate_auth(id, hash):
+        
+        if db_manager.addNewTrustedId(hash):
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
+    logger.error("Invalid authentication attempt with id:", id, "and hash:", hash)
     return jsonify(error="Invalid authentication or secret"), 401
 
 
@@ -389,35 +396,17 @@ def submitFeedback():
     return jsonify({"ok": "ok"}), 200
 
 
-def validate_auth(auth):
-    try:
-        id, checksum = auth.split(":")
-    except Exception:
+def validate_auth(id, hashedId):
+    if hashedId is None:
         return False
-    logger.info("validating auth")
-    logger.info(
-        f"checksum: {type(checksum)}\nhashed: {type(reverse_obfuscated_algorithm(id))}"
-    )
-    return str(checksum) == str(reverse_obfuscated_algorithm(id))
+    secretAuthKey = open("./secretAuthCode.txt", "r").readline()
+    data = secretAuthKey + str(id)
+    encoded_data = data.encode()
+    sha256_hash = hashlib.sha256(encoded_data).hexdigest()
+    logger.error(f"Calculated hash: {sha256_hash}")
+    return sha256_hash == hashedId
 
 
-def reverse_obfuscated_algorithm(input_string):
-    input_string = str(input_string)
-    hash_value = 0
-
-    if len(input_string) == 0:
-        return hash_value
-
-    for char in input_string:
-        char_code = ord(char)
-        hash_value = ((hash_value << 5) - hash_value) + char_code
-        hash_value = hash_value & 0xFFFFFFFF
-
-    if hash_value >= 0x80000000:
-        hash_value -= 0x100000000
-
-    logger.info(hash_value)
-    return hash_value
 
 
 if __name__ == "__main__":

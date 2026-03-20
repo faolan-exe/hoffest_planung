@@ -340,6 +340,7 @@ class DatabaseManager:
         logger.debug(f"checkTrustedId is called")
         query = "SELECT COUNT(*) FROM trusted_ids WHERE trusted = %s;"
         logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(id,)}")
         try:
             self.cursor.execute(query, (id,))
             result = self.cursor.fetchone()
