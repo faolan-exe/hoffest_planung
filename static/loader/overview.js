@@ -537,7 +537,8 @@ function enableResizeCells() {
 function highlightStand(clickedCellClass) {
   // Dim every foreign rect first
   document.querySelectorAll('rect[class*="foreign-rect-"]').forEach((rect) => {
-    rect.style.opacity = "0.7";
+    rect.style.opacity = "0.6";
+    rect.setAttribute("stroke-width", "0");
   });
 
   // Then bring the selected stand to full opacity.
@@ -546,6 +547,8 @@ function highlightStand(clickedCellClass) {
   // would also match foreign-rect-30, foreign-rect-31, etc.
   document.querySelectorAll(`rect.${clickedCellClass}`).forEach((rect) => {
     rect.style.opacity = "1";
+    rect.setAttribute("stroke", "rgb(0, 0, 0)");
+    rect.setAttribute("stroke-width", "2");
   });
 }
 
