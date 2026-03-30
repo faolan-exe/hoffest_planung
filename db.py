@@ -327,6 +327,30 @@ class DatabaseManager:
             return False
         return True
 
+    def update_stand_color(self, stand_id, color):
+        """
+        Updates the color of a stand in the database.
+
+        Parameters:
+        stand_id (int): The ID of the stand to be updated.
+        color (str): The new color to be set for the stand.
+
+        Returns:
+        bool: True if the color was successfully updated, False otherwise.
+        """
+        logger.debug(f"update_stand_color is called")
+        query = "UPDATE stand SET farbe = %s WHERE id = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (color, stand_id))
+            self.conn.commit()
+            logger.info(f"Stand {stand_id} color updated successfully to {color}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating stand color: {e}")
+            self.conn.rollback()
+            return False
+    
     def check_trusted_id(self, id):
         """
         Checks if a given ID is a trusted ID in the database.

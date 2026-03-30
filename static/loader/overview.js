@@ -545,11 +545,37 @@ function highlightStand(clickedCellClass) {
   // NOTE: We use `rect.foreign-rect-3` (exact class match) instead of
   // `rect[class*="foreign-rect-3"]` (substring match) — the substring selector
   // would also match foreign-rect-30, foreign-rect-31, etc.
+  tempRect = null;
   document.querySelectorAll(`rect.${clickedCellClass}`).forEach((rect) => {
     rect.style.opacity = "1";
     rect.setAttribute("stroke", "rgb(0, 0, 0)");
     rect.setAttribute("stroke-width", "2");
+    console.log("Highlighting rect:", rect);
+    if (!tempRect) tempRect = rect;
   });
+  document.getElementById("stand_color").value =
+    tempRect.getAttribute("fill") || "#000";
+  document.getElementById("stand_color_label").style.borderColor =
+    tempRect.getAttribute("fill") || "#000";
+  document.getElementById("stand_color").onchange = function () {
+    const newColor = this.value;
+    document.querySelectorAll(`rect.${clickedCellClass}`).forEach((rect) => {
+      rect.setAttribute("fill", newColor);
+    });
+  console.log(tempRect.classList.value);
+  
+  
+  fetch("/admin/api/updateStandColor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: tempRect.classList.value.split(" ").find(cls => cls.startsWith("uid-")).split("-")[1],
+          color: newColor
+        }),
+      })      .then((r) => r.json())
+      .then((data) => console.log(`Stand color update success:`, data))
+      .catch((err) => console.error(`Stand color update error:`, err));
+  };
 }
 
 /**

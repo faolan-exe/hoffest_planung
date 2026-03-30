@@ -220,6 +220,17 @@ def returnForeignMapData():
     data = db_manager.getAllSelectedAreas()
     return jsonify(data), 200
 
+@admin.route("/api/updateStandColor", methods=["POST"])
+def change_stand_color():
+    data = request.json
+    uid = data.get("uid")
+    color = data.get("color")
+    if not uid or not color:
+        return jsonify({"error": "Missing required fields"}), 400
+    if db_manager.update_stand_color(uid, color):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "Failed to update stand color"}), 500
+
 @admin.route("/api/currentBlacklistCells")
 def returnCurrentBlacklistCells():
     data = db_manager.getCurrentBlacklistCells()
