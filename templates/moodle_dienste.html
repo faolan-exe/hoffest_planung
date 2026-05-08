@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fafaf9">
+<title>Tagesplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-alt: #f5f5f4;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --text: #1c1917;
+    --text-muted: #78716c;
+    --text-faint: #a8a29e;
+    --accent: #1c1917;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+    --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.08);
+    --shadow-lg: 0 12px 40px rgba(28, 25, 23, 0.18);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --hour-height: 88px;
+    --time-col-width: 56px;
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.4;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, select, textarea { font-family: inherit; font-size: 16px; color: inherit; }
+
+  #app {
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    max-width: 480px; margin: 0 auto;
+    background: var(--surface);
+    position: relative;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  header.topbar {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .topbar-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .topbar h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .topbar .date {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+    animation: pulse 2s infinite;
+  }
+  .live-dot.stale { background: var(--text-faint); animation: none; box-shadow: none; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+    70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--surface-alt);
+    display: grid; place-items: center;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .icon-btn:hover { background: var(--border); }
+  .icon-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .legend {
+    display: flex; gap: 14px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .legend::-webkit-scrollbar { display: none; }
+  .legend-item { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  .calendar-wrap { flex: 1; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .calendar { position: relative; padding: 16px 16px 100px; }
+  .grid {
+    position: relative;
+    margin-left: var(--time-col-width);
+    border-left: 1px solid var(--border);
+  }
+  .hour-row {
+    height: var(--hour-height);
+    border-bottom: 1px dashed var(--border);
+    position: relative;
+  }
+  .hour-row:first-child { border-top: 1px solid var(--border); }
+  .hour-row::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    border-bottom: 1px dotted var(--border);
+    opacity: 0.6;
+  }
+  .hour-label {
+    position: absolute;
+    left: calc(-1 * var(--time-col-width));
+    top: -7px;
+    width: calc(var(--time-col-width) - 10px);
+    text-align: right;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .now-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: #ef4444;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .now-line::before {
+    content: '';
+    position: absolute;
+    left: -5px; top: -4px;
+    width: 10px; height: 10px;
+    background: #ef4444;
+    border-radius: 50%;
+  }
+
+  .events-layer { position: absolute; inset: 0; pointer-events: none; }
+  .empty-zone { position: absolute; inset: 0; z-index: 1; }
+
+  .event {
+    position: absolute;
+    border-radius: 10px;
+    padding: 8px 10px;
+    overflow: hidden;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    border-left: 3px solid var(--ec, #1c1917);
+    background: var(--ec-bg, #f5f5f4);
+    color: #1c1917;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-height: 28px;
+    z-index: 2;
+  }
+  .event:active { transform: scale(0.98); }
+  .event:hover { box-shadow: var(--shadow-md); z-index: 3; }
+  .event-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .event-title .count-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--ec);
+    color: white;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+  .event.shadow .count-badge {
+    background: var(--ec);
+    color: white;
+  }
+  .event-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .event-time {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+    margin-top: auto;
+  }
+  .event.shadow {
+    background: repeating-linear-gradient(135deg, var(--ec-bg, #fafafa) 0 6px, transparent 6px 12px);
+    border: 1.5px dashed var(--ec, #a8a29e);
+    color: var(--text-muted);
+  }
+  .event.shadow .event-title { color: var(--ec, #1c1917); }
+  .signup-cta {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--ec, #1c1917);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-top: auto;
+  }
+  .signup-cta::before { content: '+'; font-size: 13px; line-height: 1; }
+
+  .fab {
+    position: absolute;
+    right: 20px;
+    bottom: 24px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: grid; place-items: center;
+    box-shadow: var(--shadow-lg);
+    z-index: 6;
+    transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.95); }
+  .fab svg { width: 22px; height: 22px; stroke: white; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(28, 25, 23, 0.42);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    bottom: 0;
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    z-index: 51;
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.35, 1);
+    max-height: 92dvh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .sheet.open { transform: translateX(-50%) translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border-strong); border-radius: 4px; margin: 10px auto; }
+  .sheet-content { padding: 8px 24px 24px; }
+  .sheet-header { margin-bottom: 18px; }
+  .sheet-subtitle { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .sheet-title { font-family: 'Instrument Serif', serif; font-size: 28px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; }
+  .sheet-time { font-size: 13px; color: var(--text-muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+  .field { margin-bottom: 14px; }
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-size: 15px;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.08);
+  }
+  textarea.input { resize: vertical; min-height: 60px; font-family: inherit; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+
+  .cat-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cat-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cat-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .cat-pill[data-selected="true"] {
+    border-color: var(--cc);
+    background: var(--cc-bg);
+    color: var(--cc-text);
+  }
+
+  .actions { display: flex; gap: 10px; margin-top: 22px; }
+  .btn {
+    padding: 13px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    transition: opacity 0.15s, background 0.15s, transform 0.1s;
+    flex: 1;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface-alt); color: var(--text); }
+  .btn-danger { background: #fef2f2; color: #b91c1c; flex: 0 0 auto; padding: 13px 18px; }
+
+  .detail-row { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { flex: 0 0 88px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; padding-top: 3px; }
+  .detail-value { flex: 1; font-size: 15px; word-wrap: break-word; }
+
+  .slot-section-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 22px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .slot-section-title {
+    font-size: 13px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text);
+  }
+  .slot-progress {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ec, var(--text));
+  }
+  .slot-progress.full { color: #16a34a; }
+
+  .slot-list { display: flex; flex-direction: column; gap: 6px; }
+  .slot-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-alt);
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .slot-row.empty { background: transparent; border-color: var(--border); border-style: dashed; }
+  .slot-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .slot-row:not(.empty) .slot-num { background: var(--ec); color: white; border-color: var(--ec); }
+  .slot-body { flex: 1; min-width: 0; }
+  .slot-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .slot-row.empty .slot-name { font-style: italic; color: var(--text-faint); font-weight: 500; }
+  .slot-class { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .slot-remove {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .slot-remove:hover { background: #fef2f2; }
+  .slot-remove svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .slot-remove:hover svg { stroke: #b91c1c; }
+
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    z-index: 100;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #b91c1c; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .em-title { font-family: 'Instrument Serif', serif; font-size: 28px; font-style: italic; color: var(--text); margin-bottom: 8px; }
+  .empty-state .em-text { font-size: 14px; }
+  .loader { padding: 80px 20px; text-align: center; color: var(--text-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-row">
+      <div>
+        <h1 id="day-name">Lade…</h1>
+        <div class="date">
+          <span class="live-dot" id="live-dot"></span>
+          <span id="day-date"></span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+      </div>
+    </div>
+  </header>
+  <div class="legend" id="legend"></div>
+  <div class="calendar-wrap">
+    <div class="calendar" id="calendar">
+      <div class="loader">Lade Konfiguration…</div>
+    </div>
+  </div>
+  <button class="fab" onclick="openNewModal()" title="Eintragen">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+</div>
+
+<div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-content" id="sheet-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const USE_DEMO_DATA = false;
+const API_BASE = '/moodle/api/dienste';
+const POLL_INTERVAL_MS = 15000;
+
+const DEMO_CONFIG = {
+  day: { name: 'Sommerfest', date: '2026-06-21' },
+  timeRange: { start: '12:00', end: '22:00' },
+  categories: [
+    { id: 'cat_aufbau',   name: 'Aufbau',         color: '#10b981' },
+    { id: 'cat_geschirr', name: 'Geschirrdienst', color: '#3b82f6' },
+    { id: 'cat_kasse',    name: 'Kasse',          color: '#f59e0b' },
+    { id: 'cat_kuche',    name: 'Küche',          color: '#a855f7' },
+    { id: 'cat_abbau',    name: 'Abbau',          color: '#ef4444' }
+  ],
+  events: [
+    { id: 'e1', categoryId: 'cat_aufbau',   start: '12:00', end: '14:00', description: 'Bühne + Bestuhlung', isShadow: false, slots: 1, assignments: [{ person: 'Lisa Müller', class: '9b' }] },
+    { id: 'e2', categoryId: 'cat_geschirr', start: '16:00', end: '17:00', description: '',                   isShadow: false, slots: 1, assignments: [{ person: 'Max Mustermann', class: '8e' }] },
+    { id: 'e3', categoryId: 'cat_kuche',    start: '15:00', end: '18:00', description: 'Grillstation',       isShadow: false, slots: 1, assignments: [{ person: 'Tom Becker', class: '10a' }] },
+    { id: 's1', categoryId: 'cat_geschirr', start: '17:00', end: '18:00', description: 'Nach Hauptgang',     isShadow: true,  slots: 3, assignments: [{ person: 'Tom Becker', class: '7t' }, { person: 'Janne H.', class: '7u' }] },
+    { id: 's2', categoryId: 'cat_kasse',    start: '15:00', end: '17:00', description: 'Eingangskasse',      isShadow: true,  slots: 2, assignments: [] },
+    { id: 's3', categoryId: 'cat_kasse',    start: '17:00', end: '19:00', description: 'Eingangskasse',      isShadow: true,  slots: 2, assignments: [{ person: 'Anna K.', class: '9c' }] },
+    { id: 's4', categoryId: 'cat_abbau',    start: '21:00', end: '22:00', description: 'Stuhltransport',     isShadow: true,  slots: 4, assignments: [] }
+  ]
+};
+
+let state = { config: null, sheetData: null, lastFetchOk: false };
+let pollTimer = null;
+
+const $ = id => document.getElementById(id);
+const parseTime = t => { const [h,m] = t.split(':').map(Number); return h * 60 + m; };
+const fmtTime = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const fmtDate = iso => {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0,2), 16);
+  const g = parseInt(h.substring(2,4), 16);
+  const b = parseInt(h.substring(4,6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function normalizeEvent(e) {
+  return {
+    id: e.id,
+    categoryId: e.categoryId,
+    start: e.start,
+    end: e.end,
+    description: e.description || '',
+    isShadow: !!e.isShadow,
+    slots: e.slots ?? 1,
+    assignments: Array.isArray(e.assignments) ? e.assignments : []
+  };
+}
+
+function isFull(ev) { return (ev.assignments?.length || 0) >= (ev.slots || 1); }
+
+async function loadConfig(silent = false) {
+  try {
+    let cfg;
+    if (USE_DEMO_DATA) {
+      cfg = JSON.parse(JSON.stringify(DEMO_CONFIG));
+    } else {
+      const res = await fetch(`${API_BASE}/config`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      cfg = await res.json();
+    }
+    cfg.events = (cfg.events || []).map(normalizeEvent);
+    state.config = cfg;
+    state.lastFetchOk = true;
+    $('live-dot').classList.remove('stale');
+    render();
+  } catch (e) {
+    state.lastFetchOk = false;
+    $('live-dot').classList.add('stale');
+    if (!silent) {
+      showToast('Fehler beim Laden: ' + e.message, true);
+      $('calendar').innerHTML = `<div class="empty-state"><div class="em-title">Verbindungsfehler</div><div class="em-text">${escapeHtml(e.message)}</div></div>`;
+    }
+  }
+}
+
+function render() {
+  if (!state.config) return;
+  $('day-name').textContent = state.config.day.name || 'Tagesplan';
+  $('day-date').textContent = fmtDate(state.config.day.date);
+  renderLegend();
+  renderCalendar();
+}
+
+function renderLegend() {
+  $('legend').innerHTML = state.config.categories.map(c =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}</div>`
+  ).join('');
+}
+
+function layoutEvents(events, startMin, endMin) {
+  const sorted = [...events]
+    .filter(e => parseTime(e.end) > startMin && parseTime(e.start) < endMin)
+    .sort((a, b) => parseTime(a.start) - parseTime(b.start) || parseTime(a.end) - parseTime(b.end));
+
+  const groups = [];
+  let cur = null;
+  sorted.forEach(ev => {
+    if (!cur || parseTime(ev.start) >= cur.maxEnd) {
+      cur = { items: [ev], maxEnd: parseTime(ev.end) };
+      groups.push(cur);
+    } else {
+      cur.items.push(ev);
+      cur.maxEnd = Math.max(cur.maxEnd, parseTime(ev.end));
+    }
+  });
+
+  const out = [];
+  groups.forEach(g => {
+    const cols = [];
+    g.items.forEach(ev => {
+      let placed = false;
+      for (let i = 0; i < cols.length; i++) {
+        const last = cols[i][cols[i].length - 1];
+        if (parseTime(last.end) <= parseTime(ev.start)) {
+          cols[i].push(ev);
+          out.push({ event: ev, col: i, cols: 0 });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        cols.push([ev]);
+        out.push({ event: ev, col: cols.length - 1, cols: 0 });
+      }
+    });
+    const total = cols.length;
+    out.slice(out.length - g.items.length).forEach(p => p.cols = total);
+  });
+  return out;
+}
+
+function renderEventCard(ev, cat, color) {
+  const slots = ev.slots || 1;
+  const assignments = ev.assignments || [];
+  const filled = assignments.length;
+  const full = isFull(ev);
+  const titleName = cat ? cat.name : 'Event';
+  const showCount = ev.isShadow && slots > 1;
+
+  let metaText, tail;
+
+  if (ev.isShadow) {
+    if (slots > 1) {
+      if (filled === 0) {
+        metaText = ev.description || 'Slot frei';
+      } else {
+        const names = assignments.slice(0, 2).map(a => a.person).join(', ');
+        const more = filled > 2 ? ` +${filled - 2}` : '';
+        metaText = names + more;
+      }
+    } else {
+      if (full) {
+        const a = assignments[0];
+        metaText = `${a.person}${a.class ? ' · ' + a.class : ''}`;
+      } else {
+        metaText = ev.description || 'Slot frei';
+      }
+    }
+    tail = full
+      ? `<div class="event-time">${ev.start}–${ev.end}</div>`
+      : `<div class="signup-cta" style="color:${color}">Einschreiben</div>`;
+  } else {
+    const a = assignments[0] || {};
+    metaText = `${a.person || ''}${a.class ? ' · ' + a.class : ''}`;
+    tail = `<div class="event-time">${ev.start}–${ev.end}</div>`;
+  }
+
+  const badge = showCount
+    ? `<span class="count-badge" style="background:${color}">${filled}/${slots}</span>`
+    : '';
+
+  return `
+    <div class="event-title">${escapeHtml(titleName)}${badge}</div>
+    <div class="event-meta">${escapeHtml(metaText || '')}</div>
+    ${tail}
+  `;
+}
+
+function renderCalendar() {
+  const cfg = state.config;
+  const startMin = parseTime(cfg.timeRange.start);
+  const endMin = parseTime(cfg.timeRange.end);
+  const totalMin = endMin - startMin;
+  const hourHeight = 88;
+  const pxPerMin = hourHeight / 60;
+
+  const startHour = Math.floor(startMin / 60);
+  const endHour = Math.ceil(endMin / 60);
+  const gridTopMin = startHour * 60;
+  const offsetTop = (startMin - gridTopMin) * pxPerMin;
+
+  let html = '<div class="grid" id="grid">';
+  for (let h = startHour; h < endHour; h++) {
+    html += `<div class="hour-row"><span class="hour-label">${String(h).padStart(2,'0')}:00</span></div>`;
+  }
+  html += '<div class="empty-zone" id="empty-zone"></div>';
+  html += '<div class="events-layer" id="events-layer"></div>';
+  html += '</div>';
+
+  $('calendar').innerHTML = html;
+
+  const layer = $('events-layer');
+  const positioned = layoutEvents(cfg.events, startMin, endMin);
+  positioned.forEach(p => {
+    const ev = p.event;
+    const cat = cfg.categories.find(c => c.id === ev.categoryId);
+    const color = cat ? cat.color : '#78716c';
+    const top = (parseTime(ev.start) - gridTopMin) * pxPerMin;
+    const height = (parseTime(ev.end) - parseTime(ev.start)) * pxPerMin;
+    const widthPct = 100 / p.cols;
+    const leftPct = p.col * widthPct;
+
+    const isShadowOpen = ev.isShadow && !isFull(ev);
+
+    const el = document.createElement('div');
+    el.className = 'event' + (isShadowOpen ? ' shadow' : '');
+    el.style.cssText = `top:${top}px;height:${Math.max(height - 3, 28)}px;left:calc(${leftPct}% + 3px);width:calc(${widthPct}% - 6px);--ec:${color};--ec-bg:${hexToRgba(color, 0.12)};`;
+    el.innerHTML = renderEventCard(ev, cat, color);
+    el.onclick = e => { e.stopPropagation(); openEventClick(ev); };
+    layer.appendChild(el);
+  });
+
+  const zone = $('empty-zone');
+  zone.style.top = `${offsetTop}px`;
+  zone.style.height = `${totalMin * pxPerMin}px`;
+  zone.onclick = e => {
+    const rect = zone.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const minute = startMin + Math.round((y / pxPerMin) / 15) * 15;
+    const clampedStart = Math.min(Math.max(minute, startMin), endMin - 15);
+    const clampedEnd = Math.min(clampedStart + 60, endMin);
+    openNewModal({ start: fmtTime(clampedStart), end: fmtTime(clampedEnd) });
+  };
+
+  renderNowLine(startMin, gridTopMin, pxPerMin);
+}
+
+function renderNowLine(startMin, gridTopMin, pxPerMin) {
+  const cfg = state.config;
+  if (!cfg.day || !cfg.day.date) return;
+  const today = new Date();
+  const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if (localDate !== cfg.day.date) return;
+  const nowMin = today.getHours() * 60 + today.getMinutes();
+  const endMin = parseTime(cfg.timeRange.end);
+  if (nowMin < startMin || nowMin > endMin) return;
+  const grid = $('grid');
+  const line = document.createElement('div');
+  line.className = 'now-line';
+  line.style.top = `${(nowMin - gridTopMin) * pxPerMin}px`;
+  grid.appendChild(line);
+}
+
+function isSheetOpen() { return $('sheet').classList.contains('open'); }
+
+function openSheet(content) {
+  $('sheet-content').innerHTML = content;
+  $('backdrop').classList.add('open');
+  $('sheet').classList.add('open');
+}
+function closeSheet() {
+  $('backdrop').classList.remove('open');
+  $('sheet').classList.remove('open');
+  state.sheetData = null;
+}
+
+function openEventClick(ev) {
+  if (ev.isShadow) {
+    openShadowSheet(ev.id);
+  } else {
+    openFreeEventSheet(ev);
+  }
+}
+
+function openNewModal(prefill) {
+  state.sheetData = {
+    mode: 'new',
+    categoryId: state.config.categories[0]?.id || null,
+    start: prefill?.start || state.config.timeRange.start,
+    end: prefill?.end || fmtTime(parseTime(state.config.timeRange.start) + 60),
+    person: '',
+    class: '',
+    description: ''
+  };
+  renderNewSheet();
+}
+
+function renderNewSheet() {
+  const d = state.sheetData;
+  const cats = state.config.categories;
+  const catPills = cats.map(c => `
+    <button type="button" class="cat-pill" data-selected="${c.id === d.categoryId}"
+      style="--cc:${c.color};--cc-bg:${hexToRgba(c.color, 0.1)};--cc-text:${c.color}"
+      onclick="selectCat('${c.id}')">
+      <span class="dot" style="background:${c.color}"></span>${escapeHtml(c.name)}
+    </button>`).join('');
+
+  openSheet(`
+    <div class="sheet-header">
+      <div class="sheet-subtitle">Neuer Eintrag</div>
+      <div class="sheet-title">Eintragen</div>
+    </div>
+    <div class="field">
+      <label class="field-label">Kategorie</label>
+      <div class="cat-picker">${catPills}</div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Von</label>
+        <input class="input" type="time" id="f-start" value="${d.start}">
+      </div>
+      <div class="field">
+        <label class="field-label">Bis</label>
+        <input class="input" type="time" id="f-end" value="${d.end}">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Name</label>
+      <input class="input" id="f-person" value="${escapeHtml(d.person)}" placeholder="Vor- und Nachname" autocomplete="name">
+    </div>
+    <div class="field">
+      <label class="field-label">Klasse</label>
+      <input class="input" id="f-class" value="${escapeHtml(d.class)}" placeholder="z.B. 8e">
+    </div>
+    <div class="field">
+      <label class="field-label">Beschreibung <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0">optional</span></label>
+      <textarea class="input" id="f-desc">${escapeHtml(d.description)}</textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeSheet()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="submitNew()">Eintragen</button>
+    </div>
+  `);
+}
+
+function selectCat(id) {
+  const d = state.sheetData;
+  d.categoryId = id;
+  d.person = $('f-person')?.value || d.person;
+  d.class = $('f-class')?.value || d.class;
+  d.start = $('f-start')?.value || d.start;
+  d.end = $('f-end')?.value || d.end;
+  d.description = $('f-desc')?.value ?? d.description;
+  renderNewSheet();
+}
+
+function openShadowSheet(eventId) {
+  state.sheetData = { mode: 'shadow', eventId };
+  renderShadowSheet();
+}
+
+function renderShadowSheet() {
+  const ev = state.config.events.find(e => e.id === state.sheetData.eventId);
+  if (!ev) { closeSheet(); return; }
+  const cat = state.config.categories.find(c => c.id === ev.categoryId);
+  const color = cat?.color || '#78716c';
+  const slots = ev.slots || 1;
+  const assignments = ev.assignments || [];
+  const filled = assignments.length;
+  const full = filled >= slots;
+
+  const slotItems = [];
+  for (let i = 0; i < slots; i++) {
+    const a = assignments[i];
+    if (a) {
+      slotItems.push(`
+        <div class="slot-row" style="--ec:${color}">
+          <div class="slot-num">${i + 1}</div>
+          <div class="slot-body">
+            <div class="slot-name">${escapeHtml(a.person)}</div>
+            ${a.class ? `<div class="slot-class">Klasse ${escapeHtml(a.class)}</div>` : ''}
+          </div>
+          <button class="slot-remove" onclick="removeAssignment('${ev.id}', ${i})" title="Entfernen">
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      `);
+    } else {
+      slotItems.push(`
+        <div class="slot-row empty">
+          <div class="slot-num">${i + 1}</div>
+          <div class="slot-body">
+            <div class="slot-name">leer</div>
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  const formSection = full ? '' : `
+    <div class="slot-section-header" style="margin-top:24px">
+      <div class="slot-section-title">Eintragen</div>
+    </div>
+    <div class="field">
+      <label class="field-label">Name</label>
+      <input class="input" id="f-person" placeholder="Vor- und Nachname" autocomplete="name">
+    </div>
+    <div class="field">
+      <label class="field-label">Klasse</label>
+      <input class="input" id="f-class" placeholder="z.B. 8e">
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeSheet()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="submitShadow('${ev.id}')">Eintragen</button>
+    </div>
+  `;
+
+  const closeOnly = full ? `
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeSheet()">Schließen</button>
+    </div>
+  ` : '';
+
+  openSheet(`
+    <div class="sheet-header">
+      <div class="sheet-subtitle" style="color:${color}">${full ? 'Voll besetzt' : 'Slot füllen'}</div>
+      <div class="sheet-title">${escapeHtml(cat?.name || 'Slot')}</div>
+      <div class="sheet-time">${ev.start}–${ev.end}${ev.description ? ' · ' + escapeHtml(ev.description) : ''}</div>
+    </div>
+    <div class="slot-section-header" style="--ec:${color}">
+      <div class="slot-section-title">Anmeldungen</div>
+      <div class="slot-progress ${full ? 'full' : ''}" style="--ec:${color}">${filled}/${slots}</div>
+    </div>
+    <div class="slot-list">${slotItems.join('')}</div>
+    ${formSection}
+    ${closeOnly}
+  `);
+}
+
+function openFreeEventSheet(ev) {
+  state.sheetData = { mode: 'view', eventId: ev.id };
+  const cat = state.config.categories.find(c => c.id === ev.categoryId);
+  const color = cat?.color || '#78716c';
+  const a = ev.assignments[0] || {};
+  openSheet(`
+    <div class="sheet-header">
+      <div class="sheet-subtitle" style="color:${color}">${escapeHtml(cat?.name || 'Event')}</div>
+      <div class="sheet-title">${escapeHtml(a.person || '—')}</div>
+      <div class="sheet-time">${ev.start}–${ev.end}</div>
+    </div>
+    <div>
+      <div class="detail-row"><div class="detail-label">Klasse</div><div class="detail-value">${escapeHtml(a.class || '—')}</div></div>
+      ${ev.description ? `<div class="detail-row"><div class="detail-label">Notiz</div><div class="detail-value">${escapeHtml(ev.description)}</div></div>` : ''}
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeSheet()">Schließen</button>
+      <button class="btn btn-danger" onclick="confirmDelete('${ev.id}')">Löschen</button>
+    </div>
+  `);
+}
+
+async function submitNew() {
+  const d = state.sheetData;
+  const start = $('f-start').value;
+  const end = $('f-end').value;
+  const person = $('f-person').value.trim();
+  const klass = $('f-class').value.trim();
+  const description = $('f-desc').value.trim();
+
+  if (!person) return showToast('Name fehlt', true);
+  if (!klass) return showToast('Klasse fehlt', true);
+  if (parseTime(end) <= parseTime(start)) return showToast('Ende muss nach Start liegen', true);
+  if (!d.categoryId) return showToast('Kategorie wählen', true);
+
+  const payload = { categoryId: d.categoryId, start, end, person, class: klass, description, shadowId: null };
+
+  if (USE_DEMO_DATA) {
+    state.config.events.push(normalizeEvent({
+      id: 'demo_' + Date.now(),
+      categoryId: payload.categoryId,
+      start, end, description,
+      isShadow: false,
+      slots: 1,
+      assignments: [{ person, class: klass }]
+    }));
+    closeSheet();
+    render();
+    showToast('Eingetragen');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    closeSheet();
+    showToast('Eingetragen');
+    await loadConfig();
+  } catch (e) {
+    showToast('Fehler: ' + e.message, true);
+  }
+}
+
+async function submitShadow(eventId) {
+  const person = $('f-person').value.trim();
+  const klass = $('f-class').value.trim();
+  if (!person) return showToast('Name fehlt', true);
+  if (!klass) return showToast('Klasse fehlt', true);
+
+  if (USE_DEMO_DATA) {
+    const ev = state.config.events.find(e => e.id === eventId);
+    if (!ev) return;
+    if (isFull(ev)) return showToast('Slot ist voll', true);
+    ev.assignments.push({ person, class: klass });
+    showToast('Eingetragen');
+    if (isFull(ev)) closeSheet(); else renderShadowSheet();
+    render();
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shadowId: eventId, person, class: klass })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('Eingetragen');
+    await loadConfig();
+    const ev = state.config.events.find(e => e.id === eventId);
+    if (ev && isFull(ev)) closeSheet(); else renderShadowSheet();
+  } catch (e) {
+    showToast('Fehler: ' + e.message, true);
+  }
+}
+
+async function removeAssignment(eventId, index) {
+  if (!confirm('Eintrag entfernen?')) return;
+
+  if (USE_DEMO_DATA) {
+    const ev = state.config.events.find(e => e.id === eventId);
+    if (!ev) return;
+    ev.assignments.splice(index, 1);
+    render();
+    renderShadowSheet();
+    showToast('Entfernt');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/events/${eventId}/assignments/${index}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('Entfernt');
+    await loadConfig();
+    renderShadowSheet();
+  } catch (e) {
+    showToast('Fehler: ' + e.message, true);
+  }
+}
+
+async function confirmDelete(id) {
+  if (!confirm('Eintrag wirklich löschen?')) return;
+  if (USE_DEMO_DATA) {
+    state.config.events = state.config.events.filter(e => e.id !== id);
+    closeSheet();
+    render();
+    showToast('Gelöscht');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/events/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    closeSheet();
+    showToast('Gelöscht');
+    await loadConfig();
+  } catch (e) {
+    showToast('Fehler: ' + e.message, true);
+  }
+}
+
+function showToast(msg, isError) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (document.hidden) return;
+    if (isSheetOpen()) return;
+    loadConfig(true);
+  }, POLL_INTERVAL_MS);
+}
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSheet();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    loadConfig(true);
+    startPolling();
+  } else {
+    stopPolling();
+  }
+});
+
+window.addEventListener('focus', () => {
+  if (!document.hidden) loadConfig(true);
+});
+
+loadConfig();
+startPolling();
+</script>
+</body>
+</html>

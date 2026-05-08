@@ -7,6 +7,7 @@ import uuid
 from flask import json
 import logger
 import psycopg2
+import psycopg2.errors
 from logging import INFO
 from datetime import datetime, timedelta, timezone
 from logger import get_logger
@@ -1369,54 +1370,6 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def get_all_dienste(self):
-        """
-        Retrieves all dienst entries from the database.
-
-        Returns:
-        list: A list of dictionaries containing the dienst entries.
-        """
-        logger.debug(f"get_all_dienste is called")
-        query = "SELECT name, klasse, dienst FROM dienste"
-        logger.debug(f"Executing SQL query: {query}")
-        try:
-            self.cursor.execute(query)
-            result = self.cursor.fetchall()
-            logger.info(f"Data retrieved successfully")
-            return [dict(zip([column[0] for column in self.cursor.description], row)) for row in result]
-
-        except Exception as e:
-            logger.error(f"Error retrieving data: {e}")
-            self.conn.rollback()
-            return None
-    
-    def add_dienst(self, auth_id, name, klasse, dienst):
-        """
-        Adds a new dienst entry to the database.
-
-        Parameters:
-        name (str): The name of the person.
-        klasse (str): The class of the person.
-        dienst (str): The dienst of the person.
-
-        Returns:
-        bool: True if the dienst was successfully added, False otherwise.
-        """
-        logger.debug(f"add_dienst is called")
-        query = "INSERT INTO dienste (auth_id, name, klasse, dienst) VALUES (%s, %s, %s, %s)"
-        logger.debug(f"Executing SQL query: {query}")
-        values = (auth_id, name, klasse, dienst)
-        logger.debug(f"with data: {values}")
-        try:
-            self.cursor.execute(query, values)
-            self.conn.commit()
-            logger.info(f"Dienst added successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding dienst: {e}")
-            self.conn.rollback()
-            return False
-    
     def getMailer(self):
         """
         Returns the mailer API instance.
@@ -1426,11 +1379,418 @@ class DatabaseManager:
         """
         return mailer
     
+
+    ####### dienste #############
     
+    def _gen_dienste_id(self, prefix):
+        """
+        Generiert prefixed unique IDs (z.B. 'evt_a1b2c3d4').
+        Parameters:
+        prefix (str): Prefix-String wie 'evt', 'cat', 'shadow'.
+        Returns:
+        str: Prefixed ID.
+        """
+        return f"{prefix}_{uuid.uuid4().hex[:8]}"
+    
+    
+    def get_dienste_state(self):
+        """
+        Liefert den vollständigen Diensteplan-State für Frontend.
+        Returns:
+        dict: { day, timeRange, categories, events } im Frontend-Format,
+            oder None bei Fehler.
+        """
+        logger.debug("get_dienste_state is called")
+        try:
+            self.cursor.execute("""
+                SELECT day_name, day_date, time_range_start, time_range_end
+                FROM public.diensteplan_config
+                WHERE id = 1
+            """)
+            cfg_row = self.cursor.fetchone()
+            if not cfg_row:
+                logger.warning("diensteplan_config singleton row missing")
+                return None
+            day_name, day_date, t_start, t_end = cfg_row
+    
+            self.cursor.execute("""
+                SELECT id, name, color
+                FROM public.diensteplan_categories
+                ORDER BY sort_order, created_at, id
+            """)
+            categories = [
+                {"id": r[0], "name": r[1], "color": r[2]}
+                for r in self.cursor.fetchall()
+            ]
+    
+            self.cursor.execute("""
+                SELECT id, category_id, start_time, end_time, description, is_shadow, slots
+                FROM public.diensteplan_events
+                ORDER BY start_time, id
+            """)
+            events = []
+            for r in self.cursor.fetchall():
+                events.append({
+                    "id": r[0],
+                    "categoryId": r[1],
+                    "start": r[2].strftime("%H:%M"),
+                    "end": r[3].strftime("%H:%M"),
+                    "description": r[4] or "",
+                    "isShadow": bool(r[5]),
+                    "slots": r[6],
+                    "assignments": []
+                })
+    
+            self.cursor.execute("""
+                SELECT id, event_id, person, klasse
+                FROM public.diensteplan_assignments
+                ORDER BY event_id, created_at, id
+            """)
+            by_event = {}
+            for r in self.cursor.fetchall():
+                by_event.setdefault(r[1], []).append({
+                    "id": r[0],
+                    "person": r[2],
+                    "class": r[3]
+                })
+    
+            for ev in events:
+                ev["assignments"] = by_event.get(ev["id"], [])
+    
+            return {
+                "day": {
+                    "name": day_name or "",
+                    "date": day_date.isoformat() if day_date else None
+                },
+                "timeRange": {
+                    "start": t_start.strftime("%H:%M"),
+                    "end": t_end.strftime("%H:%M")
+                },
+                "categories": categories,
+                "events": events
+            }
+        except Exception as e:
+            logger.error(f"Error fetching dienste state: {e}")
+            self.conn.rollback()
+            return None
+    
+    
+    def create_dienste_event(self, category_id, start_time, end_time, person, klasse, description="", retry_count=0):
+        """
+        Erstellt einen Free-Signup (is_shadow=false, slots=1, eine Assignment).
+        Atomic: Event und Assignment werden in einer Transaction angelegt.
+        Parameters:
+        category_id (str): Existierende Kategorie-ID.
+        start_time, end_time (str): 'HH:MM'.
+        person, klasse (str): Pflichtfelder.
+        description (str): Optional.
+        Returns:
+        dict: {'ok': True, 'event_id': str} bei Erfolg,
+            {'ok': False, 'error': str, 'status': int} bei Fehler.
+        """
+        logger.debug(f"create_dienste_event called for category {category_id}")
+        if not all([category_id, start_time, end_time, person, klasse]):
+            return {"ok": False, "error": "Pflichtfelder fehlen", "status": 400}
+    
+        event_id = self._gen_dienste_id("evt")
+        try:
+            self.cursor.execute(
+                "SELECT 1 FROM public.diensteplan_categories WHERE id = %s",
+                (category_id,)
+            )
+            if not self.cursor.fetchone():
+                self.conn.rollback()
+                return {"ok": False, "error": "Kategorie nicht gefunden", "status": 400}
+    
+            self.cursor.execute("""
+                INSERT INTO public.diensteplan_events
+                    (id, category_id, start_time, end_time, description, is_shadow, slots)
+                VALUES (%s, %s, %s, %s, %s, false, 1)
+            """, (event_id, category_id, start_time, end_time, description or ""))
+    
+            self.cursor.execute("""
+                INSERT INTO public.diensteplan_assignments (event_id, person, klasse)
+                VALUES (%s, %s, %s)
+            """, (event_id, person, klasse))
+    
+            self.conn.commit()
+            logger.info(f"Free-signup event {event_id} created by {person}/{klasse}")
+            return {"ok": True, "event_id": event_id}
+        except psycopg2.errors.CheckViolation as e:
+            logger.warning(f"CheckViolation on create_dienste_event: {e}")
+            self.conn.rollback()
+            return {"ok": False, "error": "Validierung fehlgeschlagen", "status": 422}
+        except Exception as e:
+            logger.error(f"Error creating dienste event: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                logger.info(f"Retrying create_dienste_event for category {category_id}")
+                return self.create_dienste_event(category_id, start_time, end_time, person, klasse, description, retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+    
+    
+    def add_dienste_assignment(self, shadow_id, person, klasse, retry_count=0):
+        """
+        Trägt eine Person in einen Shadow-Slot ein. DB-Trigger fängt Slot-Overflow ab.
+        Parameters:
+        shadow_id (str): ID eines Shadow-Events.
+        person, klasse (str): Pflichtfelder.
+        Returns:
+        dict: {'ok': True, 'event_id': str} bei Erfolg, sonst Fehler-dict.
+        """
+        logger.debug(f"add_dienste_assignment called: shadow_id={shadow_id}")
+        if not all([shadow_id, person, klasse]):
+            return {"ok": False, "error": "Pflichtfelder fehlen", "status": 400}
+    
+        try:
+            self.cursor.execute("""
+                SELECT is_shadow FROM public.diensteplan_events WHERE id = %s
+            """, (shadow_id,))
+            row = self.cursor.fetchone()
+            if not row:
+                self.conn.rollback()
+                return {"ok": False, "error": "Event nicht gefunden", "status": 404}
+            if not row[0]:
+                self.conn.rollback()
+                return {"ok": False, "error": "Event ist kein Shadow-Slot", "status": 409}
+    
+            self.cursor.execute("""
+                INSERT INTO public.diensteplan_assignments (event_id, person, klasse)
+                VALUES (%s, %s, %s)
+            """, (shadow_id, person, klasse))
+            self.conn.commit()
+            logger.info(f"Assignment for shadow {shadow_id} added: {person}/{klasse}")
+            return {"ok": True, "event_id": shadow_id}
+        except psycopg2.errors.CheckViolation as e:
+            logger.warning(f"Slot voll oder ähnlich: {e}")
+            self.conn.rollback()
+            return {"ok": False, "error": "Slot ist voll", "status": 409}
+        except Exception as e:
+            logger.error(f"Error adding dienste assignment: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                logger.info(f"Retrying add_dienste_assignment for shadow_id {shadow_id}")
+                return self.add_dienste_assignment(shadow_id, person, klasse, retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+    
+    
+    def delete_dienste_event(self, event_id, retry_count=0):
+        """
+        Löscht ein Event komplett. Assignments cascaden.
+        Parameters:
+        event_id (str): ID des zu löschenden Events.
+        retry_count (int): Anzahl der Wiederholversuche bei Fehlern.
+        Returns:
+        dict: {'ok': True} bei Erfolg, sonst Fehler-dict.
+        """
+        logger.debug(f"delete_dienste_event called: {event_id}")
+        try:
+            self.cursor.execute(
+                "DELETE FROM public.diensteplan_events WHERE id = %s RETURNING id",
+                (event_id,)
+            )
+            deleted = self.cursor.fetchone()
+            self.conn.commit()
+            if not deleted:
+                return {"ok": False, "error": "Event nicht gefunden", "status": 404}
+            logger.info(f"Event {event_id} deleted")
+            return {"ok": True}
+        except Exception as e:
+            logger.error(f"Error deleting dienste event: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                logger.info(f"Retrying delete_dienste_event for {event_id}")
+                return self.delete_dienste_event(event_id, retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+    
+    
+    def delete_dienste_assignment(self, event_id, index, retry_count=0):
+        """
+        Entfernt eine Assignment per Index aus einem Event.
+        Index ist 0-basiert in ORDER BY created_at, id.
+        Parameters:
+        event_id (str): ID des Events.
+        index (int): 0-basierter Index in der Assignment-Liste.
+        Returns:
+        dict: {'ok': True} bei Erfolg, sonst Fehler-dict.
+        """
+        logger.debug(f"delete_dienste_assignment called: {event_id}/{index}")
+        if index < 0:
+            return {"ok": False, "error": "Index ungültig", "status": 400}
+    
+        try:
+            self.cursor.execute("""
+                DELETE FROM public.diensteplan_assignments
+                WHERE id = (
+                    SELECT id FROM public.diensteplan_assignments
+                    WHERE event_id = %s
+                    ORDER BY created_at, id
+                    OFFSET %s LIMIT 1
+                )
+                RETURNING id
+            """, (event_id, index))
+            deleted = self.cursor.fetchone()
+            self.conn.commit()
+            if deleted is None:
+                return {"ok": False, "error": "Assignment nicht gefunden", "status": 404}
+            logger.info(f"Assignment idx {index} of event {event_id} deleted (id={deleted[0]})")
+            return {"ok": True}
+        except Exception as e:
+            logger.error(f"Error deleting dienste assignment: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                logger.info(f"Retrying delete_dienste_assignment for {event_id}/{index}")
+                return self.delete_dienste_assignment(event_id, index, retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+    
+    
+    def update_dienste_config(self, day, time_range, categories, shadow_events, retry_count=0):
+        """
+        Atomic Sync der Diensteplan-Konfiguration: Tag/Zeitfenster, Kategorien-Sync,
+        Shadow-Event-Sync. Free-Signups (is_shadow=false) und deren Assignments
+        bleiben unangetastet. Bei Slot-Reduzierung werden überzählige Assignments
+        (neueste zuerst) automatisch entfernt — Frontend hat das vorher confirmed.
+        Parameters:
+        day (dict): {'name': str, 'date': str|None}.
+        time_range (dict): {'start': 'HH:MM', 'end': 'HH:MM'}.
+        categories (list): [{id?, name, color}, ...] in gewünschter Reihenfolge.
+        shadow_events (list): [{id?, categoryId, start, end, description, slots}, ...].
+        Returns:
+        dict: {'ok': True} bei Erfolg, sonst Fehler-dict.
+        """
+        logger.debug("update_dienste_config called")
+    
+        if not time_range.get("start") or not time_range.get("end"):
+            return {"ok": False, "error": "timeRange unvollständig", "status": 400}
+    
+        try:
+            self.cursor.execute("""
+                UPDATE public.diensteplan_config
+                SET day_name = %s,
+                    day_date = %s,
+                    time_range_start = %s,
+                    time_range_end = %s
+                WHERE id = 1
+            """, (
+                day.get("name", ""),
+                day.get("date") or None,
+                time_range["start"],
+                time_range["end"]
+            ))
+    
+            new_categories = []
+            for i, cat in enumerate(categories):
+                cat_id = cat.get("id") or self._gen_dienste_id("cat")
+                new_categories.append((cat_id, cat["name"], cat["color"], i))
+            new_cat_ids = [c[0] for c in new_categories]
+    
+            if new_cat_ids:
+                self.cursor.execute(
+                    "DELETE FROM public.diensteplan_categories WHERE id != ALL(%s)",
+                    (new_cat_ids,)
+                )
+            else:
+                self.cursor.execute("DELETE FROM public.diensteplan_categories")
+    
+            for cat_tuple in new_categories:
+                self.cursor.execute("""
+                    INSERT INTO public.diensteplan_categories (id, name, color, sort_order)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE
+                    SET name = EXCLUDED.name,
+                        color = EXCLUDED.color,
+                        sort_order = EXCLUDED.sort_order
+                """, cat_tuple)
+    
+            new_shadows = []
+            for sh in shadow_events:
+                sh_id = sh.get("id") or self._gen_dienste_id("shadow")
+                slots = max(1, int(sh.get("slots", 1)))
+                new_shadows.append({
+                    "id": sh_id,
+                    "categoryId": sh.get("categoryId"),
+                    "start": sh["start"],
+                    "end": sh["end"],
+                    "description": sh.get("description", ""),
+                    "slots": slots
+                })
+            new_shadow_ids = [s["id"] for s in new_shadows]
+    
+            if new_shadow_ids:
+                self.cursor.execute("""
+                    DELETE FROM public.diensteplan_events
+                    WHERE is_shadow = true AND id != ALL(%s)
+                """, (new_shadow_ids,))
+            else:
+                self.cursor.execute("""
+                    DELETE FROM public.diensteplan_events
+                    WHERE is_shadow = true
+                """)
+    
+            for sh in new_shadows:
+                self.cursor.execute("""
+                    SELECT count(*) FROM public.diensteplan_assignments
+                    WHERE event_id = %s
+                """, (sh["id"],))
+                cnt = self.cursor.fetchone()[0]
+                if cnt > sh["slots"]:
+                    excess = cnt - sh["slots"]
+                    self.cursor.execute("""
+                        DELETE FROM public.diensteplan_assignments
+                        WHERE id IN (
+                            SELECT id FROM public.diensteplan_assignments
+                            WHERE event_id = %s
+                            ORDER BY created_at DESC, id DESC
+                            LIMIT %s
+                        )
+                    """, (sh["id"], excess))
+                    logger.info(f"Trimmed {excess} excess assignments from shadow {sh['id']}")
+    
+            for sh in new_shadows:
+                self.cursor.execute("""
+                    INSERT INTO public.diensteplan_events
+                        (id, category_id, start_time, end_time, description, is_shadow, slots)
+                    VALUES (%s, %s, %s, %s, %s, true, %s)
+                    ON CONFLICT (id) DO UPDATE
+                    SET category_id = EXCLUDED.category_id,
+                        start_time = EXCLUDED.start_time,
+                        end_time = EXCLUDED.end_time,
+                        description = EXCLUDED.description,
+                        slots = EXCLUDED.slots
+                """, (
+                    sh["id"], sh["categoryId"], sh["start"], sh["end"],
+                    sh["description"], sh["slots"]
+                ))
+    
+            self.conn.commit()
+            logger.info("Dienste config updated successfully")
+            return {"ok": True}
+        except psycopg2.errors.CheckViolation as e:
+            logger.warning(f"Constraint violation on update_dienste_config: {e}")
+            self.conn.rollback()
+            return {"ok": False, "error": "Constraint-Verletzung", "status": 422}
+        except psycopg2.errors.ForeignKeyViolation as e:
+            logger.warning(f"FK violation on update_dienste_config: {e}")
+            self.conn.rollback()
+            return {"ok": False, "error": "Kategorie-Referenz ungültig", "status": 422}
+        except Exception as e:
+            logger.error(f"Error updating dienste config: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                logger.info("Retrying update_dienste_config")
+                return self.update_dienste_config(day, time_range, categories, shadow_events, retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+    
+        
+
+
 with open("./credentials.txt", "r") as file:
         SMTP_USER = file.readline().strip()
         SMTP_PASS = file.readline().strip()
 mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS, DatabaseManager())
+
+
+
 
 
 

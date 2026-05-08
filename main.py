@@ -28,7 +28,7 @@ admin = Blueprint("admin", __name__, url_prefix="/admin")
 TEST_MODE = False
 
 import socket
-if socket.gethostname() == "tobias-linux":
+if socket.gethostname() == "tobias-linux" or socket.gethostname() == "Tobis Mac":
     TEST_MODE = True
     logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production, as this allows user to skip authentication!\n\n")
     input("Press Enter to continue...")  # Wait for user input to continue
@@ -53,7 +53,7 @@ def check_auth():
         "/moodleApi",
         "/moodleApi/dienste",
         "/register"
-    ] or request.path.startswith("/admin") or request.path.startswith("/static/"):
+    ] or request.path.startswith("/admin") or request.path.startswith("/static/") or request.path.startswith("/moodle/"):
         return  # Authentifizierung nicht erforderlich für diese Endpunkte
     if not checkAuth(session.get("id")):
         session.clear()
@@ -405,6 +405,109 @@ def submitFeedback():
     rating = data.get("rating", -1)
     db_manager.getMailer().send_email("akhoffest@gmx.de", f"Es wurde eine Bewertung abgegeben:<br><br><br>Kommentar: {comment}<br><br>Bewertung: {rating}")
     return jsonify({"ok": "ok"}), 200
+
+
+
+
+
+
+@app.route("/moodle/dienste")
+def moodle_dienste():
+	"""Render der Hauptseite — Sign-up-Kalender."""
+	return render_template("moodle_dienste.html")
+ 
+ 
+@app.route("/moodle/api/dienste/config", methods=["GET"])
+def api_dienste_get_config():
+	"""
+	Liefert kompletten Diensteplan-State für Frontend.
+	Wird von beiden HTML-Seiten beim Laden + von moodle_dienste.html
+	per Polling alle 15s aufgerufen.
+	"""
+	state = db_manager.get_dienste_state()
+	if state is None:
+		return jsonify({"error": "internal_error"}), 500
+	response = jsonify(state)
+	response.headers["Cache-Control"] = "no-store"
+	return response
+ 
+ 
+@app.route("/moodle/api/dienste/events", methods=["POST"])
+def api_dienste_create_event():
+	"""
+	Zwei Modi:
+	- shadowId gesetzt: Assignment an existierenden Shadow-Slot anhängen
+	- shadowId leer: Free-Signup (neues Event mit slots=1)
+	"""
+	body = request.get_json(silent=True) or {}
+	shadow_id = body.get("shadowId")
+	person = (body.get("person") or "").strip()
+	klasse = (body.get("class") or "").strip()
+ 
+	if shadow_id:
+		result = db_manager.add_dienste_assignment(shadow_id, person, klasse)
+	else:
+		result = db_manager.create_dienste_event(
+			category_id=body.get("categoryId"),
+			start_time=body.get("start"),
+			end_time=body.get("end"),
+			person=person,
+			klasse=klasse,
+			description=body.get("description", "")
+		)
+ 
+	if result.get("ok"):
+		return jsonify({"id": result.get("event_id"), "ok": True}), 201
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@app.route("/moodle/api/dienste/events/<eid>", methods=["DELETE"])
+def api_dienste_delete_event(eid):
+	"""Löscht ein Event komplett (alle Assignments cascaden)."""
+	result = db_manager.delete_dienste_event(eid)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@app.route("/moodle/api/dienste/events/<eid>/assignments/<int:idx>", methods=["DELETE"])
+def api_dienste_delete_assignment(eid, idx):
+	"""Entfernt eine einzelne Assignment per Index aus einem Event."""
+	result = db_manager.delete_dienste_assignment(eid, idx)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@admin.route("/moodle/api/dienste/config", methods=["PUT"])
+# @admin_required  ← TODO: deinen Admin-Auth-Decorator hier einsetzen
+def api_dienste_update_config():
+	"""
+	Admin-Endpoint: synct Tageskonfig + Kategorien + Shadow-Slots in einer Transaction.
+	Free-Signups bleiben unangetastet.
+	"""
+	body = request.get_json(silent=True) or {}
+	result = db_manager.update_dienste_config(
+		day=body.get("day", {}),
+		time_range=body.get("timeRange", {}),
+		categories=body.get("categories", []),
+		shadow_events=body.get("shadowEvents", [])
+	)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@admin.route("/dienste")
+def dienste_config():
+	"""Render der Admin-Konfigurationsseite."""
+	return render_template("dienste_config.html")
+ 
+
+
+
+
+
 
 
 def validate_auth(id, hashedId):
