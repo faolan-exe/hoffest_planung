@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime, timedelta
 import time
 import traceback
 import uuid
@@ -7,18 +8,16 @@ from flask import json
 import logger
 import psycopg2
 from logging import INFO
+from datetime import datetime, timedelta, timezone
 from logger import get_logger
 import argon2
 
 import os
 
 
-
 from SMTPMailer import SMTPMailer
 
 ph = argon2.PasswordHasher()
-
-
 
 logger = get_logger("databaseManager", INFO)
 RESET_DATABASE = False
@@ -328,6 +327,30 @@ class DatabaseManager:
             return False
         return True
 
+    def update_stand_color(self, stand_id, color):
+        """
+        Updates the color of a stand in the database.
+
+        Parameters:
+        stand_id (int): The ID of the stand to be updated.
+        color (str): The new color to be set for the stand.
+
+        Returns:
+        bool: True if the color was successfully updated, False otherwise.
+        """
+        logger.debug(f"update_stand_color is called")
+        query = "UPDATE stand SET farbe = %s WHERE id = %s"
+        logger.debug(f"Executing SQL query: {query}")
+        try:
+            self.cursor.execute(query, (color, stand_id))
+            self.conn.commit()
+            logger.info(f"Stand {stand_id} color updated successfully to {color}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating stand color: {e}")
+            self.conn.rollback()
+            return False
+    
     def check_trusted_id(self, id):
         """
         Checks if a given ID is a trusted ID in the database.
@@ -341,6 +364,7 @@ class DatabaseManager:
         logger.debug(f"checkTrustedId is called")
         query = "SELECT COUNT(*) FROM trusted_ids WHERE trusted = %s;"
         logger.debug(f"Executing SQL query: {query}")
+        logger.debug(f"with data: {(id,)}")
         try:
             self.cursor.execute(query, (id,))
             result = self.cursor.fetchone()
@@ -1098,7 +1122,7 @@ class DatabaseManager:
         list: A list of tuples containing the selected areas.
         """
         logger.debug(f"getAllSelectedAreas is called")
-        query = "SELECT id, ort, ort_spezifikation FROM stand"
+        query = "SELECT id, ort, ort_spezifikation, farbe FROM stand"
         logger.debug(f"Executing SQL query: {query}")
         try:
             self.cursor.execute(query)
@@ -1152,6 +1176,62 @@ class DatabaseManager:
             logger.error(f"Error retrieving data: {e}")
             self.conn.rollback()
             return None
+        
+    def register_failed_login(self, ip_address):
+        query = """
+        INSERT INTO login_attempts (ip)
+        VALUES (%s)
+        ON CONFLICT (ip)
+        DO UPDATE SET
+            counter = CASE
+                WHEN login_attempts.first_attempt < NOW() - INTERVAL '15 minutes'
+                    THEN 1
+                ELSE login_attempts.counter + 1
+            END,
+            first_attempt = CASE
+                WHEN login_attempts.first_attempt < NOW() - INTERVAL '15 minutes'
+                    THEN NOW()
+                ELSE login_attempts.first_attempt
+            END,
+            last_attempt = NOW();
+        """
+
+        try:
+            self.cursor.execute(query, (ip_address,))
+            self.conn.commit()
+        except Exception as e:
+            logger.error(f"Error registering failed login: {e}")
+            self.conn.rollback()
+            
+            
+    def is_ip_blocked(self, ip_address):
+        query = """
+        SELECT counter, first_attempt
+        FROM login_attempts
+        WHERE ip = %s
+        """
+
+        try:
+            self.cursor.execute(query, (ip_address,))
+            row = self.cursor.fetchone()
+
+            if not row:
+                return False
+
+            counter, first_attempt = row
+
+            now_utc = datetime.now(timezone.utc)
+
+            if counter >= 5:
+                if first_attempt >= now_utc - timedelta(minutes=15):
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking IP block: {e}")
+            return False
+
     def getCurrentSocketCells(self):
         """
         Retrieves the current socket cells from the database.

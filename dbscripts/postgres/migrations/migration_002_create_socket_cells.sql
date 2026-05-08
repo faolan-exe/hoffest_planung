@@ -1,5 +1,5 @@
 -- Create socket table
-CREATE TABLE public.socket_cells(
+CREATE TABLE IF NOT EXISTS public.socket_cells(
   id serial NOT NULL PRIMARY KEY,
   cell text NOT NULL UNIQUE
 );
