@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # flask-service:
+  #   build: .
+  #   container_name: hoffest-flask-app
+  #   network_mode: "host"
+  #   ports:
+  #     - "5000:5000"
+  #   environment:
+  #     - FLASK_APP=main.py
+  #     - FLASK_ENV=development
+  #     - DATABASE_URL=postgresql://admin:admin@postgres-service:5432/hoffest-postgresDB
+  #   depends_on:
+  #     postgres-service:
+  #       condition: service_healthy
+
+  postgres-service:
+    image: postgres:13
+    container_name: hoffest-postgresDB
+    ports:
+      - "5432:5432"
+    network_mode: "host"
+    environment:
+      POSTGRES_DB: hoffest-postgresDB
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./dbscripts/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d hoffest-postgresDB"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 10s
+
+volumes:
+  postgres-data:
+    external: true
+    name: db_db_data
