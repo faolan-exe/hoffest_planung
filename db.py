@@ -30,6 +30,8 @@ def read_sql_file(filepath):
         return file.read()
 
 
+_UNSET = object()
+
 class DatabaseManager:
     TABLE_COUNT = 4
     LOWEST_WEB_ACCESS_LEVEL = 0
@@ -620,27 +622,30 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def get_submitted_data_from_id(self, id):
+    def get_submitted_data_from_id(self, id, year=None):
         """
         Retrieves the submitted data for a given user ID from the database.
 
         Parameters:
         id (int): The auth_ID of the user.
+        year (int): The year to filter by. Defaults to current year. Permanent stands (jahr=0) are always included.
 
         Returns:
         dict: The submitted data for the stand.
         """
+        if year is None:
+            year = datetime.now().year
         logger.debug(f"get_submitted_data_from_id is called")
         query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar
                     FROM stand as s
                     LEFT join standQuestions AS sq ON sq.stand_id = s.id
                     join genehmigungen AS g on g.id = s.genehmigungs_id
-                    WHERE s.auth_id = %s
+                    WHERE s.auth_id = %s AND (s.jahr = %s OR s.jahr = 0)
                     GROUP BY s.id, g.genehmigt, g.kommentar;"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(id,)}")
         try:
-            self.cursor.execute(query, (id,))
+            self.cursor.execute(query, (id, year))
             result = self.cursor.fetchall()
             if result == []:
                 logger.debug(f"No results found")
@@ -1121,7 +1126,7 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def getAllSelectedAreasExceptUserId(self, user_id, year=datetime.now().year):
+    def getAllSelectedAreasExceptUserId(self, user_id, year=None):
         """
         Retrieves all selected areas from the database except for a given user ID.
 
@@ -1131,6 +1136,8 @@ class DatabaseManager:
         Returns:
         list: A list of tuples containing the selected areas.
         """
+        if year is None:
+            year = datetime.now().year
         logger.debug(f"getAllSelectedAreasExceptUserId is called")
         query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s AND (jahr = %s OR jahr = 0)"
         logger.debug(f"Executing SQL query: {query}")
@@ -1146,13 +1153,15 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def getAllSelectedAreas(self, year=datetime.now().year):
+    def getAllSelectedAreas(self, year=_UNSET):
         """
         Retrieves all selected areas from the database.
 
         Returns:
         list: A list of tuples containing the selected areas.
         """
+        if year is _UNSET:
+            year = datetime.now().year
         logger.debug(f"getAllSelectedAreas is called")
         with self._lock:
             self._ensure_connected()
