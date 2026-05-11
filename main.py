@@ -235,6 +235,17 @@ def change_stand_color():
         return jsonify({"ok": "ok"}), 200
     return jsonify({"error": "Failed to update stand color"}), 500
 
+@admin.route("/api/updateStandJahr", methods=["POST"])
+def change_stand_jahr():
+    data = request.json
+    uid = data.get("uid")
+    jahr = data.get("jahr")
+    if uid is None or jahr is None:
+        return jsonify({"error": "Missing required fields"}), 400
+    if db_manager.update_stand_jahr(uid, jahr):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "Failed to update stand jahr"}), 500
+
 @admin.route("/api/currentBlacklistCells")
 def returnCurrentBlacklistCells():
     data = db_manager.getCurrentBlacklistCells()
@@ -498,6 +509,7 @@ def stand_details_by_year(year):
             "ort_spezifikation": td[1],
             "question_ids": td[6],
             "id": td[9],
+            "jahr": td[10],
         })
     for sid in db_manager.get_completed(year=year):
         td = db_manager.get_submitted_data_from_stand_id(sid)
@@ -513,6 +525,7 @@ def stand_details_by_year(year):
             "question_ids": td[6],
             "kommentar": td[8],
             "id": td[9],
+            "jahr": td[10],
         })
     return jsonify(data)
 

@@ -610,6 +610,27 @@ function showStandInfo(cellData) {
 
   document.getElementById("resizeBtnToggleDiv").style.display = "flex";
 
+  const bestaendigCheckbox = document.getElementById("bestaendig_toggle");
+  bestaendigCheckbox.checked = cellData.jahr === 0;
+  bestaendigCheckbox.onchange = function () {
+    const newJahr = this.checked ? 0 : currentYear;
+    fetch("/admin/api/updateStandJahr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid: cellData.id, jahr: newJahr }),
+    })
+      .then((r) => r.json())
+      .then(() => {
+        cellData.jahr = newJahr;
+        yearMapData = null;
+        yearStandDetails = null;
+        yearFetchInProgress = false;
+        colorGenerator.reset();
+        drawGrid();
+      })
+      .catch((err) => console.error("Stand jahr update error:", err));
+  };
+
   if (typeof setActiveStandCard === "function") {
     setActiveStandCard(cellData.id);
 

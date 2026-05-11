@@ -373,6 +373,19 @@ class DatabaseManager:
             self.conn.rollback()
             return False
     
+    def update_stand_jahr(self, stand_id, jahr):
+        logger.debug(f"update_stand_jahr is called")
+        query = "UPDATE stand SET jahr = %s WHERE id = %s"
+        try:
+            self.cursor.execute(query, (jahr, stand_id))
+            self.conn.commit()
+            logger.info(f"Stand {stand_id} jahr updated to {jahr}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating stand jahr: {e}")
+            self.conn.rollback()
+            return False
+
     def check_trusted_id(self, id):
         """
         Checks if a given ID is a trusted ID in the database.
@@ -528,8 +541,8 @@ class DatabaseManager:
             return False
         
         logger.debug("addNewAdminStand is called")
-        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email, jahr)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id;"""
 
         values = (
@@ -541,6 +554,7 @@ class DatabaseManager:
             data["projektName"],
             data["projektBeschreibung"],
             data["email"],
+            0 if data.get("bestaendig") else datetime.now().year,
         )
 
         try:
@@ -668,12 +682,12 @@ class DatabaseManager:
         dict: The submitted data for the stand.
         """
         logger.debug(f"get_submitted_data_from_stand_id is called")
-        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar, s.id
+        query = """SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung, ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar, s.id, s.jahr
                     FROM stand as s
                     LEFT join standQuestions AS sq ON sq.stand_id = s.id
                     join genehmigungen AS g on g.id = s.genehmigungs_id
                     WHERE s.genehmigungs_id = %s
-                    GROUP BY s.id, g.genehmigt, g.kommentar;"""
+                    GROUP BY s.id, s.jahr, g.genehmigt, g.kommentar;"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(id,)}")
         with self._lock:
@@ -831,7 +845,7 @@ class DatabaseManager:
                 query = """
                     SELECT g.id FROM genehmigungen g
                     JOIN stand s ON s.genehmigungs_id = g.id
-                    WHERE g.genehmigt IS NULL AND s.jahr = %s
+                    WHERE g.genehmigt IS NULL AND (s.jahr = %s OR s.jahr = 0)
                 """
                 self.cursor.execute(query, (year,))
             return [r[0] for r in self.cursor.fetchall()]
@@ -1118,11 +1132,11 @@ class DatabaseManager:
         list: A list of tuples containing the selected areas.
         """
         logger.debug(f"getAllSelectedAreasExceptUserId is called")
-        query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s and jahr = %s"
+        query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s AND (jahr = %s OR jahr = 0)"
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(user_id,year)}")
         try:
-            self.cursor.execute(query, (user_id,year))
+            self.cursor.execute(query, (user_id, year))
             result = self.cursor.fetchall()
             logger.info("Data retrieved successfully")
             return result
@@ -1147,7 +1161,7 @@ class DatabaseManager:
                     query = "SELECT id, ort, ort_spezifikation, farbe FROM stand"
                     self.cursor.execute(query)
                 else:
-                    query = "SELECT id, ort, ort_spezifikation, farbe FROM stand WHERE jahr = %s"
+                    query = "SELECT id, ort, ort_spezifikation, farbe FROM stand WHERE (jahr = %s OR jahr = 0)"
                     self.cursor.execute(query, (year,))
                 result = self.cursor.fetchall()
                 logger.info("Data retrieved successfully")
@@ -1168,7 +1182,7 @@ class DatabaseManager:
                 query = """
                     SELECT g.id FROM genehmigungen g
                     JOIN stand s ON s.genehmigungs_id = g.id
-                    WHERE g.genehmigt IS true AND s.jahr = %s
+                    WHERE g.genehmigt IS true AND (s.jahr = %s OR s.jahr = 0)
                 """
                 self.cursor.execute(query, (year,))
             return [r[0] for r in self.cursor.fetchall()]

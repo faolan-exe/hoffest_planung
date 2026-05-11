@@ -503,6 +503,11 @@
 
           <label for="projektBeschreibung">Beschreibung und wichtige Hinweise zum Projekt:</label>
           <textarea id="projektBeschreibung" rows="4" maxlength="5000" placeholder="Beschreiben Sie das Projekt..."></textarea>
+
+          <div style="display: inline-flex; align-items: center; margin-top: 10px; gap: 8px;">
+              <input type="checkbox" id="bestaendig" />
+              <label for="bestaendig" style="display:inline; margin:0;">Beständig <span style="color:#888; font-size:0.9em;">(erscheint in allen Jahren)</span></label>
+          </div>
       </div>
             `;
       questionTemplate = `
@@ -628,6 +633,7 @@
         ).value;
         data.email = document.getElementById("email").value;
         data.mapSelection = getMapSelectionCoords();
+        data.bestaendig = document.getElementById("bestaendig").checked;
         data.questions = {};
         for (const key in questions) {
           const questionID = key;
