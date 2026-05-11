@@ -1107,7 +1107,7 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def getAllSelectedAreasExceptUserId(self, user_id):
+    def getAllSelectedAreasExceptUserId(self, user_id, year=datetime.now().year):
         """
         Retrieves all selected areas from the database except for a given user ID.
 
@@ -1118,11 +1118,11 @@ class DatabaseManager:
         list: A list of tuples containing the selected areas.
         """
         logger.debug(f"getAllSelectedAreasExceptUserId is called")
-        query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s"
+        query = "SELECT id, ort, ort_spezifikation FROM stand WHERE auth_id != %s and jahr = %s"
         logger.debug(f"Executing SQL query: {query}")
-        logger.debug(f"with data: {(user_id,)}")
+        logger.debug(f"with data: {(user_id,year)}")
         try:
-            self.cursor.execute(query, (user_id,))
+            self.cursor.execute(query, (user_id,year))
             result = self.cursor.fetchall()
             logger.info("Data retrieved successfully")
             return result
@@ -1132,7 +1132,7 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def getAllSelectedAreas(self, year=None):
+    def getAllSelectedAreas(self, year=datetime.now().year):
         """
         Retrieves all selected areas from the database.
 
