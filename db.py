@@ -2,6 +2,7 @@ import ast
 from datetime import datetime, timedelta
 import time
 import traceback
+import threading
 import uuid
 
 from flask import json
@@ -35,7 +36,16 @@ class DatabaseManager:
 
     def __init__(self):
         self.CURRENT_DOMAIN = open("DOMAIN.txt", "r").readline().strip()
+        self._lock = threading.RLock()
         logger.debug("Initializing database manager")
+        self._connect()
+
+        if not self.check_database_integrity() or RESET_DATABASE:
+            self.init_tables()
+
+        self.do_migrations()
+
+    def _connect(self):
         self.conn = psycopg2.connect(
             database="hoffest-postgresDB",
             host="127.0.0.1",
@@ -43,13 +53,24 @@ class DatabaseManager:
             password="admin",
             port="5432",
         )
-        logger.info("Established connection to the database")
         self.cursor = self.conn.cursor()
+        logger.info("Established connection to the database")
 
-        if not self.check_database_integrity() or RESET_DATABASE:
-            self.init_tables()
-        
-        self.do_migrations()
+    def _ensure_connected(self):
+        """Reconnects if the DB connection was dropped (e.g. server idle timeout)."""
+        if self.conn.closed:
+            logger.warning("DB connection closed, reconnecting...")
+            self._connect()
+            return
+        try:
+            self.cursor.execute("SELECT 1")
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            logger.warning("DB connection lost, reconnecting...")
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            self._connect()
 
     ################################ INIT FUNCTIONS ###################################
     
@@ -212,21 +233,21 @@ class DatabaseManager:
     
     def delete_question(self, question_id):
         """
-        Deletes a question from the database.
+        Archive a question from the database.
 
         Parameters:
-        question_id (int): The ID of the question to be deleted.
+        question_id (int): The ID of the question to be archived.
 
         Returns:
-        bool: True if the question was successfully deleted, False otherwise.
+        bool: True if the question was successfully archived, False otherwise.
         """
         logger.debug("delete_question is called")
-        query = "DELETE FROM questions WHERE id = %s"
+        query = "UPDATE questions SET archiviert = true WHERE id = %s"
         logger.debug(f"executing SQL query: {query}")
         try:
             self.cursor.execute(query, (question_id,))
             self.conn.commit()
-            logger.info(f"Question {question_id} deleted!")
+            logger.info(f"Question {question_id} archived!")
             return True
         except Exception as e:
             logger.error(f"Error deleting question: {e}")
@@ -286,7 +307,7 @@ class DatabaseManager:
     #########################################################
     def get_questions(self):
         logger.debug("get_questions is called")
-        query = "SELECT id, question FROM questions"
+        query = "SELECT id, question FROM questions WHERE archiviert = false"
         try:
             self.cursor.execute(query)
             questions = self.cursor.fetchall()
@@ -655,37 +676,39 @@ class DatabaseManager:
                     GROUP BY s.id, g.genehmigt, g.kommentar;"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(id,)}")
-        try:
-            self.cursor.execute(query, (id,))
-            result = self.cursor.fetchall()
-            if result == []:
-                logger.debug(f"No results found")
-                return None
-            data = [
-                (
-                    item.replace("'", '"')
-                    if isinstance(item, str)
-                    else (
-                        ""
-                        if (item == None)
+        with self._lock:
+            self._ensure_connected()
+            try:
+                self.cursor.execute(query, (id,))
+                result = self.cursor.fetchall()
+                if result == []:
+                    logger.debug(f"No results found")
+                    return None
+                data = [
+                    (
+                        item.replace("'", '"')
+                        if isinstance(item, str)
                         else (
                             ""
-                            if item
-                            == [
-                                None,
-                            ]
-                            else item
+                            if (item == None)
+                            else (
+                                ""
+                                if item
+                                == [
+                                    None,
+                                ]
+                                else item
+                            )
                         )
                     )
-                )
-                for item in result[0]
-            ]
-            logger.info(f"Data retrieved successfully")
-            return data
-        except Exception as e:
-            logger.error(f"Error retrieving data: {e}")
-            self.conn.rollback()
-            return None
+                    for item in result[0]
+                ]
+                logger.info(f"Data retrieved successfully")
+                return data
+            except Exception as e:
+                logger.error(f"Error retrieving data: {e}")
+                self.conn.rollback()
+                return None
 
     def add_admin_account(self, name, pwd, email):
         """
@@ -798,26 +821,20 @@ class DatabaseManager:
             self.conn.rollback()
             return False
 
-    def get_pending(self):
-        """
-        Retrieves all pending stands from the database.
-
-        Returns:
-        list: A list of tuples containing the stand IDs and names.
-        """
-        logger.debug(f"get_pending is called")
-        query = "SELECT id FROM genehmigungen WHERE genehmigt IS NULL"
-        logger.debug(f"Executing SQL query: {query}")
-        try:
-            self.cursor.execute(query)
-            result = self.cursor.fetchall()
-            logger.info(f"Data retrieved successfully")
-            return [result[0] for result in result]
-
-        except Exception as e:
-            logger.error(f"Error retrieving data: {e}")
-            self.conn.rollback()
-            return None
+    def get_pending(self, year=None):
+        with self._lock:
+            self._ensure_connected()
+            if year is None:
+                query = "SELECT g.id FROM genehmigungen g WHERE g.genehmigt IS NULL"
+                self.cursor.execute(query)
+            else:
+                query = """
+                    SELECT g.id FROM genehmigungen g
+                    JOIN stand s ON s.genehmigungs_id = g.id
+                    WHERE g.genehmigt IS NULL AND s.jahr = %s
+                """
+                self.cursor.execute(query, (year,))
+            return [r[0] for r in self.cursor.fetchall()]
     
     def approve_stand(self, stand_id, status, comment):
         """
@@ -1115,7 +1132,7 @@ class DatabaseManager:
             self.conn.rollback()
             return None
     
-    def getAllSelectedAreas(self):
+    def getAllSelectedAreas(self, year=None):
         """
         Retrieves all selected areas from the database.
 
@@ -1123,39 +1140,38 @@ class DatabaseManager:
         list: A list of tuples containing the selected areas.
         """
         logger.debug(f"getAllSelectedAreas is called")
-        query = "SELECT id, ort, ort_spezifikation, farbe FROM stand"
-        logger.debug(f"Executing SQL query: {query}")
-        try:
-            self.cursor.execute(query)
-            result = self.cursor.fetchall()
-            logger.info("Data retrieved successfully")
-            return result
+        with self._lock:
+            self._ensure_connected()
+            try:
+                if year is None:
+                    query = "SELECT id, ort, ort_spezifikation, farbe FROM stand"
+                    self.cursor.execute(query)
+                else:
+                    query = "SELECT id, ort, ort_spezifikation, farbe FROM stand WHERE jahr = %s"
+                    self.cursor.execute(query, (year,))
+                result = self.cursor.fetchall()
+                logger.info("Data retrieved successfully")
+                return result
 
-        except Exception as e:
-            logger.error(f"Error retrieving data: {e}")
-            self.conn.rollback()
-            return None
+            except Exception as e:
+                logger.error(f"Error retrieving data: {e}")
+                self.conn.rollback()
+                return None
 
-    def get_completed(self):
-        """
-        Retrieves all pending stands from the database.
-
-        Returns:
-        list: A list of tuples containing the stand IDs and names.
-        """
-        logger.debug(f"get_completed is called")
-        query = "SELECT id FROM genehmigungen WHERE genehmigt IS true"
-        logger.debug(f"Executing SQL query: {query}")
-        try:
-            self.cursor.execute(query)
-            result = self.cursor.fetchall()
-            logger.info(f"Data retrieved successfully")
-            return [result[0] for result in result]
-
-        except Exception as e:
-            logger.error(f"Error retrieving data: {e}")
-            self.conn.rollback()
-            return None
+    def get_completed(self, year=None):
+        with self._lock:
+            self._ensure_connected()
+            if year is None:
+                query = "SELECT g.id FROM genehmigungen g WHERE g.genehmigt IS true"
+                self.cursor.execute(query)
+            else:
+                query = """
+                    SELECT g.id FROM genehmigungen g
+                    JOIN stand s ON s.genehmigungs_id = g.id
+                    WHERE g.genehmigt IS true AND s.jahr = %s
+                """
+                self.cursor.execute(query, (year,))
+            return [r[0] for r in self.cursor.fetchall()]
 
     def getCurrentBlacklistCells(self):
         """

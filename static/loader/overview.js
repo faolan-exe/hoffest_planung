@@ -19,9 +19,12 @@ Checkboxen:
 |checked_boxes|
 `;
 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Mutable State
 // ─────────────────────────────────────────────────────────────────────────────
+
+var currentYear = new Date().getFullYear();
 
 var blacklistCells = [];
 var socketList = [];
@@ -38,7 +41,10 @@ var currentSelectedCellClass = "";
 var currentSelectedUID = "";
 
 var standCount = 0;
-var globalForeignMapData = "";
+
+var yearMapData = null;
+var yearStandDetails = null;
+var yearFetchInProgress = false;
 
 var rows = GRID_ROWS;
 var cols = GRID_COLS;
@@ -87,6 +93,22 @@ function setup() {
   const socketBtn = document.getElementById("socketMarkerBtnToggle");
   const resizeBtn = document.getElementById("resizeBtnToggle");
   const resetBtn = document.getElementById("resetBtn");
+  const yearBtn = document.getElementById("jahr-filter");
+
+  (() => {
+    const sel = document.getElementById('jahr-filter');
+    const current = new Date().getFullYear();
+    for (let j = current; j >= 2025; j--) {
+      const opt = document.createElement('option');
+      opt.value = j;
+      opt.textContent = j;
+      if (j === currentYear) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', (e) => {
+      switchYear(parseInt(e.target.value, 10));
+    });
+  })();
 
   registerGlobalMouseListeners();
   registerToolbarListeners({
@@ -95,9 +117,33 @@ function setup() {
     socketBtn,
     resizeBtn,
     resetBtn,
+    yearBtn,
   });
 
   loadInitialData();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Year Switching
+// ─────────────────────────────────────────────────────────────────────────────
+
+function switchYear(newYear) {
+  currentYear = newYear;
+  yearMapData = null;
+  yearStandDetails = null;
+  yearFetchInProgress = false;
+  selectedCells = [];
+  currentSelectedCellClass = "";
+  currentSelectedUID = "";
+  arrayCopy = [];
+  mode = "";
+  colorGenerator.reset();
+
+  document.getElementById("standList").innerHTML =
+    '<p style="color:#718096;margin:0;">Bitte wähle einen Stand aus der Liste oder der Karte…</p>';
+  document.getElementById("resizeBtnToggleDiv").style.display = "none";
+
+  drawGrid();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,24 +154,14 @@ function registerGlobalMouseListeners() {
   window.addEventListener("mouseup", () => {
     isMouseDown = false;
   });
-  window.addEventListener("mousedown", () => {
-    /* intentionally empty */
-  });
-  window.addEventListener("mousemove", () => {
-    /* intentionally empty */
-  });
+  window.addEventListener("mousedown", () => {});
+  window.addEventListener("mousemove", () => {});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Toolbar Button Logic
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Shows only the given button and the reset button; hides all others.
- * @param {HTMLElement[]} allBtns
- * @param {HTMLElement}   activBtn
- * @param {HTMLElement}   resetBtn
- */
 function enterToolMode(allBtns, activBtn, resetBtn) {
   allBtns.forEach((btn) => {
     btn.style.display = btn === activBtn ? "initial" : "none";
@@ -135,11 +171,6 @@ function enterToolMode(allBtns, activBtn, resetBtn) {
   resetBtn.textContent = "Aktion abbrechen";
 }
 
-/**
- * Shows all buttons and hides the reset button.
- * @param {HTMLElement[]} allBtns
- * @param {HTMLElement}   resetBtn
- */
 function exitToolMode(allBtns, resetBtn) {
   allBtns.forEach((btn) => {
     btn.style.display = "initial";
@@ -154,10 +185,10 @@ function registerToolbarListeners({
   socketBtn,
   resizeBtn,
   resetBtn,
+  yearBtn,
 }) {
-  const allBtns = [blacklistBtn, draggableBtn, socketBtn, resizeBtn];
+  const allBtns = [blacklistBtn, draggableBtn, socketBtn, resizeBtn, yearBtn];
 
-  // ── Reset / Cancel ────────────────────────────────────────────────────────
   resetBtn.addEventListener("click", () => {
     mode = "";
     allowedToDraw = false;
@@ -182,7 +213,6 @@ function registerToolbarListeners({
     drawGrid();
   });
 
-  // ── Blacklist ─────────────────────────────────────────────────────────────
   blacklistBtn.addEventListener("click", () => {
     if (resetBtnActive) {
       exitToolMode(allBtns, resetBtn);
@@ -190,10 +220,8 @@ function registerToolbarListeners({
       enterToolMode(allBtns, blacklistBtn, resetBtn);
     }
   });
-
   blacklistBtn.addEventListener("click", configureBlacklistCells);
 
-  // ── Socket Marker ─────────────────────────────────────────────────────────
   socketBtn.addEventListener("click", () => {
     if (resetBtnActive) {
       exitToolMode(allBtns, resetBtn);
@@ -201,10 +229,8 @@ function registerToolbarListeners({
       enterToolMode(allBtns, socketBtn, resetBtn);
     }
   });
-
   socketBtn.addEventListener("click", enableSocketMarker);
 
-  // ── Drag ──────────────────────────────────────────────────────────────────
   draggableBtn.addEventListener("click", () => {
     if (resetBtnActive) {
       exitToolMode(allBtns, resetBtn);
@@ -212,10 +238,8 @@ function registerToolbarListeners({
       enterToolMode(allBtns, draggableBtn, resetBtn);
     }
   });
-
   draggableBtn.addEventListener("click", enableDraggableCells);
 
-  // ── Resize ────────────────────────────────────────────────────────────────
   resizeBtn.addEventListener("click", () => {
     if (resetBtnActive) {
       exitToolMode(allBtns, resetBtn);
@@ -223,7 +247,6 @@ function registerToolbarListeners({
       enterToolMode(allBtns, resizeBtn, resetBtn);
     }
   });
-
   resizeBtn.addEventListener("click", enableResizeCells);
 }
 
@@ -261,7 +284,6 @@ function drawGrid(
   gap = gapP;
   borderRadius = borderRadiusP;
 
-  // Clear and insert background image
   svg.innerHTML = `
     <image
       href="/static/plan.jpg"
@@ -278,19 +300,30 @@ function drawGrid(
     }
   }
 
-  if (globalForeignMapData !== "") {
-    drawForeignMap(globalForeignMapData);
+  if (yearMapData !== null && yearStandDetails !== null) {
+    colorGenerator.reset();
+    drawForeignMap(yearMapData);
     return;
   }
 
-  fetch("/admin/api/foreignMapData")
-    .then((r) => r.json())
-    .then((foreignMapData) => {
-      globalForeignMapData = foreignMapData;
-      standCount = foreignMapData.length;
-      drawForeignMap(globalForeignMapData);
+  if (yearFetchInProgress) return;
+  yearFetchInProgress = true;
+
+  Promise.all([
+    fetch("/admin/api/foreignMapData/" + currentYear).then((r) => r.json()),
+    fetch("/admin/api/standDetails/" + currentYear).then((r) => r.json()),
+  ])
+    .then(([mapData, standDetails]) => {
+      yearFetchInProgress = false;
+      yearMapData = mapData || [];
+      yearStandDetails = standDetails || {pending: [], completed: []};
+      standCount = yearMapData.length;
+      drawForeignMap(yearMapData);
     })
-    .catch((err) => console.error("Failed to load foreign map data:", err));
+    .catch((err) => {
+      yearFetchInProgress = false;
+      console.error("Failed to load year data:", err);
+    });
 }
 
 function drawForeignMap(foreignMapData) {
@@ -321,14 +354,9 @@ function drawForeignMap(foreignMapData) {
   });
 
   makeForeignRectsDraggable();
-  populateStandList(foreignMapData, typeof data !== "undefined" ? data : null);
+  populateStandList(foreignMapData, yearStandDetails);
 }
 
-/**
- * Wird aus overview.html aufgerufen wenn der Nutzer auf eine Standkarte klickt.
- * Hebt den Stand auf der Karte hervor und zeigt seine Detailinfos.
- * @param {string|number} uid
- */
 function selectStandOnMap(uid) {
   const rect = document.querySelector(`rect.uid-${uid}`);
   if (!rect) return;
@@ -397,8 +425,6 @@ function onDragMouseUp() {
     const row = Math.round((snappedY - gap) / (cellHeight + gap));
     const cellId = `cell-${row}-${col}`;
 
-    // Remove the ghost cell that was created when dragging started, but only
-    // if it is not a foreign rect itself (i.e. an unoccupied placeholder).
     document.querySelectorAll(`[id="${cellId}"]`).forEach((el) => {
       if (!el.classList.contains("selected-rect")) el.remove();
     });
@@ -526,31 +552,17 @@ function enableResizeCells() {
 // Stand Selection & Info Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Highlights only the cells belonging to the clicked stand and dims all others.
- * FIX: Previously, ALL foreign rects were pushed into selectedCells, causing
- * unintended highlighting. Now we only modify opacity; selectedCells is only
- * used by the resize tool.
- *
- * @param {string} clickedCellClass  e.g. "foreign-rect-3"
- */
 function highlightStand(clickedCellClass) {
-  // Dim every foreign rect first
   document.querySelectorAll('rect[class*="foreign-rect-"]').forEach((rect) => {
     rect.style.opacity = "0.6";
     rect.setAttribute("stroke-width", "0");
   });
 
-  // Then bring the selected stand to full opacity.
-  // NOTE: We use `rect.foreign-rect-3` (exact class match) instead of
-  // `rect[class*="foreign-rect-3"]` (substring match) — the substring selector
-  // would also match foreign-rect-30, foreign-rect-31, etc.
   tempRect = null;
   document.querySelectorAll(`rect.${clickedCellClass}`).forEach((rect) => {
     rect.style.opacity = "1";
     rect.setAttribute("stroke", "rgb(0, 0, 0)");
     rect.setAttribute("stroke-width", "2");
-    console.log("Highlighting rect:", rect);
     if (!tempRect) tempRect = rect;
   });
   document.getElementById("stand_color").value =
@@ -562,26 +574,20 @@ function highlightStand(clickedCellClass) {
     document.querySelectorAll(`rect.${clickedCellClass}`).forEach((rect) => {
       rect.setAttribute("fill", newColor);
     });
-  console.log(tempRect.classList.value);
-  
-  
-  fetch("/admin/api/updateStandColor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: tempRect.classList.value.split(" ").find(cls => cls.startsWith("uid-")).split("-")[1],
-          color: newColor
-        }),
-      })      .then((r) => r.json())
+
+    fetch("/admin/api/updateStandColor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: tempRect.classList.value.split(" ").find(cls => cls.startsWith("uid-")).split("-")[1],
+        color: newColor
+      }),
+    }).then((r) => r.json())
       .then((data) => console.log(`Stand color update success:`, data))
       .catch((err) => console.error(`Stand color update error:`, err));
   };
 }
 
-/**
- * Populates the sidebar info panel with data for the given stand.
- * @param {object} cellData  – entry from foreignMapData
- */
 function showStandInfo(cellData) {
   const checkedBoxes = cellData.question_ids ?? [];
   let checkedBoxesHTML = "<ul>";
@@ -604,11 +610,9 @@ function showStandInfo(cellData) {
 
   document.getElementById("resizeBtnToggleDiv").style.display = "flex";
 
-  // Eintrag in der unteren Standliste mitmarkieren
   if (typeof setActiveStandCard === "function") {
     setActiveStandCard(cellData.id);
 
-    // Zur Karte scrollen damit der Eintrag sichtbar ist
     const activeCard = document.querySelector(
       `.stand-card[data-uid="${cellData.id}"]`,
     );
@@ -620,13 +624,8 @@ function showStandInfo(cellData) {
 // Event Listener Factories
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Attaches click/drag listeners to a foreign (stand) rect.
- * @param {SVGRectElement} rect
- */
 function addForeignRectEventListeners(rect) {
   rect.addEventListener("mousedown", (e) => {
-    // ── Resolve stand metadata ─────────────────────────────────────────────
     const uidClass = Array.from(rect.classList).find((cls) =>
       cls.startsWith("uid-"),
     );
@@ -642,20 +641,16 @@ function addForeignRectEventListeners(rect) {
       return;
     }
 
-    // ── Update info panel ──────────────────────────────────────────────────
     showStandInfo(cellData);
 
-    // ── Track which stand is selected ──────────────────────────────────────
     const rectClass = Array.from(rect.classList).find((cls) =>
       cls.startsWith("foreign-rect-"),
     );
     currentSelectedCellClass = rectClass?.split("-")[2] ?? "";
     currentSelectedUID = uidClass;
 
-    // ── Highlight only this stand (BUG FIX) ───────────────────────────────
     highlightStand(rectClass);
 
-    // ── Begin drag if drag mode is active ─────────────────────────────────
     if (!allowedToDrag) return;
     if (!rectClass) return;
 
@@ -674,7 +669,6 @@ function addForeignRectEventListeners(rect) {
       dragData.offsetY.push(mousePos.y - y);
       r.style.opacity = "0.8";
 
-      // Leave a placeholder cell behind so the grid stays intact
       const viewBox = svg.viewBox.baseVal;
       const cellWidth = (viewBox.width - (cols + 1) * gap) / cols;
       const cellHeight = (viewBox.height - (rows + 1) * gap) / rows;
@@ -696,12 +690,6 @@ function addForeignRectEventListeners(rect) {
   });
 }
 
-/**
- * Attaches paint/draw listeners to a plain (non-stand) grid cell.
- * @param {SVGRectElement} rect
- * @param {number}         row
- * @param {number}         col
- */
 function addDefaultRectEventListeners(rect, row, col) {
   const cellId = `cell-${row}-${col}`;
 
@@ -756,15 +744,11 @@ function toggleSocketCell(rect, cellId) {
   }
 }
 
-/**
- * Handles a click on a cell while in "changeStandSize" mode.
- */
 function handleResizeModeClick(rect, row, col, cellId) {
   const rectClass = Array.from(rect.classList).find((cls) =>
     cls.startsWith("foreign-rect-"),
   );
 
-  // Clicked a rect that belongs to a *different* stand – not allowed
   if (
     rectClass &&
     currentSelectedCellClass !== "" &&
@@ -777,7 +761,6 @@ function handleResizeModeClick(rect, row, col, cellId) {
     return;
   }
 
-  // Clicked a rect that is already part of the selected stand – deselect it
   if (rectClass && currentSelectedCellClass === rectClass.split("-")[2]) {
     rect.style.opacity = "1";
     selectedCells = selectedCells.filter((id) => id !== cellId);
@@ -788,20 +771,17 @@ function handleResizeModeClick(rect, row, col, cellId) {
     );
     rect.setAttribute("fill", "rgba(100, 0, 255, 0.1)");
 
-    // Replace the node to cleanly remove all event listeners, then re-attach default ones
     const freshRect = rect.cloneNode(true);
     rect.parentNode.replaceChild(freshRect, rect);
     addDefaultRectEventListeners(freshRect, row, col);
     return;
   }
 
-  // Clicked an empty cell with no stand selected – nothing to do
   if (!rectClass && currentSelectedCellClass === "") {
     console.warn("Resize mode: no stand selected yet, clicked an empty cell.");
     return;
   }
 
-  // First click on a foreign rect while no stand is selected – select that stand
   if (rectClass && currentSelectedCellClass === "") {
     currentSelectedCellClass = rectClass.split("-")[2];
     currentSelectedUID =
@@ -816,7 +796,6 @@ function handleResizeModeClick(rect, row, col, cellId) {
     return;
   }
 
-  // Clicked an empty cell while a stand is selected – expand the stand into this cell
   if (currentSelectedCellClass !== "") {
     selectedCells.push(cellId);
     rect.classList.add(
@@ -899,11 +878,6 @@ function postToAdminAPI(action, value) {
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Returns the SVG-coordinate mouse position for a given mouse event.
- * @param {MouseEvent}     evt
- * @param {SVGSVGElement}  svgEl
- */
 function getMousePosition(evt, svgEl) {
   const pt = svgEl.createSVGPoint();
   pt.x = evt.clientX;
@@ -911,46 +885,22 @@ function getMousePosition(evt, svgEl) {
   return pt.matrixTransform(svgEl.getScreenCTM().inverse());
 }
 
-/**
- * Snaps a coordinate to the nearest grid line.
- * @param {number} value  Raw coordinate
- * @param {number} size   Cell size
- * @param {number} gapP   Gap between cells
- */
 function snapToGrid(value, size, gapP) {
   return gapP + Math.round((value - gapP) / (size + gapP)) * (size + gapP);
 }
 
-/**
- * Finds stand detail data (lehrer, klasse, titel, etc.) by UID.
- *
- * NOTE: `data` is expected to be a global variable containing
- * { completed: [...], pending: [...] } that is populated elsewhere
- * (e.g. from another API call or another script file).
- * This mirrors the original code's behaviour exactly.
- *
- * @param {string|number} uid
- * @returns {object|null}
- */
 function findStandById(uid) {
-  if (typeof data === "undefined") {
-    console.error(
-      "findStandById: global `data` is not defined. Make sure the stand details are loaded before clicking a stand.",
-    );
+  if (!yearStandDetails) {
+    console.error("findStandById: yearStandDetails not loaded yet.");
     return null;
   }
   return (
-    data.completed?.find((item) => item.id == uid) ??
-    data.pending?.find((item) => item.id == uid) ??
+    yearStandDetails.completed?.find((item) => item.id == uid) ??
+    yearStandDetails.pending?.find((item) => item.id == uid) ??
     null
   );
 }
 
-/**
- * Collects the current cell ID → UID mapping for all stand rects.
- * Used when saving drag or resize changes.
- * @returns {{ id: string, uid: string }[]}
- */
 function collectUIDPositions() {
   const collection = [];
   document.querySelectorAll('rect[class*="uid-"]').forEach((rect) => {
@@ -965,7 +915,7 @@ function collectUIDPositions() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Color Generator (IIFE – keeps counter encapsulated)
+// Color Generator
 // ─────────────────────────────────────────────────────────────────────────────
 
 var colorGenerator = (() => {
@@ -996,27 +946,17 @@ var colorGenerator = (() => {
     return hslToRgba(hue, 90, 60);
   }
 
-  function nextColor() {
-    counter++;
-  }
-  function getCounter() {
-    return counter;
-  }
+  function nextColor() { counter++; }
+  function getCounter() { return counter; }
+  function reset() { counter = 0; }
 
-  return { getColor, getColorByIndex, nextColor, getCounter };
+  return { getColor, getColorByIndex, nextColor, getCounter, reset };
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stand List (rechte Seitenleiste – #allStandsList)
+// Stand List
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Befüllt die untere Standliste sobald die Kartendaten geladen sind.
- * Wird nach drawForeignMap() aufgerufen.
- *
- * @param {Array}  foreignMapData  – globalForeignMapData (flaches Array)
- * @param {object} standDetails    – globale `data` Variable { completed, pending }
- */
 function populateStandList(foreignMapData, standDetails) {
   const container = document.getElementById("allStandsList");
   const badge = document.getElementById("standCountBadge");
@@ -1034,7 +974,6 @@ function populateStandList(foreignMapData, standDetails) {
     return;
   }
 
-  // Position-Lookup: uid → { color, placed }
   const positionByUid = {};
   foreignMapData.forEach(([uid, , cells, color]) => {
     positionByUid[uid] = { color, placed: cells !== "none" };
@@ -1068,10 +1007,6 @@ function populateStandList(foreignMapData, standDetails) {
   });
 }
 
-/**
- * Markiert den passenden Eintrag in der Standliste als aktiv.
- * @param {string|number} uid
- */
 function setActiveStandCard(uid) {
   document.querySelectorAll(".stand-card").forEach((el) => {
     el.classList.toggle("active", el.dataset.uid == uid);

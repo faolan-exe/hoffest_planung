@@ -177,36 +177,40 @@ def admin_route(destination="nav1"):
         "completed": [],
     }
     pending_ids = db_manager.get_pending()
-    for id in pending_ids:
-        tempData = db_manager.get_submitted_data_from_stand_id(id)
-        data["pending"].append(
-            {
-                "lehrer": tempData[2],
-                "klasse": tempData[3],
-                "titel": tempData[4],
-                "beschreibung": tempData[5],
-                "ort": tempData[0],
-                "ort_spezifikation": tempData[1],
-                "question_ids": tempData[6],
-                "id": tempData[9],
-            }
-        )
-    pending_ids = db_manager.get_completed()
-    for id in pending_ids:
-        tempData = db_manager.get_submitted_data_from_stand_id(id)
-        data["completed"].append(
-            {
-                "lehrer": tempData[2],
-                "klasse": tempData[3],
-                "titel": tempData[4],
-                "beschreibung": tempData[5],
-                "ort": tempData[0],
-                "ort_spezifikation": tempData[1],
-                "question_ids": tempData[6],
-                "kommentar": tempData[8],
-                "id": tempData[9]
-            }
-        )
+    if pending_ids:
+        for id in pending_ids:
+            tempData = db_manager.get_submitted_data_from_stand_id(id)
+            data["pending"].append(
+                {
+                    "lehrer": tempData[2],
+                    "klasse": tempData[3],
+                    "titel": tempData[4],
+                    "beschreibung": tempData[5],
+                    "ort": tempData[0],
+                    "ort_spezifikation": tempData[1],
+                    "question_ids": tempData[6],
+                    "id": tempData[9],
+                }
+            )
+
+
+    if pending_ids:
+        pending_ids = db_manager.get_completed()
+        for id in pending_ids:
+            tempData = db_manager.get_submitted_data_from_stand_id(id)
+            data["completed"].append(
+                {
+                    "lehrer": tempData[2],
+                    "klasse": tempData[3],
+                    "titel": tempData[4],
+                    "beschreibung": tempData[5],
+                    "ort": tempData[0],
+                    "ort_spezifikation": tempData[1],
+                    "question_ids": tempData[6],
+                    "kommentar": tempData[8],
+                    "id": tempData[9]
+                }
+            )
     email_texts = db_manager.get_all_emails()
     return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"))
 
@@ -215,10 +219,10 @@ def admin_route(destination="nav1"):
 def loader(page):
     return app.send_static_file(f"loader/{page}")
 
-@admin.route("/api/foreignMapData")
-def returnForeignMapData():
-    data = db_manager.getAllSelectedAreas()
-    return jsonify(data), 200
+@admin.route("/api/foreignMapData/<year>")
+def returnForeignMapData(year):
+    data = db_manager.getAllSelectedAreas(year)
+    return jsonify(data if data is not None else []), 200
 
 @admin.route("/api/updateStandColor", methods=["POST"])
 def change_stand_color():
@@ -478,7 +482,41 @@ def api_dienste_delete_assignment(eid, idx):
 		return jsonify({"ok": True})
 	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
  
- 
+@admin.route("/api/standDetails/<int:year>")
+def stand_details_by_year(year):
+    data = {"pending": [], "completed": []}
+    for sid in db_manager.get_pending(year=year):
+        td = db_manager.get_submitted_data_from_stand_id(sid)
+        if not td:
+            continue
+        data["pending"].append({
+            "lehrer": td[2],
+            "klasse": td[3],
+            "titel": td[4],
+            "beschreibung": td[5],
+            "ort": td[0],
+            "ort_spezifikation": td[1],
+            "question_ids": td[6],
+            "id": td[9],
+        })
+    for sid in db_manager.get_completed(year=year):
+        td = db_manager.get_submitted_data_from_stand_id(sid)
+        if not td:
+            continue
+        data["completed"].append({
+            "lehrer": td[2],
+            "klasse": td[3],
+            "titel": td[4],
+            "beschreibung": td[5],
+            "ort": td[0],
+            "ort_spezifikation": td[1],
+            "question_ids": td[6],
+            "kommentar": td[8],
+            "id": td[9],
+        })
+    return jsonify(data)
+
+
 @admin.route("/moodle/api/dienste/config", methods=["PUT"])
 # @admin_required  ← TODO: deinen Admin-Auth-Decorator hier einsetzen
 def api_dienste_update_config():
