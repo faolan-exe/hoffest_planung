@@ -337,20 +337,22 @@ def admin_api():
     
 @app.route("/moodleApi")
 def moodleApi():
-    id = request.args.get("id", "nothing")
+    auth_id = request.args.get("id", "nothing")
+    year_str = request.args.get("year")
+    year = int(year_str) if year_str and year_str.isdigit() else None
 
-    if not checkAuth(id):
+    if not checkAuth(auth_id):
         return jsonify({"error": "Invalid authentication"}), 401
-    confirmedIDS = db_manager.get_completed()
+    confirmedIDS = db_manager.get_completed(year=year)
     confirmed = []
-    for id in confirmedIDS:
-        data = db_manager.get_submitted_data_from_stand_id(id)
+    for sid in confirmedIDS:
+        data = db_manager.get_submitted_data_from_stand_id(sid)
         confirmed.append({"lehrer": data[2], "name": data[4]})
 
-    pendingIDS = db_manager.get_pending()
+    pendingIDS = db_manager.get_pending(year=year)
     pending = []
-    for id in pendingIDS:
-        data = db_manager.get_submitted_data_from_stand_id(id)
+    for sid in pendingIDS:
+        data = db_manager.get_submitted_data_from_stand_id(sid)
         pending.append({"lehrer": data[2], "name": data[4]})
     return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
@@ -549,10 +551,15 @@ def api_dienste_update_config():
 	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
  
  
-@admin.route("/dienste")
-def dienste_config():
-	"""Render der Admin-Konfigurationsseite."""
-	return render_template("dienste_config.html")
+@admin.route("/moodle/api/dienste/reset", methods=["POST"])
+def api_dienste_reset():
+	"""Admin-Endpoint: löscht alle User-Einträge + Shadow-Assignments, behält Shadow-Event-Struktur."""
+	result = db_manager.reset_dienste_entries()
+	if result.get("ok"):
+		return jsonify({"ok": True, "deleted_events": result.get("deleted_events", 0), "deleted_assignments": result.get("deleted_assignments", 0)})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 500)
+
+
  
 
 

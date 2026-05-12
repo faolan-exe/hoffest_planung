@@ -504,6 +504,7 @@ const DEMO_CONFIG = {
 
 let state = { config: null, sheetData: null, lastFetchOk: false };
 let pollTimer = null;
+let initialLoadDone = false;
 
 const $ = id => document.getElementById(id);
 const parseTime = t => { const [h,m] = t.split(':').map(Number); return h * 60 + m; };
@@ -543,21 +544,30 @@ function normalizeEvent(e) {
 function isFull(ev) { return (ev.assignments?.length || 0) >= (ev.slots || 1); }
 
 async function loadConfig(silent = false) {
+  const isFirst = !initialLoadDone;
   try {
     let cfg;
     if (USE_DEMO_DATA) {
       cfg = JSON.parse(JSON.stringify(DEMO_CONFIG));
     } else {
       const res = await fetch(`${API_BASE}/config`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        if (res.status >= 500 && isFirst) {
+          location.reload();
+          return;
+        }
+        throw new Error('HTTP ' + res.status);
+      }
       cfg = await res.json();
     }
+    initialLoadDone = true;
     cfg.events = (cfg.events || []).map(normalizeEvent);
     state.config = cfg;
     state.lastFetchOk = true;
     $('live-dot').classList.remove('stale');
     render();
   } catch (e) {
+    initialLoadDone = true;
     state.lastFetchOk = false;
     $('live-dot').classList.add('stale');
     if (!silent) {

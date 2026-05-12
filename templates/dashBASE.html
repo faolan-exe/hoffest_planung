@@ -22,6 +22,7 @@
 <link rel="prefetch" href="/admin/loader/confirmed.js" as="script" />
 <link rel="prefetch" href="/admin/loader/settings.js" as="script" />
 <link rel="prefetch" href="/admin/loader/overview.js" as="script" />
+<link rel="prefetch" href="/admin/loader/dienste.js" as="script" />
 
 <script>
       function load(nav, setCurrentID) {
@@ -37,6 +38,9 @@
             break;
           case "nav3":
             page = "overview.js";
+            break;
+          case "navDienste":
+            page = "dienste.js";
             break;
             case "nav4":
             page = "settings.js";
@@ -87,7 +91,7 @@
   <body>
     <div class="grid-container">
       <div class="grid-item item-logo"><img src="https://gymnasium-oberursel.de/img/logo.png" alt="logo" width="90%" style="padding-left: 10px;"></div>
-      <div class="grid-item item-welcome">
+      <div class="item-welcome">
         <div class="welcome-text">
           <h1>Willkommen</h1>
           <h3 id="status-text"></h3>
@@ -114,6 +118,9 @@
           </p>
           <p>
             <a id="nav3" onclick="load('nav3')">Übersicht</a>
+          </p>
+          <p>
+            <a id="navDienste" onclick="load('navDienste')">Dienste</a>
           </p>
           <p>
             <a id="nav4" onclick="load('nav4')">Einstellungen</a>

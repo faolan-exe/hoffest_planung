@@ -1,13 +1,18 @@
 <p></p>
 <hr>
 <h1 style="text-decoration: underline;">Aktuelle Stände</h1>
-<p></p>
+<p><span style="color: #ff0000;"><strong>Diese Tabelle aktualisiert sich
+      automatisch. Bitte nicht manuell bearbeiten!</strong></span></p>
+<p>
+  <label for="yearSelect" style="font-weight: bold; margin-right: 8px;">Jahr:</label>
+  <select id="yearSelect" style="padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;"></select>
+</p>
 <h2 id="progress"></h2>
 <h3>Bestätigte Projekte</h3>
 <table id="confirmedTable"
-  style="width: 50%; border-collapse: collapse; margin-bottom: 20px;">
+  style="width: 50%; border-collapse: collapse; margin-bottom: 30px; height: 94.4px;">
   <thead>
-    <tr>
+    <tr style="height: 40.8px;">
       <th
         style="padding: 8px 12px; text-align: left; border: 1px solid #ddd; background-color: #f2f2f2;">
         Lehrer</th>
@@ -17,8 +22,9 @@
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <th></th>
+    <tr style="height: 2.8px;">
+      <th style="display: none;"> </th>
+      <td style="display: none;"> </td>
     </tr>
   </tbody>
 </table>
@@ -37,20 +43,17 @@
   </thead>
   <tbody>
     <tr>
-      <th></th>
+      <th style="display: none;"> </th>
+      <td style="display: none;"> </td>
     </tr>
   </tbody>
 </table>
 <p>
   <script>
     async function sha256(message) {
-      // encode as UTF-8
       const msgBuffer = new TextEncoder().encode(message);
-      // hash the message
       const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      // convert ArrayBuffer to Array
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      // convert bytes to hex string
       const hashHex = hashArray
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
@@ -63,6 +66,30 @@
 
     var hashedID;
 
+    // Jahr-Dropdown befüllen
+    (function() {
+      var sel = document.getElementById("yearSelect");
+      var currentYear = new Date().getFullYear();
+      for (var y = 2025; y <= currentYear; y++) {
+        var opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", function() {
+        if (!hashedID) return;
+        clearTables();
+        loadTable();
+      });
+    })();
+
+    function clearTables() {
+      var confirmedTbody = document.getElementById("confirmedTable").querySelector("tbody");
+      var pendingTbody = document.getElementById("pendingTable").querySelector("tbody");
+      confirmedTbody.innerHTML = '<tr><th style="display:none"> </th><td style="display:none"> </td></tr>';
+      pendingTbody.innerHTML = '<tr><th style="display:none"> </th><td style="display:none"> </td></tr>';
+    }
 
     function start() {
       fetch("https://hoffest.t-auer.com/register", {
@@ -79,8 +106,7 @@
         .then((result) => {
           if (result.ok == true) {
             document.getElementById("linkBtn").onclick = function() {
-              window.open("https://hoffest.t-auer.com?id=" + hashedID,
-                "_blank");
+              window.open("https://hoffest.t-auer.com?id=" + hashedID, "_blank");
             };
             loadTable();
           } else {
@@ -99,10 +125,10 @@
     }
 
     function loadTable() {
-      fetch("https://hoffest.t-auer.com/moodleApi?id=" + hashedID)
+      var year = document.getElementById("yearSelect").value;
+      fetch("https://hoffest.t-auer.com/moodleApi?id=" + hashedID + "&year=" + year)
         .then((response) => response.json())
         .then((data) => {
-          // Bestätigte Projekte einfügen
           const confirmedTableBody = document
             .getElementById("confirmedTable")
             .querySelector("tbody");
@@ -114,28 +140,26 @@
           data.confirmed.forEach((item) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-                        <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
-                        <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
-                    `;
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
+            `;
             confirmedTableBody.appendChild(row);
           });
           const pendingTableBody = document
             .getElementById("pendingTable")
             .querySelector("tbody");
-          // Ausstehende Projekte einfügen
           if (data.pending.length === 0) {
             const row = document.createElement("tr");
             row.innerHTML =
               `<td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;" colspan="2">Keine ausstehenden Stände</td>`;
             pendingTableBody.appendChild(row);
           }
-
           data.pending.forEach((item) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-                        <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
-                        <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
-                    `;
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
+            `;
             pendingTableBody.appendChild(row);
           });
         })

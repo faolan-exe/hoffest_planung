@@ -1681,8 +1681,37 @@ class DatabaseManager:
                 logger.info(f"Retrying delete_dienste_assignment for {event_id}/{index}")
                 return self.delete_dienste_assignment(event_id, index, retry_count + 1)
             return {"ok": False, "error": "Internal error", "status": 500}
-    
-    
+
+
+    def reset_dienste_entries(self, retry_count=0):
+        """
+        Reset: löscht alle Free-Signup-Events und alle Assignments der Shadow-Events.
+        Shadow-Event-Struktur (Kategorien, Zeitslots, Slots-Anzahl) bleibt erhalten.
+        """
+        logger.debug("reset_dienste_entries called")
+        try:
+            self.cursor.execute(
+                "DELETE FROM public.diensteplan_events WHERE is_shadow = false"
+            )
+            deleted_events = self.cursor.rowcount
+            self.cursor.execute("""
+                DELETE FROM public.diensteplan_assignments
+                WHERE event_id IN (
+                    SELECT id FROM public.diensteplan_events WHERE is_shadow = true
+                )
+            """)
+            deleted_assignments = self.cursor.rowcount
+            self.conn.commit()
+            logger.info(f"reset_dienste_entries: {deleted_events} free-signup events, {deleted_assignments} shadow assignments deleted")
+            return {"ok": True, "deleted_events": deleted_events, "deleted_assignments": deleted_assignments}
+        except Exception as e:
+            logger.error(f"Error in reset_dienste_entries: {e}")
+            self.conn.rollback()
+            if retry_count < 3:
+                return self.reset_dienste_entries(retry_count + 1)
+            return {"ok": False, "error": "Internal error", "status": 500}
+
+
     def update_dienste_config(self, day, time_range, categories, shadow_events, retry_count=0):
         """
         Atomic Sync der Diensteplan-Konfiguration: Tag/Zeitfenster, Kategorien-Sync,
