@@ -1,53 +1,85 @@
-if (data.completed.length == 1) {
-  statusText = "<h3>Es ist bereits 1 Stand bestätigt.</h3>";
-} else if (data.completed.length == 0) {
-  statusText = "<h3>Es wurden noch keine Stände bestätigt.</h3>";
-} else {
-  statusText = "<h3>Es wurden " + data.completed.length + " Stände bestätigt.</h3>";
-}
-headingText = "<h2>Bestätigt:</h2>";
+var bigDiv = document.getElementById("inner-grid");
 
-position = -1;
-standData = data.completed
-
-
-
-bigDiv = document.getElementById("inner-grid");
 function init() {
-  bigDiv.innerHTML = "<div class=\"spacer\" id=\"heading\">ERROR</div>";
-  document.getElementById("status-text").innerHTML = statusText;
-  document.getElementById("heading").innerHTML = headingText;
+  bigDiv.innerHTML = '<div class="spacer" id="heading"><h2>Bestätigt:</h2></div>';
+  document.getElementById("status-text").innerHTML = "";
 
-  standData.forEach((stand) => {
-    const { lehrer, klasse, titel, beschreibung, ort, id } = stand;
-    position = position + 1;
-    console.log(position);
-    if (position == 3) {
-      position = 0;
-    }
+  const yearBar = document.createElement("div");
+  yearBar.style.cssText = "padding: 8px 12px 4px; display: flex; align-items: center; gap: 8px; grid-column: 1 / -1;";
 
-    const template = `
-        <div class="grid2-item ${position == 0
-        ? "inner-left"
-        : position == 1
-          ? "inner-mid"
-          : "inner-right"
-      }">
-              <div class="info-card" style="position: relative">
-                <span class="title2">${lehrer}, ${klasse}</span>
-                <br />
-                <span class="title">${titel}</span>
-                <p class="description">
-                  ${beschreibung}
-                </p>
-                <div class="actions">
-                  <a href="#" onclick="load('nav6', '${id}')">Details ➡</a>
-                </div>
-              </div>
-            </div>
-        `;
+  const label = document.createElement("label");
+  label.textContent = "Jahr: ";
+  label.style.fontWeight = "600";
 
-    bigDiv.innerHTML += template;
+  const sel = document.createElement("select");
+  sel.id = "confirmed-year-select";
+  sel.style.cssText = "padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;";
+
+  const currentYear = new Date().getFullYear();
+  for (var y = currentYear; y >= 2025; y--) {
+    var opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  sel.addEventListener("change", function () {
+    loadForYear(parseInt(this.value));
   });
+
+  yearBar.appendChild(label);
+  yearBar.appendChild(sel);
+  bigDiv.appendChild(yearBar);
+
+  loadForYear(currentYear);
 }
 
+function loadForYear(year) {
+  document.querySelectorAll(".confirmed-card").forEach(function (el) { el.remove(); });
+
+  fetch("/admin/api/standDetails/" + year)
+    .then(function (r) { return r.json(); })
+    .then(function (details) {
+      var stands = details.completed || [];
+      var count = stands.length;
+
+      if (count === 1) {
+        document.getElementById("status-text").innerHTML = "<h3>Es ist bereits 1 Stand bestätigt.</h3>";
+      } else if (count === 0) {
+        document.getElementById("status-text").innerHTML = "<h3>Es wurden noch keine Stände bestätigt.</h3>";
+      } else {
+        document.getElementById("status-text").innerHTML = "<h3>Es wurden " + count + " Stände bestätigt.</h3>";
+      }
+
+      if (count === 0) {
+        var empty = document.createElement("div");
+        empty.className = "grid2-item inner-left confirmed-card";
+        empty.innerHTML = '<p style="color:#718096;padding:12px;">Keine bestätigten Stände für dieses Jahr.</p>';
+        bigDiv.appendChild(empty);
+        return;
+      }
+
+      var position = -1;
+      stands.forEach(function (stand) {
+        var lehrer = stand.lehrer, klasse = stand.klasse, titel = stand.titel,
+            beschreibung = stand.beschreibung, id = stand.id;
+        position = (position + 1) % 3;
+        var posClass = position === 0 ? "inner-left" : position === 1 ? "inner-mid" : "inner-right";
+
+        var div = document.createElement("div");
+        div.className = "grid2-item confirmed-card " + posClass;
+        div.innerHTML = '\
+          <div class="info-card" style="position:relative">\
+            <span class="title2">' + lehrer + ', ' + klasse + '</span><br/>\
+            <span class="title">' + titel + '</span>\
+            <p class="description">' + beschreibung + '</p>\
+            <div class="actions">\
+              <a href="#" onclick="load(\'nav6\', \'' + id + '\')">Details ➡</a>\
+            </div>\
+          </div>';
+        bigDiv.appendChild(div);
+      });
+    })
+    .catch(function (err) { console.error("Error loading confirmed stands:", err); });
+}

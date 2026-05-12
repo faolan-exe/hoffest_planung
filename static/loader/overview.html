@@ -1,3 +1,23 @@
+<div id="approval-modal-backdrop" onclick="if(event.target===this)closeApprovalModal()">
+  <div id="approval-modal">
+    <h2>Stand prüfen: <span id="modal-stand-title"></span></h2>
+    <div class="modal-info-row"><span class="modal-info-label">Lehrkraft</span><span id="modal-lehrer"></span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Klasse</span><span id="modal-klasse"></span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Projektname</span><span id="modal-titel"></span></div>
+    <div class="modal-section-label">Beschreibung</div>
+    <div id="modal-beschreibung" style="font-size:0.9em;color:#4a5568;line-height:1.5;"></div>
+    <div class="modal-section-label">Ausgewählte Optionen</div>
+    <ul id="modal-options" style="font-size:0.88em;color:#4a5568;margin:0 0 0 1.4em;padding:0;line-height:1.6;"></ul>
+    <div class="modal-section-label">Kommentar</div>
+    <textarea id="modal-comment" placeholder="Optionalen Kommentar hinzufügen (beim Ablehnen erforderlich, min. 10 Zeichen)"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="closeApprovalModal()">Abbrechen</button>
+      <button class="modal-btn-reject" onclick="modalRejectStand()">Ablehnen</button>
+      <button class="modal-btn-accept" onclick="modalAcceptStand()">✓ Bestätigen</button>
+    </div>
+  </div>
+</div>
+
 <div
   style="width: 100%; height: 70vh; overflow: hidden; border: 1px solid #ccc"
 >
@@ -229,4 +249,79 @@
     background: #c6f6d5;
     color: #276749;
   }
+  .stand-card-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .stand-card.pending {
+    border-color: #fcd34d;
+  }
+  .stand-card.pending:hover {
+    border-color: #f59e0b;
+    background: #fffbeb;
+  }
+  .stand-card-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  .stand-action-btn {
+    font-size: 0.72em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.15s;
+    font-family: inherit;
+  }
+  .stand-action-btn:hover { opacity: 0.72; }
+  .stand-action-btn.accept { background: #c6f6d5; color: #276749; }
+  .stand-action-btn.more   { background: #e2e8f0; color: #2d3748; }
+
+  /* Approval Modal */
+  #approval-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.48);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #approval-modal-backdrop.open { display: flex; }
+  #approval-modal {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    width: 480px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  #approval-modal h2 { margin: 0 0 16px; font-size: 1.1em; color: #2d3748; }
+  .modal-info-row {
+    display: flex; gap: 8px; font-size: 0.88em;
+    padding: 5px 0; border-bottom: 1px solid #f0f4f8;
+  }
+  .modal-info-label { font-weight: 600; color: #718096; min-width: 90px; }
+  .modal-section-label {
+    font-weight: 600; font-size: 0.82em; color: #718096;
+    text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 4px;
+  }
+  #approval-modal textarea {
+    width: 100%; box-sizing: border-box; padding: 8px;
+    border: 1px solid #cbd5e0; border-radius: 6px;
+    font-size: 0.9em; min-height: 70px; resize: vertical; font-family: inherit;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+  .modal-actions button {
+    padding: 8px 16px; border-radius: 6px; border: none;
+    cursor: pointer; font-size: 0.88em; font-weight: 600;
+    transition: opacity 0.15s; font-family: inherit;
+  }
+  .modal-actions button:hover { opacity: 0.8; }
+  .modal-btn-accept { background: #48bb78; color: white; }
+  .modal-btn-reject { background: #fc8181; color: white; }
+  .modal-btn-cancel { background: #e2e8f0; color: #4a5568; }
 </style>

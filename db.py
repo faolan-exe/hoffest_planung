@@ -460,20 +460,22 @@ class DatabaseManager:
             logger.error("Overlap found in selected areas")
             return False  # TODO: Auto Update Map Of The User
         
-        query = """INSERT INTO stand (auth_id, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (auth_id) 
-                DO UPDATE SET 
+        query = """INSERT INTO stand (auth_id, jahr, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (jahr, auth_id)
+                DO UPDATE SET
                     ort = EXCLUDED.ort,
                     ort_spezifikation = EXCLUDED.ort_spezifikation,
                     lehrer = EXCLUDED.lehrer,
                     klasse = EXCLUDED.klasse,
                     name = EXCLUDED.name,
-                    beschreibung = EXCLUDED.beschreibung
-                    RETURNING id;"""
+                    beschreibung = EXCLUDED.beschreibung,
+                    email = EXCLUDED.email
+                RETURNING id;"""
 
         values = (
             auth_id,
+            datetime.now().year,
             data["baseLocation"],
             str(data["mapSelection"]) if data["baseLocation"] == "h" else data["raumnummer"],
             data["lehrername"],
@@ -783,7 +785,8 @@ class DatabaseManager:
                 self.conn.rollback()
                 return False
         
-        query = "INSERT INTO genehmigungen (id) VALUES (%s)"
+        query = """INSERT INTO genehmigungen (id) VALUES (%s)
+                   ON CONFLICT (id) DO UPDATE SET genehmigt = NULL, kommentar = NULL"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(stand_id,)}")
         try:

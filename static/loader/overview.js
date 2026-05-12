@@ -285,6 +285,11 @@ function drawGrid(
   borderRadius = borderRadiusP;
 
   svg.innerHTML = `
+    <defs>
+      <pattern id="pending-hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(0,0,0,0.30)" stroke-width="4"/>
+      </pattern>
+    </defs>
     <image
       href="/static/plan.jpg"
       width="100%"
@@ -327,6 +332,8 @@ function drawGrid(
 }
 
 function drawForeignMap(foreignMapData) {
+  const pendingIds = new Set((yearStandDetails?.pending ?? []).map(s => String(s.id)));
+
   foreignMapData.forEach((element) => {
     try {
       const uID = element[0];
@@ -336,6 +343,7 @@ function drawForeignMap(foreignMapData) {
 
       const cells = JSON.parse(mapSelection.replaceAll("'", '"'));
       const colorIndex = colorGenerator.getCounter();
+      const isPending = pendingIds.has(String(uID));
 
       cells.forEach((cellId) => {
         const rect = document.getElementById(cellId);
@@ -345,6 +353,15 @@ function drawForeignMap(foreignMapData) {
         rect.classList.add(`foreign-rect-${colorIndex}`);
         rect.classList.add(`uid-${uID}`);
         rect.setAttribute("fill", element[3]);
+
+        if (isPending) {
+          rect.style.opacity = "0.6";
+          const hatch = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          ["x", "y", "width", "height", "rx", "ry"].forEach(a => hatch.setAttribute(a, rect.getAttribute(a)));
+          hatch.setAttribute("fill", "url(#pending-hatch)");
+          hatch.setAttribute("pointer-events", "none");
+          svg.appendChild(hatch);
+        }
       });
 
       colorGenerator.nextColor();
@@ -986,6 +1003,7 @@ function populateStandList(foreignMapData, standDetails) {
     ...(standDetails?.completed ?? []),
     ...(standDetails?.pending ?? []),
   ];
+  const pendingIds = new Set((standDetails?.pending ?? []).map(s => String(s.id)));
 
   badge.textContent = allStands.length;
 
@@ -1004,18 +1022,37 @@ function populateStandList(foreignMapData, standDetails) {
 
   allStands.forEach((stand) => {
     const pos = positionByUid[stand.id] ?? { color: "#cccccc", placed: false };
+    const isPending = pendingIds.has(String(stand.id));
     const card = document.createElement("div");
-    card.className = "stand-card" + (pos.placed ? "" : " no-position");
+
+    let badgeClass, badgeText;
+    if (isPending) {
+      badgeClass = "pending";
+      badgeText = "ausstehend";
+    } else if (pos.placed) {
+      badgeClass = "placed";
+      badgeText = "platziert";
+    } else {
+      badgeClass = "";
+      badgeText = "offen";
+    }
+
+    card.className = "stand-card" + (isPending ? " pending" : (pos.placed ? "" : " no-position"));
     card.dataset.uid = stand.id;
 
     card.innerHTML = `
       <div class="stand-color-dot" style="background:${pos.color}"></div>
       <div style="flex:1; min-width:0;">
-        <div class="stand-card-title">${stand.titel ?? "Unbekannt"}</div>
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:4px;">
+          <div class="stand-card-title">${stand.titel ?? "Unbekannt"}</div>
+          <div class="stand-card-badge ${badgeClass}">${badgeText}</div>
+        </div>
         <div class="stand-card-meta">${stand.lehrer ?? "–"} · ${stand.klasse ?? "–"}</div>
-      </div>
-      <div class="stand-card-badge ${pos.placed ? "placed" : ""}">
-        ${pos.placed ? "platziert" : "offen"}
+        ${isPending ? `
+        <div class="stand-card-actions">
+          <button class="stand-action-btn accept" onclick="event.stopPropagation(); overviewDirectApprove('${stand.id}')">✓ Akzeptieren</button>
+          <button class="stand-action-btn more" onclick="event.stopPropagation(); openApprovalModal('${stand.id}')">Mehr</button>
+        </div>` : ""}
       </div>
     `;
 
@@ -1032,4 +1069,84 @@ function setActiveStandCard(uid) {
   document.querySelectorAll(".stand-card").forEach((el) => {
     el.classList.toggle("active", el.dataset.uid == uid);
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Approval Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+var _approvalModalStandId = null;
+
+function openApprovalModal(standId) {
+  var stand = findStandById(standId);
+  if (!stand) return;
+
+  document.getElementById("modal-stand-title").textContent = stand.titel ?? "";
+  document.getElementById("modal-lehrer").textContent = stand.lehrer ?? "";
+  document.getElementById("modal-klasse").textContent = stand.klasse ?? "";
+  document.getElementById("modal-titel").textContent = stand.titel ?? "";
+  document.getElementById("modal-beschreibung").textContent = stand.beschreibung ?? "Keine Beschreibung";
+
+  var optionsEl = document.getElementById("modal-options");
+  optionsEl.innerHTML = "";
+  var qids = Array.isArray(stand.question_ids) ? stand.question_ids : [];
+  qids.forEach(function (qid) {
+    var li = document.createElement("li");
+    li.textContent = questionIdLookup[qid] ?? String(qid);
+    optionsEl.appendChild(li);
+  });
+
+  document.getElementById("modal-comment").value = "";
+  _approvalModalStandId = standId;
+  document.getElementById("approval-modal-backdrop").classList.add("open");
+}
+
+function closeApprovalModal() {
+  document.getElementById("approval-modal-backdrop").classList.remove("open");
+  _approvalModalStandId = null;
+}
+
+function modalAcceptStand() {
+  var comment = document.getElementById("modal-comment").value;
+  overviewSendFetch(_approvalModalStandId, "accepted", comment);
+}
+
+function modalRejectStand() {
+  var comment = document.getElementById("modal-comment").value;
+  if (!comment || comment.length < 10) {
+    alert("Bitte mindestens 10 Zeichen als Kommentar eingeben");
+    return;
+  }
+  if (comment.length > 1000) {
+    alert("Der Kommentar ist zu lang");
+    return;
+  }
+  overviewSendFetch(_approvalModalStandId, "declined", comment);
+}
+
+function overviewDirectApprove(standId) {
+  if (!confirm("Stand bestätigen?")) return;
+  overviewSendFetch(standId, "accepted", "");
+}
+
+function overviewSendFetch(standId, status, comment) {
+  fetch("/admin/stand/" + standId, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: status, comment: comment }),
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (resData) {
+      if (resData.ok === "ok") {
+        closeApprovalModal();
+        yearMapData = null;
+        yearStandDetails = null;
+        yearFetchInProgress = false;
+        colorGenerator.reset();
+        drawGrid();
+      } else {
+        alert("Fehler: " + (resData.error || "Unbekannter Fehler"));
+      }
+    })
+    .catch(function (err) { alert("Netzwerkfehler: " + err); });
 }
