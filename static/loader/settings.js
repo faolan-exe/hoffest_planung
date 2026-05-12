@@ -133,6 +133,26 @@ if (typeof Quill === 'undefined') {
         pageStatusText.innerHTML = "inaktiv";
     }
 
+    allowReeditToggle = document.getElementById("allowReeditToggle");
+    allowReeditText = document.getElementById("allowReeditText");
+
+    allowReeditToggle.addEventListener("click", function() {
+        if (allowReeditToggle.checked) {
+            allowReeditText.innerHTML = "aktiv";
+            sendFetch("allowReedit", "1");
+        } else {
+            allowReeditText.innerHTML = "inaktiv";
+            sendFetch("allowReedit", "0");
+        }
+    });
+    if (allowReeditSetting == "1") {
+        allowReeditToggle.checked = true;
+        allowReeditText.innerHTML = "aktiv";
+    } else {
+        allowReeditToggle.checked = false;
+        allowReeditText.innerHTML = "inaktiv";
+    }
+
     
     submitNewQuestionBtn.addEventListener("click", submitNewQuestion);
     submitNewPwdBtn.addEventListener("click", submitNewPassword);
@@ -194,7 +214,7 @@ function sendFetch(action, value) {
                 alert("Email text updated successfully");
                 return;
             }
-            if (action.includes("pageStatus")) {
+            if (action.includes("pageStatus") || action.includes("allowReedit")) {
                 return;
             }
             document.location = "/admin";

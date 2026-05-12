@@ -108,13 +108,14 @@ def index():
     enabled = True
     if db_manager.get_status_action("enabled") == "0":
         enabled = False
+    allow_reedit = db_manager.get_status_action("allow_reedit") == "1"
     questions = db_manager.get_questions()
     blacklistCells = db_manager.getCurrentBlacklistCells()
     socketCells = db_manager.getCurrentSocketCells()
 
     already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
     return render_template(
-        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells, socketCells=socketCells
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells, socketCells=socketCells, allow_reedit=allow_reedit
     )
 
 
@@ -212,7 +213,7 @@ def admin_route(destination="nav1"):
                 }
             )
     email_texts = db_manager.get_all_emails()
-    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"))
+    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"), allow_reedit=db_manager.get_status_action("allow_reedit"))
 
 
 @admin.route("/loader/<page>")
@@ -318,6 +319,10 @@ def admin_api():
         case "pageStatus":
             if not db_manager.update_status_action("enabled", value):
                 return jsonify({"error": "Failed to update page status"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "allowReedit":
+            if not db_manager.update_status_action("allow_reedit", value):
+                return jsonify({"error": "Failed to update allow_reedit"}), 400
             return jsonify({"ok": "ok"}), 200
         case "blacklistCellsUpdate":
             if not db_manager.update_blacklist_cells(value):

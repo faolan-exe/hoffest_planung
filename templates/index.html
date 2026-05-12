@@ -383,8 +383,9 @@
       {% else %}
       socketCells = []
       {% endif %}
-      
+
       enabled = "{{enabled}}"
+      allowReedit = {{ allow_reedit | tojson }}
     </script>
   </head>
 
@@ -596,6 +597,7 @@
     </script>
 
     <script defer>
+      var _reeditFromStage = "";
       actionTitle = document.getElementById("actionTitle");
       actionSubText = document.getElementById("actionSubtext");
       additionaltext = document.getElementById("additionalText");
@@ -717,13 +719,25 @@
             nextStageBtn.classList.remove("normal-btn");
             nextStageBtn.classList.add("start-btn");
 
+            var addText, lastActionVal;
+            if (_reeditFromStage === "confirmed") {
+              addText = "Gehen Sie nochmals durch alle Schritte der Registrierung, um Ihren Antrag zu aktualisieren.<br><br><strong style='color:#c0392b'>Achtung:</strong> Da Ihr Stand bereits genehmigt wurde, muss er nach der Bearbeitung erneut durch die Organisatoren genehmigt werden.<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de";
+              lastActionVal = "confirmed";
+            } else if (_reeditFromStage === "display") {
+              addText = "Gehen Sie nochmals durch alle Schritte der Registrierung, um Ihren Antrag zu aktualisieren.<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de";
+              lastActionVal = "display";
+            } else {
+              addText = "Für die Bearbeitung Ihres Antrags gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Antrag entsprechend an. <br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de";
+              lastActionVal = "notConfirmed";
+            }
+
             updateUI(
               "Willkommen!",
-              "Bearbeiten sie im folgenden Ihren Antrag.",
-              "Für die Bearbeitung Ihres Antrags gehen Sie nochmals durch alle Schritte, die Sie auch bei der Registrierung durchlaufen sind. <br><br>Bitte beachten Sie die Begründung, die zu der Ablehnung geführt hat und passen Sie Ihren Antrag entsprechend an. <br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de",
+              "Bearbeiten Sie im Folgenden Ihren Antrag.",
+              addText,
               "Los geht's!",
               "selectRectangle",
-              "notConfirmed"
+              lastActionVal
             );
           },
           selectRectangle: () => {
@@ -737,7 +751,7 @@
               "start"
             );
             additionaltext.style.display = "block";
-            nextStageBtn.disabled = true;
+            nextStageBtn.disabled = selectedCells.length < 1;
             lastAction.value = "start";
           },
           stage3: () => {
@@ -745,7 +759,7 @@
               (el) => (el.style.display = "block")
             );
             initQuestionBlock();
-            if (submittedData !== null && submittedData[7] !== "") {
+            if (submittedData !== null) {
               loadPreviousData();
             }
             updateUI(
@@ -801,16 +815,20 @@
             }
           },
           display: () => {
+            _reeditFromStage = "display";
             try {
               drawOwnExistingGrid();
             } catch (e) {
             }
 
+            const reeditSection = allowReedit
+              ? `<hr style="margin:20px 0 12px"><p style="color:#555;font-size:0.9em;margin-bottom:8px;">Möchten Sie Ihren Stand nachträglich bearbeiten?</p><button onclick="_reeditFromStage='display';stageManager('start2')" style="padding:8px 18px;border:1px solid #bbb;border-radius:6px;cursor:pointer;font-size:0.9em;background:#f8f8f8;">✏ Stand bearbeiten</button>`
+              : "";
 
             updateUI(
               "Registrierung abgeschlossen",
               "Ihr Stand wurde erfolgreich registriert! ",
-              "Sie erhalten in Kürze weitere Informationen in einer E-Mail an Ihre E-Mail Adresse. Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>Sie können die Seite schließen.",
+              "Sie erhalten in Kürze weitere Informationen in einer E-Mail an Ihre E-Mail Adresse. Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de<br><br>" + reeditSection + feedbackTemplate,
               "",
               "",
               ""
@@ -819,13 +837,36 @@
             [nextStageBtn, lastStageBtn].forEach(
               (el) => (el.style.display = "none")
             );
+            document.getElementById('feedbackForm').addEventListener('submit', async e => {
+              e.preventDefault();
+              const form = e.target;
+              const payload = { rating: form.rating.value, comments: form.comments.value.trim() };
+              const res = await fetch('/submitFeedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              if (res.ok) {
+                document.querySelector('.feedback-form-container').innerHTML = `<h2>Vielen Dank für Ihr Feedback!</h2><br><p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>`;
+                localStorage.setItem("feedback", "1");
+              } else {
+                alert('Etwas ist schiefgelaufen – bitte später erneut versuchen.');
+              }
+            });
+            if (localStorage.getItem("feedback") === "1") {
+              document.querySelector('.feedback-form-container').style.display = "none";
+            }
           },
           confirmed: () => {
+            _reeditFromStage = "confirmed";
             drawOwnExistingGrid();
+            const reeditSection = allowReedit
+              ? `<hr style="margin:20px 0 12px"><p style="color:#555;font-size:0.9em;margin-bottom:8px;">Möchten Sie Änderungen vornehmen? Ihr Stand muss dann erneut genehmigt werden.</p><button onclick="_reeditFromStage='confirmed';stageManager('start2')" style="padding:8px 18px;border:1px solid #bbb;border-radius:6px;cursor:pointer;font-size:0.9em;background:#f8f8f8;">✏ Stand bearbeiten</button><br><br>`
+              : "";
             updateUI(
               "Registrierung abgeschlossen",
               "<span style=\"color: green\">Ihr Stand wurde vorläufig genehmigt!</span>",
-              `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}<br><br><br>` + feedbackTemplate,
+              `Die Überprüfung wurde abgeschlossen und Ihr Stand ist genehmigt worden. Es kann dennoch zu kurzfristigen Änderungen bezüglich der Lage des Standes kommen. Schauen Sie daher einen Tag vor dem Hoffest nochmal auf die Karte um zu schauen, wo sich Ihr Stand befinden wird. Die Karte ist NICHT über ein Handy einsehbar!<br><br>Falls Sie Fragen haben, wenden Sie sich bitte an die Organisatoren: <br>akhoffest@gmx.de${submittedData[8] !== "" ? "<br><br><br><h3>Bemerkung:</h3>" + submittedData[8] : ""}<br><br>` + reeditSection + feedbackTemplate,
               "",
               "",
               ""
@@ -864,16 +905,11 @@
               }
             });
             if (localStorage.getItem("feedback") === "1") {
-              document.querySelector('.feedback-form-container').innerHTML = `
-                   <h2>Vielen Dank für Ihr Feedback!</h2>
-                   <br>
-                   <p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>
-                 `;
-              document.querySelector('.feedback-form-container').style.display = "block"
-
+              document.querySelector('.feedback-form-container').style.display = "none";
             }
           },
           notConfirmed: () => {
+            _reeditFromStage = "notConfirmed";
             drawOwnExistingGrid();
             updateUI(
               "Registrierung abgeschlossen",
@@ -919,8 +955,9 @@
       }
 
       function loadPreviousData() {
-        document.getElementById("lehrername").value =
-          submittedData[2] || "";
+        const lehrerInput = document.getElementById("lehrername");
+        lehrerInput.value = submittedData[2] || "";
+        lehrerInput.disabled = true;
         document.getElementById("klasse").value = submittedData[3] || "";
         document.getElementById("projektName").value =
           submittedData[4] || "";
@@ -961,7 +998,8 @@
         data.projektBeschreibung = document.getElementById(
           "projektBeschreibung"
         ).value;
-        data.email = document.getElementById("email").value;
+        const emailEl = document.getElementById("email");
+        data.email = emailEl.disabled ? null : emailEl.value;
         data.mapSelection = getMapSelectionCoords();
         data.questions = {};
         data.needsPower = false;
@@ -972,11 +1010,11 @@
           if (questionID == "4" && questionElement.checked) {
             data.needsPower = true;
           }
-          
+
         }
         if (submittedData !== null) {
           data.id = submittedData[0];
-          data.reedit = submittedData[7] !== "";
+          data.reedit = true;
         }
 
         return data;

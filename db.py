@@ -438,7 +438,7 @@ class DatabaseManager:
         logger.debug("addNewStand is called")
         reedit = data.get("reedit", False)
         ### check for race conditions
-        existingMaps = self.getAllSelectedAreas()
+        existingMaps = self.getAllSelectedAreasExceptUserId(auth_id) if reedit else self.getAllSelectedAreas()
         allMaps = [data["mapSelection"] if data["baseLocation"] == "h" else data["raumnummer"], ]
         for map in existingMaps:
             if map[2] == "none":
@@ -459,7 +459,16 @@ class DatabaseManager:
         if overlap_found:
             logger.error("Overlap found in selected areas")
             return False  # TODO: Auto Update Map Of The User
-        
+
+        email = data.get("email")
+        if not email and reedit:
+            self.cursor.execute(
+                "SELECT email FROM stand WHERE auth_id = %s AND (jahr = %s OR jahr = 0)",
+                (auth_id, datetime.now().year)
+            )
+            row = self.cursor.fetchone()
+            email = row[0] if row else ""
+
         query = """INSERT INTO stand (auth_id, jahr, ort, ort_spezifikation, lehrer, klasse, name, beschreibung, email)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (jahr, auth_id)
@@ -482,7 +491,7 @@ class DatabaseManager:
             data["klasse"],
             data["projektName"],
             data["projektBeschreibung"],
-            data["email"],
+            email,
         )
 
         try:
@@ -903,9 +912,9 @@ class DatabaseManager:
         bool: True if the status was successfully changed, False otherwise.
         """
         logger.debug(f"change_status_action is called")
-        query = "UPDATE status SET value = %s WHERE action = %s"
+        query = "INSERT INTO status (action, value) VALUES (%s, %s) ON CONFLICT (action) DO UPDATE SET value = EXCLUDED.value"
         logger.debug(f"Executing SQL query: {query}")
-        data = (value, action)
+        data = (action, value)
         logger.debug(f"with data: {data}")
         try:
             self.cursor.execute(query, data)
