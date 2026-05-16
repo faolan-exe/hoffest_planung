@@ -461,12 +461,12 @@ function render() {
 
     <section>
       <div class="section-header">
-        <div class="section-title">Shadow-Events</div>
+        <div class="section-title">Template-Events</div>
         <button class="section-add" onclick="openShadowModal()">Hinzufügen</button>
       </div>
       <div class="item-list">
         ${shadows.length === 0
-          ? `<div class="empty-list">Keine Shadow-Slots — Nutzer tragen frei ein</div>`
+          ? `<div class="empty-list">Keine Template-Slots — Nutzer tragen frei ein</div>`
           : shadows.map(s => {
               const cat = cfg.categories.find(c => c.id === s.categoryId);
               const color = cat?.color || '#78716c';
@@ -612,10 +612,10 @@ function renderShadowSheet() {
   if (cats.length === 0) {
     openSheet(`
       <div class="sheet-header">
-        <div class="sheet-subtitle">Shadow-Event</div>
+        <div class="sheet-subtitle">Template-Event</div>
         <div class="sheet-title">Erstmal Kategorie anlegen</div>
       </div>
-      <p style="color:var(--text-muted);font-size:14px">Du brauchst mindestens eine Kategorie, bevor du Shadow-Events erstellen kannst.</p>
+      <p style="color:var(--text-muted);font-size:14px">Du brauchst mindestens eine Kategorie, bevor du Template-Events erstellen kannst.</p>
       <div class="actions">
         <button class="btn btn-secondary" onclick="closeSheet()">OK</button>
       </div>
@@ -625,7 +625,7 @@ function renderShadowSheet() {
   const catOptions = cats.map(c => `<option value="${c.id}" ${c.id === d.categoryId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
   openSheet(`
     <div class="sheet-header">
-      <div class="sheet-subtitle">Shadow-Event</div>
+      <div class="sheet-subtitle">Template-Event</div>
       <div class="sheet-title">${d.id ? 'Bearbeiten' : 'Neuer Slot'}</div>
     </div>
     <div class="field">
@@ -691,7 +691,7 @@ function saveShadow() {
 }
 
 function deleteShadow(id) {
-  if (!confirm('Shadow-Slot löschen?')) return;
+  if (!confirm('Template-Slot löschen?')) return;
   state.config.events = state.config.events.filter(e => e.id !== id);
   render();
 }

@@ -823,7 +823,7 @@ function renderNewSheet() {
       <input class="input" id="f-person" value="${escapeHtml(d.person)}" placeholder="Vor- und Nachname" autocomplete="name">
     </div>
     <div class="field">
-      <label class="field-label">Klasse</label>
+      <label class="field-label">Klasse <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0">optional</span></label>
       <input class="input" id="f-class" value="${escapeHtml(d.class)}" placeholder="z.B. 8e">
     </div>
     <div class="field">
@@ -900,7 +900,7 @@ function renderShadowSheet() {
       <input class="input" id="f-person" placeholder="Vor- und Nachname" autocomplete="name">
     </div>
     <div class="field">
-      <label class="field-label">Klasse</label>
+      <label class="field-label">Klasse <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0">optional</span></label>
       <input class="input" id="f-class" placeholder="z.B. 8e">
     </div>
     <div class="actions">
@@ -962,7 +962,6 @@ async function submitNew() {
   const description = $('f-desc').value.trim();
 
   if (!person) return showToast('Name fehlt', true);
-  if (!klass) return showToast('Klasse fehlt', true);
   if (parseTime(end) <= parseTime(start)) return showToast('Ende muss nach Start liegen', true);
   if (!d.categoryId) return showToast('Kategorie wählen', true);
 
@@ -1002,7 +1001,6 @@ async function submitShadow(eventId) {
   const person = $('f-person').value.trim();
   const klass = $('f-class').value.trim();
   if (!person) return showToast('Name fehlt', true);
-  if (!klass) return showToast('Klasse fehlt', true);
 
   if (USE_DEMO_DATA) {
     const ev = state.config.events.find(e => e.id === eventId);

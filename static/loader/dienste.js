@@ -154,12 +154,12 @@ function dcRender() {
     </section>\
     <section>\
       <div class="dc-section-header">\
-        <div class="dc-section-title">Shadow-Events</div>\
+        <div class="dc-section-title">Template-Events</div>\
         <button class="dc-section-add" onclick="dcOpenShadowModal()">Hinzufügen</button>\
       </div>\
       <div class="dc-item-list">\
         ' + (shadows.length === 0
-          ? '<div class="dc-empty-list">Keine Shadow-Slots — Nutzer tragen frei ein</div>'
+          ? '<div class="dc-empty-list">Keine Template-Slots — Nutzer tragen frei ein</div>'
           : shadows.map(function(s) {
               var cat = cfg.categories.find(function(c) { return c.id === s.categoryId; });
               var color = cat ? cat.color : '#78716c';
@@ -191,7 +191,7 @@ function dcRender() {
           Einträge zurücksetzen\
         </button>\
       </div>\
-      <p style="font-size:12px;color:var(--dc-text-faint);margin-top:4px">Löscht alle Benutzer-Einträge und Teilnehmer der Shadow-Slots. Die Shadow-Event-Struktur und Konfiguration bleiben erhalten.</p>\
+      <p style="font-size:12px;color:var(--dc-text-faint);margin-top:4px">Löscht alle Benutzer-Einträge und Teilnehmer der Template-Slots. Die Template-Event-Struktur und Konfiguration bleiben erhalten.</p>\
     </div>';
 
   ['dc-day-name', 'dc-day-date', 'dc-range-start', 'dc-range-end'].forEach(function(id) {
@@ -325,10 +325,10 @@ function dcRenderShadowSheet() {
   if (cats.length === 0) {
     dcOpenSheet('\
       <div class="dc-sheet-header">\
-        <div class="dc-sheet-subtitle">Shadow-Event</div>\
+        <div class="dc-sheet-subtitle">Template-Event</div>\
         <div class="dc-sheet-title">Erstmal Kategorie anlegen</div>\
       </div>\
-      <p style="color:var(--dc-text-muted);font-size:14px">Du brauchst mindestens eine Kategorie, bevor du Shadow-Events erstellen kannst.</p>\
+      <p style="color:var(--dc-text-muted);font-size:14px">Du brauchst mindestens eine Kategorie, bevor du Template-Events erstellen kannst.</p>\
       <div class="dc-actions">\
         <button class="dc-btn dc-btn-secondary" onclick="dcCloseSheet()">OK</button>\
       </div>');
@@ -339,7 +339,7 @@ function dcRenderShadowSheet() {
   }).join('');
   dcOpenSheet('\
     <div class="dc-sheet-header">\
-      <div class="dc-sheet-subtitle">Shadow-Event</div>\
+      <div class="dc-sheet-subtitle">Template-Event</div>\
       <div class="dc-sheet-title">' + (d.id ? 'Bearbeiten' : 'Neuer Slot') + '</div>\
     </div>\
     <div class="dc-field">\
@@ -402,7 +402,7 @@ function dcSaveShadow() {
 }
 
 function dcDeleteShadow(id) {
-  if (!confirm('Shadow-Slot löschen?')) return;
+  if (!confirm('Template-Slot löschen?')) return;
   dcState.config.events = dcState.config.events.filter(function(e) { return e.id !== id; });
   dcRender();
 }
@@ -479,8 +479,8 @@ async function dcResetEntries() {
   var confirmed = confirm(
     'Wirklich alle Einträge zurücksetzen?\n\n' +
     '• Alle Benutzer-Einträge (Free-Signups) werden gelöscht.\n' +
-    '• Alle Teilnehmer der Shadow-Slots werden entfernt.\n\n' +
-    'Konfiguration, Kategorien und Shadow-Event-Struktur bleiben erhalten.\n\n' +
+    '• Alle Teilnehmer der Template-Slots werden entfernt.\n\n' +
+    'Konfiguration, Kategorien und Template-Event-Struktur bleiben erhalten.\n\n' +
     'Diese Aktion kann nicht rückgängig gemacht werden.'
   );
   if (!confirmed) return;

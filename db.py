@@ -1540,7 +1540,7 @@ class DatabaseManager:
             {'ok': False, 'error': str, 'status': int} bei Fehler.
         """
         logger.debug(f"create_dienste_event called for category {category_id}")
-        if not all([category_id, start_time, end_time, person, klasse]):
+        if not all([category_id, start_time, end_time, person]):
             return {"ok": False, "error": "Pflichtfelder fehlen", "status": 400}
     
         event_id = self._gen_dienste_id("evt")
@@ -1590,7 +1590,7 @@ class DatabaseManager:
         dict: {'ok': True, 'event_id': str} bei Erfolg, sonst Fehler-dict.
         """
         logger.debug(f"add_dienste_assignment called: shadow_id={shadow_id}")
-        if not all([shadow_id, person, klasse]):
+        if not all([shadow_id, person]):
             return {"ok": False, "error": "Pflichtfelder fehlen", "status": 400}
     
         try:
