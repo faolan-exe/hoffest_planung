@@ -56,7 +56,7 @@ class DatabaseManager:
         logger.info("Initialized ThreadedConnectionPool with 5-20 connections")
         
         # For compatibility with code that expects self.conn and self.cursor,
-        # get one connection for setup operations
+        # initialize a single connection for non-concurrent operations
         self.conn = self.conn_pool.getconn()
         self.cursor = self.conn.cursor()
         
@@ -65,11 +65,11 @@ class DatabaseManager:
                 self.init_tables()
 
             self.do_migrations()
-        finally:
-            # Return the connection to the pool after initialization
-            self.conn_pool.putconn(self.conn)
-            self.conn = None
-            self.cursor = None
+        except Exception as e:
+            logger.error(f"Error during initialization: {e}", exc_info=True)
+            if self.conn:
+                self.conn_pool.putconn(self.conn)
+            raise
 
     @contextmanager
     def get_db_connection(self):
