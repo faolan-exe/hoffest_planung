@@ -363,25 +363,17 @@ def moodleApi():
 
 @app.route("/moodleApi/dienste", methods=["GET", "POST"])
 def moodleApiDienste():
-    if request.method == "POST":
-        data = request.json
-        if data["action"] == "getDienste":
-            returnedDienste = db_manager.get_all_dienste()
-            logger.info(f"Returning Dienste: {returnedDienste}")
-            return jsonify({"dienste": returnedDienste}), 200
-            
-            
-        if not db_manager.add_dienst(*data["value"]):
-            return jsonify({"error": "Failed to add dienst"}), 400
-        return jsonify({"ok": "ok"}), 200
-    id = request.args.get("id", "nothing")
-
-    if not checkAuth(id):
-        return jsonify({"error": "Invalid authentication"}), 401
-    dienste = db_manager.get_all_dienste() 
-    logger.info(f"Returning Dienste: {dienste}")
-
-    return jsonify({"dienste": dienste}), 200
+    """
+    DEPRECATED: This endpoint is deprecated. Use the new /moodle/api/dienste/* endpoints instead.
+    
+    New endpoints:
+    - GET /moodle/api/dienste/config - Get full configuration
+    - POST /moodle/api/dienste/events - Create event or add assignment
+    - DELETE /moodle/api/dienste/events/<eid> - Delete event
+    - DELETE /moodle/api/dienste/events/<eid>/assignments/<idx> - Delete assignment
+    """
+    logger.warning("Deprecated endpoint /moodleApi/dienste called. Use /moodle/api/dienste/* instead.")
+    return jsonify({"error": "This endpoint is deprecated. Please use /moodle/api/dienste/* instead."}), 410
 
 @app.route("/login", methods=["POST", "GET"])
 def login_route(data=None):
