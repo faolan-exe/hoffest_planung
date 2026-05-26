@@ -733,7 +733,7 @@ class DatabaseManager:
                 )
                 for item in result[0]
             ]
-            logger.info(f"Data retrieved successfully")
+            logger.info(f"Data 7 retrieved successfully")
             return data
         except Exception as e:
             logger.error(f"Error retrieving data: {e}")
@@ -786,7 +786,7 @@ class DatabaseManager:
                     )
                     for item in result[0]
                 ]
-                logger.info(f"Data retrieved successfully")
+                logger.info(f"Data 6 retrieved successfully")
                 return data
             except Exception as e:
                 logger.error(f"Error retrieving data: {e}")
@@ -1183,7 +1183,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
-            logger.info("Data retrieved successfully")
+            logger.info("Data 5 retrieved successfully")
             return {row[0]: row[1] for row in result}
 
         except Exception as e:
@@ -1210,7 +1210,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query, (user_id, year))
             result = self.cursor.fetchall()
-            logger.info("Data retrieved successfully")
+            logger.info("Data 4 retrieved successfully")
             return result
 
         except Exception as e:
@@ -1238,7 +1238,7 @@ class DatabaseManager:
                     query = "SELECT id, ort, ort_spezifikation, farbe FROM stand WHERE (jahr = %s OR jahr = 0)"
                     self.cursor.execute(query, (year,))
                 result = self.cursor.fetchall()
-                logger.info("Data retrieved successfully")
+                logger.info("Data 2 retrieved successfully")
                 return result
 
             except Exception as e:
@@ -1274,7 +1274,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
-            logger.info(f"Data retrieved successfully")
+            logger.info(f"Data 3 retrieved successfully")
             return [result[0] for result in result]
 
         except Exception as e:
@@ -1350,7 +1350,7 @@ class DatabaseManager:
         try:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
-            logger.info(f"Data retrieved successfully")
+            logger.info(f"Data 1 retrieved successfully")
             return [result[0] for result in result]
 
         except Exception as e:
