@@ -848,12 +848,12 @@
               });
               if (res.ok) {
                 document.querySelector('.feedback-form-container').innerHTML = `<h2>Vielen Dank für Ihr Feedback!</h2><br><p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>`;
-                localStorage.setItem("feedback", "1");
+                localStorage.setItem("feedback", String(new Date().getFullYear()));
               } else {
                 alert('Etwas ist schiefgelaufen – bitte später erneut versuchen.');
               }
             });
-            if (localStorage.getItem("feedback") === "1") {
+            if (localStorage.getItem("feedback") === String(new Date().getFullYear())) {
               document.querySelector('.feedback-form-container').style.display = "none";
             }
           },
@@ -898,13 +898,13 @@
                   <br>
                   <p>Ihre Rückmeldung hilft uns, die Seite weiter zu verbessern.</p>
                 `;
-                localStorage.setItem("feedback", "1");
+                localStorage.setItem("feedback", String(new Date().getFullYear()));
                 document.querySelector('.feedback-form-container').style.display = "block"
               } else {
                 alert('Etwas ist schiefgelaufen – bitte später erneut versuchen.');
               }
             });
-            if (localStorage.getItem("feedback") === "1") {
+            if (localStorage.getItem("feedback") === String(new Date().getFullYear())) {
               document.querySelector('.feedback-form-container').style.display = "none";
             }
           },

@@ -25,6 +25,7 @@ ph = argon2.PasswordHasher()
 
 logger = get_logger("databaseManager", INFO)
 RESET_DATABASE = False
+SEND_ADMIN_REGISTRATION_EMAIL = False  # auf True setzen, um Benachrichtigungen an Orga-Adressen wieder zu aktivieren
 
 
 def read_sql_file(filepath):
@@ -863,8 +864,9 @@ class DatabaseManager:
             query = "SELECT email FROM admin"
             self.cursor.execute(query)
             emails = self.cursor.fetchall()
-            for email in emails: # emails from all admins
-                mailer.send_email(email[0], email_text)
+            if SEND_ADMIN_REGISTRATION_EMAIL:
+                for email in emails: # emails from all admins
+                    mailer.send_email(email[0], email_text)
             mailer.send_email(teacher_email, email_text_teacher)
             return True
         except Exception as e:

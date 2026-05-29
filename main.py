@@ -417,7 +417,7 @@ def submitFeedback():
     data = request.json
     comment = data.get("comments", "[KEIN KOMMENTAR]")
     rating = data.get("rating", -1)
-    db_manager.getMailer().send_email("akhoffest@gmx.de", f"Es wurde eine Bewertung abgegeben:<br><br><br>Kommentar: {comment}<br><br>Bewertung: {rating}")
+    db_manager.getMailer().send_email("hoffest@t-auer.com", f"Es wurde eine Bewertung abgegeben:<br><br><br>Kommentar: {comment}<br><br>Bewertung: {rating}")
     return jsonify({"ok": "ok"}), 200
 
 
