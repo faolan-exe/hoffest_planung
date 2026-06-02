@@ -177,28 +177,23 @@ def admin_route(destination="nav1"):
         "pending": [],
         "completed": [],
     }
-    pending_ids = db_manager.get_pending()
-    if pending_ids:
-        for id in pending_ids:
-            tempData = db_manager.get_submitted_data_from_stand_id(id)
-            data["pending"].append(
-                {
-                    "lehrer": tempData[2],
-                    "klasse": tempData[3],
-                    "titel": tempData[4],
-                    "beschreibung": tempData[5],
-                    "ort": tempData[0],
-                    "ort_spezifikation": tempData[1],
-                    "question_ids": tempData[6],
-                    "id": tempData[9],
-                }
-            )
+    pending_data = db_manager.get_all_stand_data_batch(genehmigt_filter=None)
+    for tempData in pending_data:
+        data["pending"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+                "id": tempData[9],
+            }
+        )
 
-
-    if pending_ids:
-        pending_ids = db_manager.get_completed()
-        for id in pending_ids:
-            tempData = db_manager.get_submitted_data_from_stand_id(id)
+    if pending_data:
+        for tempData in db_manager.get_all_stand_data_batch(genehmigt_filter=True):
             data["completed"].append(
                 {
                     "lehrer": tempData[2],
@@ -348,17 +343,11 @@ def moodleApi():
 
     if not checkAuth(auth_id):
         return jsonify({"error": "Invalid authentication"}), 401
-    confirmedIDS = db_manager.get_completed(year=year)
-    confirmed = []
-    for sid in confirmedIDS:
-        data = db_manager.get_submitted_data_from_stand_id(sid)
-        confirmed.append({"lehrer": data[2], "name": data[4]})
+    confirmed_data = db_manager.get_all_stand_data_batch(genehmigt_filter=True, year=year)
+    confirmed = [{"lehrer": d[2], "name": d[4]} for d in confirmed_data]
 
-    pendingIDS = db_manager.get_pending(year=year)
-    pending = []
-    for sid in pendingIDS:
-        data = db_manager.get_submitted_data_from_stand_id(sid)
-        pending.append({"lehrer": data[2], "name": data[4]})
+    pending_data = db_manager.get_all_stand_data_batch(genehmigt_filter=None, year=year)
+    pending = [{"lehrer": d[2], "name": d[4]} for d in pending_data]
     return jsonify({"confirmed": confirmed, "pending": pending}), 200
 
 @app.route("/moodleApi/dienste", methods=["GET", "POST"])
@@ -495,10 +484,7 @@ def api_dienste_delete_assignment(eid, idx):
 @admin.route("/api/standDetails/<int:year>")
 def stand_details_by_year(year):
     data = {"pending": [], "completed": []}
-    for sid in db_manager.get_pending(year=year):
-        td = db_manager.get_submitted_data_from_stand_id(sid)
-        if not td:
-            continue
+    for td in db_manager.get_all_stand_data_batch(genehmigt_filter=None, year=year):
         data["pending"].append({
             "lehrer": td[2],
             "klasse": td[3],
@@ -510,10 +496,7 @@ def stand_details_by_year(year):
             "id": td[9],
             "jahr": td[10],
         })
-    for sid in db_manager.get_completed(year=year):
-        td = db_manager.get_submitted_data_from_stand_id(sid)
-        if not td:
-            continue
+    for td in db_manager.get_all_stand_data_batch(genehmigt_filter=True, year=year):
         data["completed"].append({
             "lehrer": td[2],
             "klasse": td[3],

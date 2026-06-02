@@ -741,6 +741,54 @@ class DatabaseManager:
             self.conn.rollback()
             return None
 
+    def get_all_stand_data_batch(self, genehmigt_filter, year=None):
+        """
+        Fetches all stand data for pending or completed stands in a single query.
+        genehmigt_filter: None for pending (IS NULL), True for completed (IS TRUE)
+        Returns: list of data lists in same format as get_submitted_data_from_stand_id
+        """
+        genehmigt_clause = "g.genehmigt IS NULL" if genehmigt_filter is None else "g.genehmigt IS TRUE"
+        if year is not None:
+            year_clause = "AND (s.jahr = %s OR s.jahr = 0)"
+            params = (year,)
+        else:
+            year_clause = ""
+            params = ()
+
+        query = f"""SELECT s.ort, s.ort_spezifikation, s.lehrer, s.klasse, s.name, s.beschreibung,
+                           ARRAY_AGG(sq.question_id) AS question_ids, g.genehmigt, g.kommentar, s.id, s.jahr
+                    FROM stand AS s
+                    LEFT JOIN standQuestions AS sq ON sq.stand_id = s.id
+                    JOIN genehmigungen AS g ON g.id = s.genehmigungs_id
+                    WHERE {genehmigt_clause} {year_clause}
+                    GROUP BY s.id, s.jahr, g.genehmigt, g.kommentar"""
+
+        with self._lock:
+            self._ensure_connected()
+            try:
+                self.cursor.execute(query, params)
+                rows = self.cursor.fetchall()
+                result = []
+                for row in rows:
+                    data = [
+                        (
+                            item.replace("'", '"')
+                            if isinstance(item, str)
+                            else (
+                                "" if item is None
+                                else ("" if item == [None] else item)
+                            )
+                        )
+                        for item in row
+                    ]
+                    result.append(data)
+                logger.info(f"Data 6 retrieved successfully ({len(result)} rows)")
+                return result
+            except Exception as e:
+                logger.error(f"Error retrieving stand data batch: {e}")
+                self.conn.rollback()
+                return []
+
     def get_submitted_data_from_stand_id(self, id):
         """
         Retrieves the submitted data for a given user ID from the database.
