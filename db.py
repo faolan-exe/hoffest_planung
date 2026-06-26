@@ -1156,10 +1156,10 @@ class DatabaseManager:
         bool: True if the email text was successfully sent, False otherwise.
         """
         logger.debug(f"broadcast_text is called")
-        query = "SELECT email FROM stand"
+        query = "SELECT email FROM stand WHERE jahr = %s OR jahr = 0"
         logger.debug(f"Executing SQL query: {query}")
         try:
-            self.cursor.execute(query)
+            self.cursor.execute(query, (datetime.now().year,))
             result = self.cursor.fetchall()
             for email in result:
                 authID = self.get_auth_id_from_email(email[0])
