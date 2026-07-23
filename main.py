@@ -89,22 +89,12 @@ def index():
         if checkAuth(id):  # important local check!
             session["id"] = id
             return redirect("/")
-        return (
-            jsonify(
-                error="Invalid authentication",
-            ),
-            401,
-        )
+        return render_template("unauthorized.html"), 401
 
     sessionValue = session.get("id", "")
     if not checkAuth(sessionValue):
         session.clear()
-        return (
-            jsonify(
-                error="Invalid authentication",
-            ),
-            401,
-        )
+        return render_template("unauthorized.html"), 401
     enabled = True
     if db_manager.get_status_action("enabled") == "0":
         enabled = False
