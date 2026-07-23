@@ -44,17 +44,13 @@ class DatabaseManager:
         self._lock = threading.RLock()
         logger.debug("Initializing database manager")
 
-        # Create a thread-safe connection pool (min 5, max 20 connections)
+        # Create a thread-safe connection pool (min 1, max 20 connections)
+        db_url = os.environ.get("DATABASE_URL", "postgresql://admin:admin@127.0.0.1:5432/hoffest-postgresDB")
+
         self.conn_pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=5,
-            maxconn=20,
-            database="hoffest-postgresDB",
-            host="127.0.0.1",
-            user="admin",
-            password="admin",
-            port="5432",
+            1, 20, dsn=db_url
         )
-        logger.info("Initialized ThreadedConnectionPool with 5-20 connections")
+        logger.info("Initialized ThreadedConnectionPool with 1-20 connections")
 
         # For compatibility with code that expects self.conn and self.cursor,
         # initialize a single connection for non-concurrent operations

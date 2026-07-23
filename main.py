@@ -192,21 +192,20 @@ def admin_route(destination="nav1"):
             }
         )
 
-    if pending_data:
-        for tempData in db_manager.get_all_stand_data_batch(genehmigt_filter=True):
-            data["completed"].append(
-                {
-                    "lehrer": tempData[2],
-                    "klasse": tempData[3],
-                    "titel": tempData[4],
-                    "beschreibung": tempData[5],
-                    "ort": tempData[0],
-                    "ort_spezifikation": tempData[1],
-                    "question_ids": tempData[6],
-                    "kommentar": tempData[8],
-                    "id": tempData[9]
-                }
-            )
+    for tempData in db_manager.get_all_stand_data_batch(genehmigt_filter=True):
+        data["completed"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+                "kommentar": tempData[8],
+                "id": tempData[9]
+            }
+        )
     email_texts = db_manager.get_all_emails()
     return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"), allow_reedit=db_manager.get_status_action("allow_reedit"))
 
@@ -560,7 +559,7 @@ def validate_auth(id, hashedId):
 
 
 
-
+app.register_blueprint(admin)
 if __name__ == "__main__":
-    app.register_blueprint(admin)
+   
     app.run(port=8000, host="0.0.0.0", threaded=True, debug=True)
