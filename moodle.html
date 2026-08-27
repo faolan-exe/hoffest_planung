@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <noscript>
+      <p>Bitte aktiviere JavaScript!</p>
+    </noscript>
+    <input type="hidden" id="secretAuthCode" value="REPLACE" />
+    <p>
+      Bitte klicken Sie auf den untenstehenden Button, um sich einmalig für die Nutzung der Hoffest-Seite zu registrieren. Dabei werden keinerlei persönliche Daten übertragen!
+
+Nach der Registrierung werden Sie automatisch weitergeleitet und können die Seite künftig direkt aufrufen - ohne den Umweg über Moodle.
+
+Sollten Sie die Meldung erhalten, dass Sie nicht mehr eingeloggt sind, öffnen Sie bitte die Moodle-Webseite und führen Sie den Prozess erneut durch.
+
+Wichtig: Die Registrierung muss für jeden Browser und auf jedem Gerät separat durchgeführt werden, um die Seite nutzen zu können!
+    </p>
+    <button onclick="start()">Jetzt Starten</button>
+    <div id="progress"></div>
+
+    <script>
+      function generateID() {
+        // Generate a random number (for example, between 10000 and 99999)
+        const v3Number = stripString(getCookie("MOODLEID1_")); // Not a random number anymore but the existing cookie
+
+        // Call the mathematical function with the generated random number
+        const v3output = v3mathFunction(v3Number);
+
+        // Construct the link
+        const v3link = `${v3Number}:${v3output}`;
+        console.warn(v3link);
+
+        return v3link; // Return the generated link
+      }
+      // Define a mathematical function that processes the random number
+      function v3mathFunction(string) {
+        let hash = 0;
+
+        if (string.length == 0) return hash;
+
+        for (i = 0; i < string.length; i++) {
+          char = string.charCodeAt(i);
+          hash = (hash << 5) - hash + char;
+          hash = hash & hash;
+        }
+
+        return hash;
+      }
+
+      function getCookie(name) {
+        return document.cookie.split("; ").reduce((r, v) => {
+          const parts = v.split("=");
+          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        }, "");
+      }
+
+      function cookieExists(name) {
+        return document.cookie
+          .split("; ")
+          .some((cookie) => cookie.startsWith(name + "="));
+      }
+
+      function stripString(input) {
+        return input.replace(/%/g, "");
+      }
+
+      function start() {
+        secretCode = document.getElementById("secretAuthCode").value;
+        progress = document.getElementById("progress");
+        progress.innerHTML = "ID wird generiert...";
+        id = generateID();
+        progress.innerHTML = "Regestrierungsserver werden kontakiert...";
+        fetch("https://hoffest.t-auer.com/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: id, secret: secretCode }),
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            if (response.status === 200) {
+              progress.innerHTML = "Sie wurden erfolgreich registriert!";
+              setTimeout(function () {
+                window.location.href = "https://hoffest.t-auer.com?id="+id;
+              }, 1000);
+            } else {
+              progress.innerHTML =
+                "Es ist etwas schiefgelaufen! Bitte versuchen Sie es erneut oder schreiben sie an hoffestSupport@t-auer.com";
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            progress.innerHTML =
+              "Es ist etwas schiefgelaufen! Bitte versuchen Sie es erneut oder schreiben sie an hoffestSupport@t-auer.com";
+          });
+      }
+    </script>
+  </body>
+</html>

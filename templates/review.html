@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=, initial-scale=1.0">
+    <title>Review</title>
+</head>
+<body>
+    <h1>Bestätigen eines Stands:</h1>
+    <div id="info">
+        loading...
+    </div>
+    <div>
+        <textarea name="" id="comment" placeholder="Gebe einen Kommentar ein (optinal für Bestätigen)"></textarea>
+        <br>
+        <Button onclick="acceptData()">Accept</Button>
+        <Button onclick="declineData()">Decline</Button>
+    </div>
+    <script id="pending-data" type="application/json">
+        {{data | tojson}}
+    </script>
+    <script>
+        let data = JSON.parse(document.getElementById("pending-data").textContent);
+        const infoDiv = document.getElementById("info");
+        infoDiv.innerHTML = data;
+
+        function acceptData() {
+            sendFetch("accepted", document.getElementById("comment").value);
+        }
+        function declineData() {
+            const comment = document.getElementById("comment").value;
+            if (comment === "") {
+                alert("Bitte einen Kommentar eingeben");
+                return;
+            }
+            if (comment.length > 1000) {
+                alert("Der Kommentar ist zu lang");
+                return;
+            }
+            if (comment.length < 10) {
+                alert("Der Kommentar ist zu kurz");
+                return;
+            }
+            sendFetch("declined", comment);
+        }
+        function sendFetch(status, comment) {
+            fetch(document.location, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "status": status,
+                    "comment": comment
+                })
+            })
+            .then(response => response.json())
+            .then(resData => {
+                console.log("Success:", resData);
+                if (resData.ok === "ok") {
+                    alert("Status updated successfully!");
+                    window.location.href = "/admin";
+                } else {
+                    alert("Error updating status: " + data.error);
+                }
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+        }
+    </script>
+</body>
+</html>

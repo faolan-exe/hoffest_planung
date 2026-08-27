@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animationstest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 300px;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            background: #3498db;
+            color: white;
+        }
+        .slide-enter {
+            transform: translateX(100%);
+        }
+        .slide-exit {
+            transform: translateX(-100%);
+        }
+        .fade-enter {
+            opacity: 0;
+        }
+        .fade-exit {
+            opacity: 0;
+        }
+        .scale-enter {
+            transform: scale(0.9);
+            opacity: 0;
+        }
+        .scale-exit {
+            transform: scale(1.1);
+            opacity: 0;
+        }
+        .flip-enter {
+            transform: rotateY(90deg);
+        }
+        .flip-exit {
+            transform: rotateY(-90deg);
+        }
+        .transition {
+            transition: all 0.5s ease-in-out;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            margin: 5px;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="container">
+            <div id="content" class="content transition">Willkommen</div>
+        </div>
+        <div class="controls">
+            <button onclick="nextAnimation()">Weiter</button>
+            <button onclick="prevAnimation()">Zurück</button>
+        </div>
+    </div>
+    
+    <script>
+        let states = ["Willkommen", "Interagiere mit der Karte", "Gib Daten ein", "Bestätigung"];
+        let animations = ["slide", "fade", "scale", "flip"];
+        let currentIndex = 0;
+        let animationIndex = 0;
+
+        function changeContent(next) {
+            let content = document.getElementById("content");
+            let currentAnimation = animations[animationIndex];
+            
+            content.classList.add(`${currentAnimation}-exit`);
+            setTimeout(() => {
+                content.classList.remove(`${currentAnimation}-exit`);
+                content.classList.add(`${currentAnimation}-enter`);
+                content.innerText = states[currentIndex];
+                setTimeout(() => {
+                    content.classList.remove(`${currentAnimation}-enter`);
+                }, 50);
+            }, 500);
+        }
+
+        function nextAnimation() {
+            if (currentIndex < states.length - 1) {
+                currentIndex++;
+                animationIndex = (animationIndex + 1) % animations.length;
+                changeContent(true);
+            }
+        }
+
+        function prevAnimation() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                animationIndex = (animationIndex - 1 + animations.length) % animations.length;
+                changeContent(false);
+            }
+        }
+    </script>
+</body>
+</html>

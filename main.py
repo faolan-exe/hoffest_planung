@@ -1,0 +1,555 @@
+from datetime import timedelta
+import os
+from flask import (
+    Flask,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    Blueprint,
+    url_for,
+)
+from logger import get_logger
+from flask_cors import CORS
+import db
+from werkzeug.middleware.proxy_fix import ProxyFix
+import hashlib
+
+
+db_manager = db.DatabaseManager()
+
+logger = get_logger("main")
+secretAuthKey = open("./secretAuthCode.txt", "r").readline()
+
+admin = Blueprint("admin", __name__, url_prefix="/admin")
+
+TEST_MODE = False
+
+import socket
+if socket.gethostname() == "tobias-linux" or socket.gethostname() == "Tobis Mac":
+    TEST_MODE = True
+    logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production, as this allows user to skip authentication!\n\n")
+    input("Press Enter to continue...")  # Wait for user input to continue
+
+# Global admin verification
+@admin.before_request
+def check_admin():
+    if not isinstance(session.get("adminName"), str):
+        return redirect(url_for("login_route"))
+
+
+app = Flask(__name__)
+
+
+# Global user verification
+@app.before_request
+def check_auth():
+    if request.path in [
+        "/login",
+        "/",
+        "/favicon.ico",
+        "/moodleApi",
+        "/moodleApi/dienste",
+        "/register"
+    ] or request.path.startswith("/admin") or request.path.startswith("/static/") or request.path.startswith("/moodle/"):
+        return  # Authentifizierung nicht erforderlich für diese Endpunkte
+    if not checkAuth(session.get("id")):
+        session.clear()
+        return redirect(url_for("index"))
+
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
+CORS(app)
+CORS(app, resources={r"/register": {"origins": "*"}})
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
+app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
+
+
+def checkAuth(user_id, hashed_id=None): 
+    """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
+    if TEST_MODE and user_id != "":
+        logger.warning("Running in TEST_MODE, allowing all users")
+        return True
+
+    if  db_manager.check_trusted_id(user_id):
+        return True
+
+    if validate_auth(user_id, hashed_id):
+        return True  
+    return False
+
+
+@app.route("/")
+def index():
+    id = request.args.get("id", "")
+    if id != "":
+        logger.info("ID provided in query parameters: " + id)
+        if checkAuth(id):  # important local check!
+            session["id"] = id
+            return redirect("/")
+        return render_template("unauthorized.html"), 401
+
+    sessionValue = session.get("id", "")
+    if not checkAuth(sessionValue):
+        session.clear()
+        return render_template("unauthorized.html"), 401
+    enabled = True
+    if db_manager.get_status_action("enabled") == "0":
+        enabled = False
+    allow_reedit = db_manager.get_status_action("allow_reedit") == "1"
+    questions = db_manager.get_questions()
+    blacklistCells = db_manager.getCurrentBlacklistCells()
+    socketCells = db_manager.getCurrentSocketCells()
+
+    already_submitted_data = db_manager.get_submitted_data_from_id(session.get("id"))
+    return render_template(
+        "index.html", already_submitted_data=already_submitted_data, questions=questions, foreignMapData=db_manager.getAllSelectedAreasExceptUserId(sessionValue), enabled=enabled, blacklistCells=blacklistCells, socketCells=socketCells, allow_reedit=allow_reedit
+    )
+
+
+@app.route("/commitStand", methods=["POST"])
+def commitStand():
+    if db_manager.get_status_action("enabled") == "0":
+        return jsonify({"error": "forbidden"}), 403
+    data = request.json
+    if db_manager.addNewStand(data, auth_id=session.get("id")):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "error"}), 500
+
+
+@admin.route("/commitStand", methods=["POST"])
+def commitStand():
+    data = request.json
+    if db_manager.addNewAdminStand(data):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "error"}), 500
+
+
+@app.route("/test")
+def test():
+    return jsonify(ok=True), 200
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.json
+    try:
+        id = data["id"]
+        hash = data["hashedID"]
+    except KeyError:
+        return jsonify(error="Missing required fields"), 400
+    if validate_auth(id, hash):
+        
+        if db_manager.addNewTrustedId(hash):
+            return jsonify(ok=True), 200
+        return jsonify(error="Failed to add ID"), 400
+    logger.error("Invalid authentication attempt with id:", id, "and hash:", hash)
+    return jsonify(error="Invalid authentication or secret"), 401
+
+
+@admin.route("/register")
+def register_admin_stand():
+    questions = db_manager.get_questions()
+    logger.debug("Got questions: " + str(questions))
+
+    return render_template(
+        "indexForAdmin.html", questions=questions, foreignMapData=db_manager.getAllSelectedAreas()
+    )
+
+@admin.route("/", methods=["POST", "GET"])
+def admin_route(destination="nav1"):
+    if session.get("dest"):
+        destination = session.get("dest")
+    data = {
+        "active": 0,
+        "pending": [],
+        "completed": [],
+    }
+    pending_data = db_manager.get_all_stand_data_batch(genehmigt_filter=None)
+    for tempData in pending_data:
+        data["pending"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+                "id": tempData[9],
+            }
+        )
+
+    for tempData in db_manager.get_all_stand_data_batch(genehmigt_filter=True):
+        data["completed"].append(
+            {
+                "lehrer": tempData[2],
+                "klasse": tempData[3],
+                "titel": tempData[4],
+                "beschreibung": tempData[5],
+                "ort": tempData[0],
+                "ort_spezifikation": tempData[1],
+                "question_ids": tempData[6],
+                "kommentar": tempData[8],
+                "id": tempData[9]
+            }
+        )
+    email_texts = db_manager.get_all_emails()
+    return render_template("dashBASE.html", data=data, questionIdLookup=db_manager.get_questions(), email_texts=email_texts, destination=destination, enabled=db_manager.get_status_action("enabled"), allow_reedit=db_manager.get_status_action("allow_reedit"))
+
+
+@admin.route("/loader/<page>")
+def loader(page):
+    return app.send_static_file(f"loader/{page}")
+
+@admin.route("/api/foreignMapData/<year>")
+def returnForeignMapData(year):
+    data = db_manager.getAllSelectedAreas(year)
+    return jsonify(data if data is not None else []), 200
+
+@admin.route("/api/updateStandColor", methods=["POST"])
+def change_stand_color():
+    data = request.json
+    uid = data.get("uid")
+    color = data.get("color")
+    if not uid or not color:
+        return jsonify({"error": "Missing required fields"}), 400
+    if db_manager.update_stand_color(uid, color):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "Failed to update stand color"}), 500
+
+@admin.route("/api/updateStandJahr", methods=["POST"])
+def change_stand_jahr():
+    data = request.json
+    uid = data.get("uid")
+    jahr = data.get("jahr")
+    if uid is None or jahr is None:
+        return jsonify({"error": "Missing required fields"}), 400
+    if db_manager.update_stand_jahr(uid, jahr):
+        return jsonify({"ok": "ok"}), 200
+    return jsonify({"error": "Failed to update stand jahr"}), 500
+
+@admin.route("/api/currentBlacklistCells")
+def returnCurrentBlacklistCells():
+    data = db_manager.getCurrentBlacklistCells()
+    return jsonify(data), 200
+
+@admin.route("/api/currentSocketCells")
+def returnCurrentSocketCells():
+    data = db_manager.getCurrentSocketCells()
+    return jsonify(data), 200
+
+@admin.route("/stand/<path_id>", methods=["GET", "POST"])
+def admin_stand_route(path_id):
+    if request.method == "POST":
+        data = request.json
+        if not db_manager.approve_stand(path_id, data["status"], data["comment"]):
+            logger.error(f"Error approving stand")
+            return jsonify({"error": "Error approving stand"}), 500
+        return jsonify({"ok": "ok"}), 200
+    stand_data = db_manager.get_submitted_data_from_stand_id(path_id)
+    return render_template("review.html", data=stand_data)
+
+@admin.route("/api", methods=["POST"]) 
+def admin_api():
+    action = request.json.get("action")
+    value = request.json.get("value")
+    
+    match (action):
+        case "newQuestion":
+            if not db_manager.add_question(value):
+                return jsonify({"error": "Failed to add question"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "deleteQuestion":
+            if not db_manager.delete_question(value):
+                return jsonify({"error": "Failed to delete question!\nSehr warscheinlich wurde diese Frage bereits von einer Lehrkraft angeklickt und kann daher nicht mehr gelöscht werden"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "newPassword":
+            if not db_manager.update_password(value):
+                return jsonify({"error": "Failed to update password"}), 400
+            logger.warning("Password updated-->Secret Key changed")
+            app.secret_key = os.urandom(64)
+            return jsonify({"ok": "ok"}), 200
+        case "emailText1":
+            if not db_manager.update_email_text(1, value):
+                return jsonify({"error": "Failed to update email text 1"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText2":
+            if not db_manager.update_email_text(2, value):
+                return jsonify({"error": "Failed to update email text 2"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText3":
+            if not db_manager.update_email_text(3,value):
+                return jsonify({"error": "Failed to update email text 3"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText4":
+            if not db_manager.update_email_text(4,value):
+                return jsonify({"error": "Failed to update email text 4"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText5":
+            if not db_manager.update_email_text(5,value):
+                return jsonify({"error": "Failed to update email text 5"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText10":
+            if not db_manager.update_email_text(10,value):
+                return jsonify({"error": "Failed to update email text 10"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "emailText10S":
+            if not db_manager.update_email_text(10,value,do_broadcast=True):
+                return jsonify({"error": "Failed to update email text 10"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "pageStatus":
+            if not db_manager.update_status_action("enabled", value):
+                return jsonify({"error": "Failed to update page status"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "allowReedit":
+            if not db_manager.update_status_action("allow_reedit", value):
+                return jsonify({"error": "Failed to update allow_reedit"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "blacklistCellsUpdate":
+            if not db_manager.update_blacklist_cells(value):
+                return jsonify({"error": "Failed to update blacklist cells"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "socketCellsUpdate":
+            if not db_manager.update_socket_cells(value):
+                return jsonify({"error": "Failed to update socket cells"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case "standPositionsUpdate":
+            if not db_manager.update_stand_positions(value):
+                return jsonify({"error": "Failed to update stand postions"}), 400
+            return jsonify({"ok": "ok"}), 200
+        case _:
+            return jsonify({"error": "Invalid action"}), 400
+    
+    
+@app.route("/moodleApi")
+def moodleApi():
+    auth_id = request.args.get("id", "nothing")
+    year_str = request.args.get("year")
+    year = int(year_str) if year_str and year_str.isdigit() else None
+
+    if not checkAuth(auth_id):
+        return jsonify({"error": "Invalid authentication"}), 401
+    confirmed_data = db_manager.get_all_stand_data_batch(genehmigt_filter=True, year=year)
+    confirmed = [{"lehrer": d[2], "name": d[4]} for d in confirmed_data]
+
+    pending_data = db_manager.get_all_stand_data_batch(genehmigt_filter=None, year=year)
+    pending = [{"lehrer": d[2], "name": d[4]} for d in pending_data]
+    return jsonify({"confirmed": confirmed, "pending": pending}), 200
+
+@app.route("/moodleApi/dienste", methods=["GET", "POST"])
+def moodleApiDienste():
+    """
+    DEPRECATED: This endpoint is deprecated. Use the new /moodle/api/dienste/* endpoints instead.
+    
+    New endpoints:
+    - GET /moodle/api/dienste/config - Get full configuration
+    - POST /moodle/api/dienste/events - Create event or add assignment
+    - DELETE /moodle/api/dienste/events/<eid> - Delete event
+    - DELETE /moodle/api/dienste/events/<eid>/assignments/<idx> - Delete assignment
+    """
+    logger.warning("Deprecated endpoint /moodleApi/dienste called. Use /moodle/api/dienste/* instead.")
+    return jsonify({"error": "This endpoint is deprecated. Please use /moodle/api/dienste/* instead."}), 410
+
+@app.route("/login", methods=["POST", "GET"])
+def login_route(data=None):
+    if request.method == "POST":
+        data = request.json
+    if data:
+        ip = request.remote_addr
+        if db_manager.is_ip_blocked(ip):
+            logger.warning(f"Blocked login attempt from IP: {ip}")
+            return "blocked", 403
+        username = data["username"]
+        password = data["password"]
+        if db_manager.authenticateAdmin(username, password):
+            session["adminName"] = username
+            # session["id"] = "bypass"  # isAdmin=True
+            logger.info("New user session")
+            return "ok", 200
+        else:
+            db_manager.register_failed_login(ip)
+            return "failed", 401
+    return render_template("/login.html")
+
+@admin.route("/set_session", methods=["POST"])
+def set_session():
+    name = request.json.get("name")
+    value = request.json.get("value")
+    logger.debug(f"SETTING SESSION: {name}---{value}")
+    session[name] = value
+    return "", 200
+
+
+@app.route("/robots.txt")
+def static_robots():
+    return "<pre>" + open("robots.txt").read().replace("\n", "<br>") + "</pre>"
+
+
+@app.route("/submitFeedback", methods=["POST"])
+def submitFeedback():
+    if not checkAuth(session.get("id")):
+        return jsonify({"error": "Invalid authentication"}), 401
+    data = request.json
+    comment = data.get("comments", "[KEIN KOMMENTAR]")
+    rating = data.get("rating", -1)
+    db_manager.getMailer().send_email("hoffest@t-auer.com", f"Es wurde eine Bewertung abgegeben:<br><br><br>Kommentar: {comment}<br><br>Bewertung: {rating}")
+    return jsonify({"ok": "ok"}), 200
+
+
+
+
+
+
+@app.route("/moodle/dienste")
+def moodle_dienste():
+	"""Render der Hauptseite — Sign-up-Kalender."""
+	return render_template("moodle_dienste.html")
+ 
+ 
+@app.route("/moodle/api/dienste/config", methods=["GET"])
+def api_dienste_get_config():
+	"""
+	Liefert kompletten Diensteplan-State für Frontend.
+	Wird von beiden HTML-Seiten beim Laden + von moodle_dienste.html
+	per Polling alle 15s aufgerufen.
+	"""
+	state = db_manager.get_dienste_state()
+	if state is None:
+		return jsonify({"error": "internal_error"}), 500
+	response = jsonify(state)
+	response.headers["Cache-Control"] = "no-store"
+	return response
+ 
+ 
+@app.route("/moodle/api/dienste/events", methods=["POST"])
+def api_dienste_create_event():
+	"""
+	Zwei Modi:
+	- shadowId gesetzt: Assignment an existierenden Shadow-Slot anhängen
+	- shadowId leer: Free-Signup (neues Event mit slots=1)
+	"""
+	body = request.get_json(silent=True) or {}
+	shadow_id = body.get("shadowId")
+	person = (body.get("person") or "").strip()
+	klasse = (body.get("class") or "").strip()
+ 
+	if shadow_id:
+		result = db_manager.add_dienste_assignment(shadow_id, person, klasse)
+	else:
+		result = db_manager.create_dienste_event(
+			category_id=body.get("categoryId"),
+			start_time=body.get("start"),
+			end_time=body.get("end"),
+			person=person,
+			klasse=klasse,
+			description=body.get("description", "")
+		)
+ 
+	if result.get("ok"):
+		return jsonify({"id": result.get("event_id"), "ok": True}), 201
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@app.route("/moodle/api/dienste/events/<eid>", methods=["DELETE"])
+def api_dienste_delete_event(eid):
+	"""Löscht ein Event komplett (alle Assignments cascaden)."""
+	result = db_manager.delete_dienste_event(eid)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@app.route("/moodle/api/dienste/events/<eid>/assignments/<int:idx>", methods=["DELETE"])
+def api_dienste_delete_assignment(eid, idx):
+	"""Entfernt eine einzelne Assignment per Index aus einem Event."""
+	result = db_manager.delete_dienste_assignment(eid, idx)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+@admin.route("/api/standDetails/<int:year>")
+def stand_details_by_year(year):
+    data = {"pending": [], "completed": []}
+    for td in db_manager.get_all_stand_data_batch(genehmigt_filter=None, year=year):
+        data["pending"].append({
+            "lehrer": td[2],
+            "klasse": td[3],
+            "titel": td[4],
+            "beschreibung": td[5],
+            "ort": td[0],
+            "ort_spezifikation": td[1],
+            "question_ids": td[6],
+            "id": td[9],
+            "jahr": td[10],
+        })
+    for td in db_manager.get_all_stand_data_batch(genehmigt_filter=True, year=year):
+        data["completed"].append({
+            "lehrer": td[2],
+            "klasse": td[3],
+            "titel": td[4],
+            "beschreibung": td[5],
+            "ort": td[0],
+            "ort_spezifikation": td[1],
+            "question_ids": td[6],
+            "kommentar": td[8],
+            "id": td[9],
+            "jahr": td[10],
+        })
+    return jsonify(data)
+
+
+@admin.route("/moodle/api/dienste/config", methods=["PUT"])
+# @admin_required  ← TODO: deinen Admin-Auth-Decorator hier einsetzen
+def api_dienste_update_config():
+	"""
+	Admin-Endpoint: synct Tageskonfig + Kategorien + Shadow-Slots in einer Transaction.
+	Free-Signups bleiben unangetastet.
+	"""
+	body = request.get_json(silent=True) or {}
+	result = db_manager.update_dienste_config(
+		day=body.get("day", {}),
+		time_range=body.get("timeRange", {}),
+		categories=body.get("categories", []),
+		shadow_events=body.get("shadowEvents", [])
+	)
+	if result.get("ok"):
+		return jsonify({"ok": True})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
+ 
+ 
+@admin.route("/moodle/api/dienste/reset", methods=["POST"])
+def api_dienste_reset():
+	"""Admin-Endpoint: löscht alle User-Einträge + Shadow-Assignments, behält Shadow-Event-Struktur."""
+	result = db_manager.reset_dienste_entries()
+	if result.get("ok"):
+		return jsonify({"ok": True, "deleted_events": result.get("deleted_events", 0), "deleted_assignments": result.get("deleted_assignments", 0)})
+	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 500)
+
+
+ 
+
+
+
+
+
+
+
+def validate_auth(id, hashedId):
+    if hashedId is None:
+        return False
+    secretAuthKey = open("./secretAuthCode.txt", "r").readline()
+    data = secretAuthKey + str(id)
+    encoded_data = data.encode()
+    sha256_hash = hashlib.sha256(encoded_data).hexdigest()
+    logger.error(f"Calculated hash: {sha256_hash}")
+    return sha256_hash == hashedId
+
+
+
+app.register_blueprint(admin)
+if __name__ == "__main__":
+   
+    app.run(port=8000, host="0.0.0.0", threaded=True, debug=True)

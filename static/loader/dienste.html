@@ -1,0 +1,309 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --dc-bg: #fafaf9;
+    --dc-surface: #ffffff;
+    --dc-surface-alt: #f5f5f4;
+    --dc-border: #e7e5e4;
+    --dc-border-strong: #d6d3d1;
+    --dc-text: #1c1917;
+    --dc-text-muted: #78716c;
+    --dc-text-faint: #a8a29e;
+    --dc-accent: #1c1917;
+    --dc-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+    --dc-shadow-md: 0 4px 12px rgba(28, 25, 23, 0.08);
+    --dc-shadow-lg: 0 12px 40px rgba(28, 25, 23, 0.18);
+    --dc-radius: 12px;
+    --dc-radius-sm: 8px;
+  }
+
+  #dc-app {
+    grid-column: 1 / -1;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--dc-surface);
+    color: var(--dc-text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.4;
+    padding-bottom: 90px;
+    max-width: 860px;
+    width: 100%;
+margin: 0 15vw;
+
+  }
+
+  #dc-app button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  #dc-app input, #dc-app select, #dc-app textarea { font-family: inherit; font-size: 16px; color: inherit; }
+
+  #dc-app section {
+    padding: 20px 24px 8px;
+    border-bottom: 1px solid var(--dc-border);
+  }
+  #dc-app section:last-of-type { border-bottom: none; }
+  .dc-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .dc-section-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .dc-section-add {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dc-accent);
+    padding: 6px 12px;
+    background: var(--dc-surface-alt);
+    border-radius: 999px;
+    transition: background 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border: none;
+    cursor: pointer;
+  }
+  .dc-section-add:hover { background: var(--dc-border); }
+  .dc-section-add::before { content: '+ '; font-size: 14px; }
+
+  .dc-field { margin-bottom: 14px; }
+  .dc-field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .dc-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--dc-border);
+    border-radius: var(--dc-radius-sm);
+    background: var(--dc-surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-size: 15px;
+  }
+  .dc-input:focus {
+    outline: none;
+    border-color: var(--dc-accent);
+    box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.08);
+  }
+  textarea.dc-input { resize: vertical; min-height: 60px; font-family: inherit; }
+  select.dc-input { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+  .dc-field-row { display: flex; gap: 10px; }
+  .dc-field-row .dc-field { flex: 1; }
+
+  .dc-item-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; }
+  .dc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--dc-surface);
+    border: 1px solid var(--dc-border);
+    border-radius: var(--dc-radius);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .dc-item:hover { border-color: var(--dc-border-strong); box-shadow: var(--dc-shadow-sm); }
+  .dc-item-color-dot {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .dc-item-body { flex: 1; min-width: 0; }
+  .dc-item-title { font-size: 14px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dc-item-sub { font-size: 12px; color: var(--dc-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dc-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .dc-item-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: grid; place-items: center;
+    transition: background 0.15s;
+  }
+  .dc-item-btn:hover { background: var(--dc-surface-alt); }
+  .dc-item-btn svg { width: 14px; height: 14px; stroke: var(--dc-text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dc-item-btn.dc-danger:hover svg { stroke: #b91c1c; }
+
+  .dc-empty-list {
+    padding: 20px 16px;
+    text-align: center;
+    color: var(--dc-text-faint);
+    font-size: 13px;
+    background: var(--dc-surface-alt);
+    border-radius: var(--dc-radius);
+    border: 1px dashed var(--dc-border-strong);
+  }
+
+  .dc-save-bar {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: calc(100% - 16.6% - 20px);
+    max-width: 860px;
+    padding: 14px 24px;
+    background: var(--dc-surface);
+    border-top: 1px solid var(--dc-border);
+    display: flex;
+    gap: 10px;
+    box-shadow: 0 -8px 24px rgba(28, 25, 23, 0.05);
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0));
+    z-index: 10;
+  }
+  .dc-btn {
+    padding: 13px 18px;
+    border-radius: var(--dc-radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    transition: opacity 0.15s, background 0.15s, transform 0.1s;
+    flex: 1;
+  }
+  .dc-btn:active { transform: scale(0.98); }
+  .dc-btn-primary { background: var(--dc-accent); color: white; }
+  .dc-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dc-btn-secondary { background: var(--dc-surface-alt); color: var(--dc-text); }
+
+  .dc-sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(28, 25, 23, 0.42);
+    z-index: 50;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .dc-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+  .dc-sheet {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    bottom: 0;
+    width: 100%;
+    max-width: 480px;
+    background: var(--dc-surface);
+    border-radius: 24px 24px 0 0;
+    z-index: 51;
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0.35, 1);
+    max-height: 92dvh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .dc-sheet.open { transform: translateX(-50%) translateY(0); }
+  .dc-sheet-handle { width: 36px; height: 4px; background: var(--dc-border-strong); border-radius: 4px; margin: 10px auto; }
+  .dc-sheet-content { padding: 8px 24px 24px; }
+  .dc-sheet-header { margin-bottom: 18px; }
+  .dc-sheet-subtitle { font-size: 11px; color: var(--dc-text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 4px; }
+  .dc-sheet-title { font-family: 'Instrument Serif', serif; font-size: 28px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.05; }
+  .dc-actions { display: flex; gap: 10px; margin-top: 22px; }
+
+  .dc-color-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+  }
+  .dc-color-swatch {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.15s;
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .dc-color-swatch:hover { transform: scale(1.08); }
+  .dc-color-swatch[data-selected="true"] {
+    border-color: var(--dc-text);
+    transform: scale(1.05);
+  }
+  .dc-color-swatch[data-selected="true"]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") center/55% no-repeat;
+  }
+
+  .dc-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--dc-accent);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    z-index: 100;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    box-shadow: var(--dc-shadow-md);
+  }
+  .dc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .dc-toast.error { background: #b91c1c; }
+
+  .dc-loader-msg { padding: 60px 20px; text-align: center; color: var(--dc-text-muted); font-size: 14px; }
+  .dc-dirty-indicator {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: #f59e0b;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .dc-reset-section {
+    padding: 20px 24px 20px;
+    border-top: 1px solid var(--dc-border);
+    margin-top: 8px;
+  }
+  .dc-reset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .dc-reset-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .dc-btn-danger-outline {
+    padding: 9px 16px;
+    border-radius: var(--dc-radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+  .dc-btn-danger-outline:hover { background: #fee2e2; border-color: #fca5a5; }
+  .dc-btn-danger-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+
+<div id="dc-app">
+  <main id="dc-main">
+    <div class="dc-loader-msg">Lade…</div>
+  </main>
+</div>
+
+<div class="dc-save-bar" id="dc-save-bar" style="display:none">
+  <button class="dc-btn dc-btn-secondary" onclick="dcLoadConfig()">Verwerfen</button>
+  <button class="dc-btn dc-btn-primary" id="dc-save-btn" onclick="dcSaveAll()"><span id="dc-save-label">Speichern</span></button>
+</div>
+
+<div class="dc-sheet-backdrop" id="dc-backdrop" onclick="dcCloseSheet()"></div>
+<div class="dc-sheet" id="dc-sheet">
+  <div class="dc-sheet-handle"></div>
+  <div class="dc-sheet-content" id="dc-sheet-content"></div>
+</div>
+
+<div class="dc-toast" id="dc-toast"></div>

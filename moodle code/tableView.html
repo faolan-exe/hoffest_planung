@@ -1,0 +1,177 @@
+<p></p>
+<hr>
+<h1 style="text-decoration: underline;">Aktuelle Stände</h1>
+<p><span style="color: #ff0000;"><strong>Diese Tabelle aktualisiert sich
+      automatisch. Bitte nicht manuell bearbeiten!</strong></span></p>
+<p>
+  <label for="yearSelect" style="font-weight: bold; margin-right: 8px;">Jahr:</label>
+  <select id="yearSelect" style="padding: 4px 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;"></select>
+</p>
+<h2 id="progress"></h2>
+<h3>Bestätigte Projekte</h3>
+<table id="confirmedTable"
+  style="width: 50%; border-collapse: collapse; margin-bottom: 30px; height: 94.4px;">
+  <thead>
+    <tr style="height: 40.8px;">
+      <th
+        style="padding: 8px 12px; text-align: left; border: 1px solid #ddd; background-color: #f2f2f2;">
+        Lehrer</th>
+      <th
+        style="padding: 8px 12px; text-align: left; border: 1px solid #ddd; background-color: #f2f2f2;">
+        Standname</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="height: 2.8px;">
+      <th style="display: none;"> </th>
+      <td style="display: none;"> </td>
+    </tr>
+  </tbody>
+</table>
+<h3>Ausstehende Projekte</h3>
+<table id="pendingTable"
+  style="width: 50%; border-collapse: collapse; margin-bottom: 20px;">
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px 12px; text-align: left; border: 1px solid #ddd; background-color: #f2f2f2;">
+        Lehrer</th>
+      <th
+        style="padding: 8px 12px; text-align: left; border: 1px solid #ddd; background-color: #f2f2f2;">
+        Standname</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th style="display: none;"> </th>
+      <td style="display: none;"> </td>
+    </tr>
+  </tbody>
+</table>
+<p>
+  <script>
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      return hashHex;
+    }
+
+    progress = document.getElementById("progress");
+    secretCode = document.getElementById("secretAuthCode").value;
+    id = M.cfg.userId;
+
+    var hashedID;
+
+    // Jahr-Dropdown befüllen
+    (function() {
+      var sel = document.getElementById("yearSelect");
+      var currentYear = new Date().getFullYear();
+      for (var y = 2025; y <= currentYear; y++) {
+        var opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener("change", function() {
+        if (!hashedID) return;
+        clearTables();
+        loadTable();
+      });
+    })();
+
+    function clearTables() {
+      var confirmedTbody = document.getElementById("confirmedTable").querySelector("tbody");
+      var pendingTbody = document.getElementById("pendingTable").querySelector("tbody");
+      confirmedTbody.innerHTML = '<tr><th style="display:none"> </th><td style="display:none"> </td></tr>';
+      pendingTbody.innerHTML = '<tr><th style="display:none"> </th><td style="display:none"> </td></tr>';
+    }
+
+    function start() {
+      fetch("https://hoffest.t-auer.com/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: id,
+            hashedID: hashedID,
+          }),
+        })
+        .then((response) => response.json())
+        .then((result) => {
+          if (result.ok == true) {
+            document.getElementById("linkBtn").onclick = function() {
+              window.open("https://hoffest.t-auer.com?id=" + hashedID, "_blank");
+            };
+            loadTable();
+          } else {
+            console.error("Error:", result);
+            progress.innerHTML =
+              "Es ist etwas schiefgelaufen! Bitte laden Sie die Seite erneut oder schreiben sie an hoffestSupport@t-auer.com: <br>" +
+              result.error;
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          progress.innerHTML =
+            "Es ist etwas sehr schiefgelaufen! Bitte laden Sie die Seite erneut oder schreiben sie an hoffestSupport@t-auer.com: <br>" +
+            error;
+        });
+    }
+
+    function loadTable() {
+      var year = document.getElementById("yearSelect").value;
+      fetch("https://hoffest.t-auer.com/moodleApi?id=" + hashedID + "&year=" + year)
+        .then((response) => response.json())
+        .then((data) => {
+          const confirmedTableBody = document
+            .getElementById("confirmedTable")
+            .querySelector("tbody");
+          if (data.confirmed.length === 0) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td colspan="2">Keine bestätigten Stände</td>`;
+            confirmedTableBody.appendChild(row);
+          }
+          data.confirmed.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
+            `;
+            confirmedTableBody.appendChild(row);
+          });
+          const pendingTableBody = document
+            .getElementById("pendingTable")
+            .querySelector("tbody");
+          if (data.pending.length === 0) {
+            const row = document.createElement("tr");
+            row.innerHTML =
+              `<td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;" colspan="2">Keine ausstehenden Stände</td>`;
+            pendingTableBody.appendChild(row);
+          }
+          data.pending.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.lehrer}</td>
+              <td style="padding: 8px 12px;text-align: left;border: 1px solid #ddd;">${item.name}</td>
+            `;
+            pendingTableBody.appendChild(row);
+          });
+        })
+        .catch((error) => {
+          console.error("Fehler beim Laden der Daten:", error);
+          progress.innerHTML = "Fehler beim Laden der Daten: " + error.error;
+        });
+    }
+
+    sha256(secretCode + id.toString()).then((hash) => {
+      hashedID = hash;
+      start();
+    });
+  </script>
+</p>

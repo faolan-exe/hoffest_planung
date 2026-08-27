@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dash.css" />
+    <script defer>
+      data = {{ data | tojson }}
+      questionIdLookup = {{ questionIdLookup | tojson }}
+      emailTexts = {{ email_texts | tojson }}
+      enabled = "{{ enabled }}"
+      allowReeditSetting = "{{ allow_reedit }}"
+      currentID = undefined;
+    </script>
+     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<link rel="prefetch" href="/admin/loader/unconfirmed.js" as="script" />
+<link rel="prefetch" href="/admin/loader/confirmed.js" as="script" />
+<link rel="prefetch" href="/admin/loader/settings.js" as="script" />
+<link rel="prefetch" href="/admin/loader/overview.js" as="script" />
+<link rel="prefetch" href="/admin/loader/dienste.js" as="script" />
+
+<script>
+      function load(nav, setCurrentID) {
+        if (setCurrentID) {
+          currentID = setCurrentID;
+        }        
+        switch (nav) {
+          case "nav1":
+            page = "unconfirmed.js";
+            break;
+          case "nav2":
+            page = "confirmed.js";
+            break;
+          case "nav3":
+            page = "overview.js";
+            break;
+          case "navDienste":
+            page = "dienste.js";
+            break;
+            case "nav4":
+            page = "settings.js";
+            break;
+          case "nav5":
+            nav = "nav1"
+            page = "confirmAction.js";
+            break;
+          case "nav6":
+            nav = "nav2"
+            page = "confirmAction.js";
+            break;
+
+        }console.log(nav)
+        fetch("/admin/set_session", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: "dest", value: nav }),
+        });
+        try {
+          document.getElementById("script").remove();
+        } catch (e) {}
+
+        document
+          .querySelectorAll("a")
+          .forEach((el) => el.classList.remove("active"));
+        document.getElementById(nav).classList.add("active");
+        const script = document.createElement("script");
+        script.src = `/admin/loader/${page}`;
+        script.id = "script";
+
+        //script.type = "module";
+        script.onload = () => {
+          if (typeof init === "function") {
+            init();
+          } else {
+            console.error("init nicht gefunden");
+          }
+        };
+        document.body.appendChild(script);
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="grid-container">
+      <div class="grid-item item-logo"><img src="https://gymnasium-oberursel.de/img/logo.png" alt="logo" width="90%" style="padding-left: 10px;"></div>
+      <div class="item-welcome">
+        <div class="welcome-text">
+          <h1>Willkommen</h1>
+          <h3 id="status-text"></h3>
+        </div>
+      </div>
+      <div class="grid-item item-actionbutton">
+        <div
+          style="display: flex; justify-content: space-around; margin-top: 10%"
+        >
+          <button class="add-btn" onclick="window.location.href = '/admin/register'">
+            Stand manuell hinzufügen
+          </button>
+        </div>
+      </div>
+      <div class="grid-item item-sidebar">
+        <div style="display: block">
+          <p>
+            <a id="nav1" class="link1" onclick="load('nav1')"
+              >Ausstehend</a
+            >
+          </p>
+          <p>
+            <a id="nav2" onclick="load('nav2')">Bestätigt</a>
+          </p>
+          <p>
+            <a id="nav3" onclick="load('nav3')">Übersicht</a>
+          </p>
+          <p>
+            <a id="navDienste" onclick="load('navDienste')">Dienste</a>
+          </p>
+          <p>
+            <a id="nav4" onclick="load('nav4')">Einstellungen</a>
+          </p>
+        </div>
+      </div>
+      <div id="inner-grid" class="inner-grid">
+        <div class="spacer" id="heading">ERROR</div>
+      </div>
+      <div id="loader">
+        <script>
+          load("{{destination}}");
+        </script>
+      </div>
+    </div>
+  </body>
+</html>
