@@ -492,12 +492,12 @@ const DEMO_CONFIG = {
     { id: 'cat_abbau',    name: 'Abbau',          color: '#ef4444' }
   ],
   events: [
-    { id: 'e1', categoryId: 'cat_aufbau',   start: '12:00', end: '14:00', description: 'Bühne + Bestuhlung', isShadow: false, slots: 1, assignments: [{ person: 'Lisa Müller', class: '9b' }] },
-    { id: 'e2', categoryId: 'cat_geschirr', start: '16:00', end: '17:00', description: '',                   isShadow: false, slots: 1, assignments: [{ person: 'Max Mustermann', class: '8e' }] },
-    { id: 'e3', categoryId: 'cat_kuche',    start: '15:00', end: '18:00', description: 'Grillstation',       isShadow: false, slots: 1, assignments: [{ person: 'Tom Becker', class: '10a' }] },
-    { id: 's1', categoryId: 'cat_geschirr', start: '17:00', end: '18:00', description: 'Nach Hauptgang',     isShadow: true,  slots: 3, assignments: [{ person: 'Tom Becker', class: '7t' }, { person: 'Janne H.', class: '7u' }] },
+    { id: 'e1', categoryId: 'cat_aufbau',   start: '12:00', end: '14:00', description: 'Bühne + Bestuhlung', isShadow: false, slots: 1, assignments: [{ id: 1, person: 'Lisa Müller', class: '9b' }] },
+    { id: 'e2', categoryId: 'cat_geschirr', start: '16:00', end: '17:00', description: '',                   isShadow: false, slots: 1, assignments: [{ id: 2, person: 'Max Mustermann', class: '8e' }] },
+    { id: 'e3', categoryId: 'cat_kuche',    start: '15:00', end: '18:00', description: 'Grillstation',       isShadow: false, slots: 1, assignments: [{ id: 3, person: 'Tom Becker', class: '10a' }] },
+    { id: 's1', categoryId: 'cat_geschirr', start: '17:00', end: '18:00', description: 'Nach Hauptgang',     isShadow: true,  slots: 3, assignments: [{ id: 4, person: 'Tom Becker', class: '7t' }, { id: 5, person: 'Janne H.', class: '7u' }] },
     { id: 's2', categoryId: 'cat_kasse',    start: '15:00', end: '17:00', description: 'Eingangskasse',      isShadow: true,  slots: 2, assignments: [] },
-    { id: 's3', categoryId: 'cat_kasse',    start: '17:00', end: '19:00', description: 'Eingangskasse',      isShadow: true,  slots: 2, assignments: [{ person: 'Anna K.', class: '9c' }] },
+    { id: 's3', categoryId: 'cat_kasse',    start: '17:00', end: '19:00', description: 'Eingangskasse',      isShadow: true,  slots: 2, assignments: [{ id: 6, person: 'Anna K.', class: '9c' }] },
     { id: 's4', categoryId: 'cat_abbau',    start: '21:00', end: '22:00', description: 'Stuhltransport',     isShadow: true,  slots: 4, assignments: [] }
   ]
 };
@@ -537,6 +537,7 @@ function normalizeEvent(e) {
     description: e.description || '',
     isShadow: !!e.isShadow,
     slots: e.slots ?? 1,
+    // .id der Anmeldungen bleibt erhalten - removeAssignment() braucht sie.
     assignments: Array.isArray(e.assignments) ? e.assignments : []
   };
 }
@@ -874,7 +875,7 @@ function renderShadowSheet() {
             <div class="slot-name">${escapeHtml(a.person)}</div>
             ${a.class ? `<div class="slot-class">Klasse ${escapeHtml(a.class)}</div>` : ''}
           </div>
-          <button class="slot-remove" onclick="removeAssignment('${ev.id}', ${i})" title="Entfernen">
+          <button class="slot-remove" onclick="removeAssignment('${ev.id}', ${a.id})" title="Entfernen">
             <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -974,7 +975,7 @@ async function submitNew() {
       start, end, description,
       isShadow: false,
       slots: 1,
-      assignments: [{ person, class: klass }]
+      assignments: [{ id: Date.now(), person, class: klass }]
     }));
     closeSheet();
     render();
@@ -1006,7 +1007,7 @@ async function submitShadow(eventId) {
     const ev = state.config.events.find(e => e.id === eventId);
     if (!ev) return;
     if (isFull(ev)) return showToast('Slot ist voll', true);
-    ev.assignments.push({ person, class: klass });
+    ev.assignments.push({ id: Date.now(), person, class: klass });
     showToast('Eingetragen');
     if (isFull(ev)) closeSheet(); else renderShadowSheet();
     render();
@@ -1029,21 +1030,32 @@ async function submitShadow(eventId) {
   }
 }
 
-async function removeAssignment(eventId, index) {
+// assignmentId ist die Datenbank-ID der Anmeldung, nicht ihre Position in der
+// Liste. Die Seite aktualisiert sich nur alle 15s - ueber die Position haette
+// ein zwischenzeitlich hinzugekommener Eintrag den Index verschoben und der
+// Klick eine fremde Anmeldung geloescht.
+async function removeAssignment(eventId, assignmentId) {
   if (!confirm('Eintrag entfernen?')) return;
 
   if (USE_DEMO_DATA) {
     const ev = state.config.events.find(e => e.id === eventId);
     if (!ev) return;
-    ev.assignments.splice(index, 1);
+    ev.assignments = ev.assignments.filter(a => a.id !== assignmentId);
     render();
     renderShadowSheet();
     showToast('Entfernt');
     return;
   }
 
+  if (assignmentId === undefined || assignmentId === null) {
+    showToast('Eintrag nicht mehr vorhanden', true);
+    await loadConfig();
+    renderShadowSheet();
+    return;
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/events/${eventId}/assignments/${index}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/events/${eventId}/assignments/by-id/${assignmentId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     showToast('Entfernt');
     await loadConfig();

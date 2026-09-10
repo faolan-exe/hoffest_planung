@@ -1,39 +1,52 @@
-version: '3.8'
-
 services:
-  # flask-service:
-  #   build: .
-  #   container_name: hoffest-flask-app
-  #   network_mode: "host"
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     - FLASK_APP=main.py
-  #     - FLASK_ENV=development
-  #     - DATABASE_URL=postgresql://admin:admin@postgres-service:5432/hoffest-postgresDB
-  #   depends_on:
-  #     postgres-service:
-  #       condition: service_healthy
-
-  postgres-service:
+  db:
     image: postgres:17
-    container_name: hoffest-postgresDB
-    ports:
-      - "5432:5432"
-    # network_mode: "host"
+    container_name: hoffest-db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: hoffest-postgresDB
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: hoffest
+      POSTGRES_USER: hoffest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt - siehe .env.example}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./dbscripts/postgres:/docker-entrypoint-initdb.d
+      - hoffest-db-data:/var/lib/postgresql/data
+    # Nur lokal erreichbar. Frueher war 5432 auf allen Interfaces offen.
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d hoffest-postgresDB"]
+      test: ["CMD-SHELL", "pg_isready -U hoffest -d hoffest"]
       interval: 10s
+      timeout: 5s
       retries: 5
       start_period: 10s
-      timeout: 10s
+
+  app:
+    build: .
+    container_name: hoffest-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://hoffest:${POSTGRES_PASSWORD}@db:5432/hoffest
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:?FLASK_SECRET_KEY fehlt - siehe .env.example}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET fehlt - siehe .env.example}
+      DOMAIN: ${DOMAIN:-https://hoffest.t-auer.com}
+      SMTP_HOST: ${SMTP_HOST:-smtp.strato.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER fehlt - siehe .env.example}
+      SMTP_PASS: ${SMTP_PASS:?SMTP_PASS fehlt - siehe .env.example}
+      # Migration laeuft im entrypoint.sh, nicht beim Import.
+      HOFFEST_AUTO_MIGRATE: "0"
+    volumes:
+      # Logs bleiben ausserhalb des Containers lesbar.
+      - ./logs:/app/logs
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
-  postgres-data:
+  # Bewusst ein eigener Name: ein Volume aus einer aelteren Installation
+  # wuerde die Zugangsdaten aus der .env ignorieren (Postgres wertet sie nur
+  # beim ersten Start eines leeren Verzeichnisses aus) und die Anmeldung
+  # schlaege fehl. Daten aus einem alten Volume kommen per Dump herueber,
+  # siehe README.md.
+  hoffest-db-data:

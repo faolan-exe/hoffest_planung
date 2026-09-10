@@ -1,0 +1,16 @@
+# Secrets - duerfen niemals ins Repository
+credentials.txt
+secretAuthCode.txt
+flaskSecretKey.txt
+.env
+
+# Laufzeitdaten
+logs/
+backups/
+__pycache__/
+*.pyc
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

@@ -2,11 +2,19 @@
 
 FROM python:3.12.1-slim
 
-WORKDIR /python-docker
+# postgresql-client wird fuer die Backup- und Restore-Skripte gebraucht.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 COPY requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
-RUN pip install gunicorn
-COPY . .
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]
+COPY . .
+RUN chmod +x entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["./entrypoint.sh"]

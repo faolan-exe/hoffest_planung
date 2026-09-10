@@ -192,6 +192,7 @@ function dcRender() {
         </button>\
       </div>\
       <p style="font-size:12px;color:var(--dc-text-faint);margin-top:4px">Löscht alle Benutzer-Einträge und Teilnehmer der Template-Slots. Die Template-Event-Struktur und Konfiguration bleiben erhalten.</p>\
+      <p style="font-size:12px;color:var(--dc-text-faint);margin-top:6px">Beim Jahreswechsel passiert das automatisch: der Plan wird archiviert, alle Einträge werden entfernt und das Datum zurückgesetzt. Dieser Knopf wird nur gebraucht, um innerhalb einer Saison neu anzufangen.</p>\
     </div>';
 
   ['dc-day-name', 'dc-day-date', 'dc-range-start', 'dc-range-end'].forEach(function(id) {
@@ -298,6 +299,13 @@ function dcDeleteCategory(id) {
     if (!confirm('Diese Kategorie wird von Events benutzt. Trotzdem löschen? (Events bleiben, verlieren aber Farbe)')) return;
   }
   dcState.config.categories = dcState.config.categories.filter(function(c) { return c.id !== id; });
+  // Referenzen mitloeschen: sonst schickt dcSaveAll() Template-Slots mit einer
+  // categoryId, die es serverseitig nicht mehr gibt. Das lief in eine
+  // Fremdschluesselverletzung (HTTP 422) und der komplette Speichervorgang
+  // schlug fehl - inklusive aller anderen Aenderungen.
+  dcState.config.events.forEach(function(e) {
+    if (e.categoryId === id) e.categoryId = null;
+  });
   dcRender();
 }
 

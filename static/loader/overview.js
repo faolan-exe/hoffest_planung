@@ -609,7 +609,7 @@ function showStandInfo(cellData) {
   const checkedBoxes = cellData.question_ids ?? [];
   let checkedBoxesHTML = "<ul>";
   for (const boxId of checkedBoxes) {
-    checkedBoxesHTML += `<li>${questionIdLookup[boxId]}</li>`;
+    checkedBoxesHTML += `<li>${questionIdLookup[boxId] ?? "(gelöschte Frage)"}</li>`;
   }
   checkedBoxesHTML += "</ul>";
 
@@ -1092,7 +1092,7 @@ function openApprovalModal(standId) {
   var qids = Array.isArray(stand.question_ids) ? stand.question_ids : [];
   qids.forEach(function (qid) {
     var li = document.createElement("li");
-    li.textContent = questionIdLookup[qid] ?? String(qid);
+    li.textContent = questionIdLookup[qid] ?? "(gelöschte Frage)";
     optionsEl.appendChild(li);
   });
 

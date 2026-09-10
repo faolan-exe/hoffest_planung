@@ -6,21 +6,24 @@ if (!myData) {
   reJudge = true;
 }
 console.log("myDATA:  ", myData);
-var {
-  klasse,
-  lehrer,
-  titel,
-  beschreibung,
-  ort_spezifikation,
-  ort,
-  question_ids,
-  id,
-} = myData;
-statusText = `Genehmigung für den Stand von ${lehrer}`;
-headingText = titel;
+
+// "data" stammt aus dem Seitenaufbau. Ein Antrag, der erst danach eingegangen
+// ist, steht dort nicht - frueher ist das Skript hier beim Destructuring
+// abgestuerzt und init() wurde nie definiert ("init nicht gefunden").
+var { klasse, lehrer, titel, beschreibung, ort_spezifikation, ort, question_ids, id } =
+  myData || {};
+statusText = myData ? `Genehmigung für den Stand von ${lehrer}` : "Stand nicht gefunden";
+headingText = myData ? titel : "Nicht gefunden";
 
 function init() {
   bigDiv.innerHTML = '<div class="spacer" id="heading">ERROR</div>';
+  if (!myData) {
+    document.getElementById("status-text").innerHTML = statusText;
+    bigDiv.innerHTML =
+      '<div class="spacer"><p>Dieser Stand ist in der geladenen Übersicht nicht enthalten. ' +
+      'Bitte die Seite neu laden.</p><p><a href="/admin">Zurück zum Dashboard</a></p></div>';
+    return;
+  }
   document.getElementById("status-text").innerHTML = statusText;
   document.getElementById("heading").innerHTML = headingText;
   fetch("/admin/loader/confirmAction.html")
@@ -43,7 +46,7 @@ function setup() {
   optionsField.innerHTML = "";
   for (let i = 0; i < question_ids.length; i++) {
     optionsField.innerHTML += `<li style="margin-left:2rem;">${
-      questionIdLookup[question_ids[i]]
+      questionIdLookup[question_ids[i]] ?? "(gelöschte Frage)"
     }</li>`;
   }
 

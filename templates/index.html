@@ -966,10 +966,13 @@
         document.getElementById("email").value = "unverändert (aus Datenschutz weder einsehbar noch editierbar)";
         document.getElementById("email").disabled = true;
         for (const [key, value] of Object.entries(submittedData[6])) {
-          console.log(key, value);
-          const questionID = value;
-          const questionElement = document.getElementById(`${questionID}`);
-          questionElement.checked = true;
+          const questionElement = document.getElementById(`${value}`);
+          // Zwischenzeitlich geloeschte (archivierte) Fragen stehen weiterhin
+          // in standQuestions, haben aber keine Checkbox mehr. Ohne diese
+          // Pruefung bricht das Bearbeiten-Formular hier komplett ab.
+          if (questionElement) {
+            questionElement.checked = true;
+          }
         }
       }
 

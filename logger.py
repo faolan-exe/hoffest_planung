@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 
@@ -13,7 +14,11 @@ def get_logger(name=None, log_level=logging.DEBUG, log_file='logs.log', max_byte
     :param backup_count: Number of backup files to keep. Default is 5.
     :return: Configured logger instance.
     """
-    log_file = "logs/" + log_file
+    # Das Verzeichnis liegt nicht im Repository. Ohne diese Zeile scheitert
+    # der Import auf einem frisch aufgesetzten Server mit FileNotFoundError.
+    log_dir = os.environ.get("HOFFEST_LOG_DIR", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, log_file)
     logger_var = logging.getLogger(name)
     logger_var.setLevel(logging.DEBUG)  
 

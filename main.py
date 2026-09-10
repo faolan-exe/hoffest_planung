@@ -16,22 +16,27 @@ from flask_cors import CORS
 import db
 from werkzeug.middleware.proxy_fix import ProxyFix
 import hashlib
+import hmac
 
 
 db_manager = db.DatabaseManager()
 
 logger = get_logger("main")
-secretAuthKey = open("./secretAuthCode.txt", "r").readline()
+
+# Einmal beim Start lesen statt bei jedem Auth-Check die Datei zu oeffnen.
+SECRET_AUTH_KEY = db.read_secret("AUTH_SECRET", "./secretAuthCode.txt")
 
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
-TEST_MODE = False
-
-import socket
-if socket.gethostname() == "tobias-linux" or socket.gethostname() == "Tobis Mac":
-    TEST_MODE = True
-    logger.warning("\n\n\nRunning in TEST_MODE! This is not secure and should not be used in production, as this allows user to skip authentication!\n\n")
-    input("Press Enter to continue...")  # Wait for user input to continue
+# TEST_MODE haengt bewusst an einer Umgebungsvariable und nicht mehr am
+# Hostnamen: er schaltet die Authentifizierung komplett ab und darf niemals
+# versehentlich anspringen.
+TEST_MODE = os.environ.get("HOFFEST_TEST_MODE") == "1"
+if TEST_MODE:
+    logger.warning(
+        "TEST_MODE aktiv - die Authentifizierung ist abgeschaltet. "
+        "Niemals im produktiven Betrieb verwenden!"
+    )
 
 # Global admin verification
 @admin.before_request
@@ -46,6 +51,11 @@ app = Flask(__name__)
 # Global user verification
 @app.before_request
 def check_auth():
+    # Ohne dieses Flag ist jede Session eine reine Browser-Session und
+    # PERMANENT_SESSION_LIFETIME bleibt wirkungslos. Nur fuer bestehende
+    # Sessions setzen, sonst bekaeme jeder anonyme Abruf ein Cookie.
+    if session:
+        session.permanent = True
     if request.path in [
         "/login",
         "/",
@@ -63,13 +73,14 @@ def check_auth():
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
 CORS(app)
 CORS(app, resources={r"/register": {"origins": "*"}})
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(weeks=99999)
-app.config["SECRET_KEY"] = open("./flaskSecretKey.txt", "r").readline()
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=90)
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+app.config["SECRET_KEY"] = db.read_secret("FLASK_SECRET_KEY", "./flaskSecretKey.txt")
 
 
 def checkAuth(user_id, hashed_id=None): 
     """Prüft, ob die Authentifizierung gültig ist und ob der Benutzer vertrauenswürdig ist."""
-    if TEST_MODE and user_id != "":
+    if TEST_MODE and user_id:
         logger.warning("Running in TEST_MODE, allowing all users")
         return True
 
@@ -85,9 +96,11 @@ def checkAuth(user_id, hashed_id=None):
 def index():
     id = request.args.get("id", "")
     if id != "":
-        logger.info("ID provided in query parameters: " + id)
+        # Nur ein Praefix loggen - die vollstaendige ID ist der Zugangsschluessel.
+        logger.info("ID provided in query parameters: " + id[:8] + "...")
         if checkAuth(id):  # important local check!
             session["id"] = id
+            session.permanent = True
             return redirect("/")
         return render_template("unauthorized.html"), 401
 
@@ -134,18 +147,20 @@ def test():
 
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json
+    data = request.get_json(silent=True)
     try:
         id = data["id"]
         hash = data["hashedID"]
-    except KeyError:
+    except (KeyError, TypeError):
         return jsonify(error="Missing required fields"), 400
     if validate_auth(id, hash):
         
         if db_manager.addNewTrustedId(hash):
             return jsonify(ok=True), 200
         return jsonify(error="Failed to add ID"), 400
-    logger.error("Invalid authentication attempt with id:", id, "and hash:", hash)
+    # Vorher standen hier Positionsargumente an einem Formatstring ohne
+    # Platzhalter - dieser Logeintrag wurde nie geschrieben.
+    logger.warning(f"Invalid authentication attempt for id {str(id)[:8]}...")
     return jsonify(error="Invalid authentication or secret"), 401
 
 
@@ -269,8 +284,10 @@ def admin_api():
         case "newPassword":
             if not db_manager.update_password(value):
                 return jsonify({"error": "Failed to update password"}), 400
-            logger.warning("Password updated-->Secret Key changed")
-            app.secret_key = os.urandom(64)
+            # Frueher wurde hier app.secret_key neu gesetzt. Das galt nur fuer
+            # den Worker, der den Request bearbeitet hat, und hat alle
+            # Lehrkraft-Sessions in eine Login-Schleife geschickt.
+            logger.warning("Admin-Passwort geaendert")
             return jsonify({"ok": "ok"}), 200
         case "emailText1":
             if not db_manager.update_email_text(1, value):
@@ -366,6 +383,7 @@ def login_route(data=None):
         password = data["password"]
         if db_manager.authenticateAdmin(username, password):
             session["adminName"] = username
+            session.permanent = True
             # session["id"] = "bypass"  # isAdmin=True
             logger.info("New user session")
             return "ok", 200
@@ -462,10 +480,16 @@ def api_dienste_delete_event(eid):
 	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
  
  
-@app.route("/moodle/api/dienste/events/<eid>/assignments/<int:idx>", methods=["DELETE"])
-def api_dienste_delete_assignment(eid, idx):
-	"""Entfernt eine einzelne Assignment per Index aus einem Event."""
-	result = db_manager.delete_dienste_assignment(eid, idx)
+@app.route("/moodle/api/dienste/events/<eid>/assignments/by-id/<int:aid>", methods=["DELETE"])
+def api_dienste_delete_assignment(eid, aid):
+	"""
+	Entfernt eine Anmeldung ueber ihre Datenbank-ID.
+
+	Frueher lief das ueber den Index in der Liste. Da die Seite nur alle 15
+	Sekunden aktualisiert, konnte in der Zwischenzeit ein Eintrag dazukommen
+	oder wegfallen - der Klick hat dann eine andere Person geloescht.
+	"""
+	result = db_manager.delete_dienste_assignment(eid, aid)
 	if result.get("ok"):
 		return jsonify({"ok": True})
 	return jsonify({"error": result.get("error", "unknown")}), result.get("status", 400)
@@ -538,18 +562,21 @@ def api_dienste_reset():
 
 
 def validate_auth(id, hashedId):
-    if hashedId is None:
+    """Prueft sha256(secret + userId) gegen den vom Client gelieferten Hash."""
+    # Der Wert kommt ungeprueft aus dem Request: alles, was kein reiner
+    # Hex-String ist, kann kein gueltiger Hash sein.
+    if not isinstance(hashedId, str) or not hashedId.isascii():
         return False
-    secretAuthKey = open("./secretAuthCode.txt", "r").readline()
-    data = secretAuthKey + str(id)
-    encoded_data = data.encode()
-    sha256_hash = hashlib.sha256(encoded_data).hexdigest()
-    logger.error(f"Calculated hash: {sha256_hash}")
-    return sha256_hash == hashedId
+    data = SECRET_AUTH_KEY + str(id)
+    sha256_hash = hashlib.sha256(data.encode()).hexdigest()
+    # Der Hash ist der Zugangsschluessel und wird deshalb nicht geloggt.
+    return hmac.compare_digest(sha256_hash, hashedId)
 
 
 
 app.register_blueprint(admin)
 if __name__ == "__main__":
-   
-    app.run(port=8000, host="0.0.0.0", threaded=True, debug=True)
+    # Nur fuer die lokale Entwicklung. Im Betrieb laeuft die Anwendung unter
+    # gunicorn (siehe Dockerfile / README.md). debug=True wuerde den
+    # Werkzeug-Debugger samt Python-Konsole im Browser oeffnen.
+    app.run(port=8000, host="127.0.0.1", threaded=True, debug=False)

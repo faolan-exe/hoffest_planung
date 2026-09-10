@@ -423,21 +423,11 @@
                   <p class="vars-hint">Variable: <code>|kommentar|</code></p>
                 </div>
 
-                <div class="email-block">
-                  <h3>An Lehrkraft — Stand verschoben</h3>
-                  <div id="emailText5" class="quill-editor"></div>
-                  <div class="email-actions">
-                    <button id="submitEmailText5Btn" class="btn btn-blue">Speichern</button>
-                  </div>
-                </div>
-
-                <div class="email-block">
-                  <h3>An Orga — Neuer Stand übermittelt</h3>
-                  <div id="emailText4" class="quill-editor"></div>
-                  <div class="email-actions">
-                    <button id="submitEmailText4Btn" class="btn btn-blue">Speichern</button>
-                  </div>
-                </div>
+                <!-- Entfernt: "Stand verschoben" (Text 5) und "An Orga - Neuer
+                     Stand" (Text 4). Beide werden vom Backend nicht versendet:
+                     Text 5 wird nirgends gelesen, Text 4 haengt hinter
+                     SEND_ADMIN_REGISTRATION_EMAIL = False in db.py. Die Texte
+                     bleiben in der Datenbank erhalten. -->
 
               </div>
             </div>

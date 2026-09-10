@@ -31,6 +31,11 @@ class SMTPMailer:
                 # Auf neue Mail warten (mit Timeout)
                 recipient, text = self.email_queue.get(timeout=idle_timeout)
 
+                # Beenden-Signal aus stop()
+                if recipient is None:
+                    self.email_queue.task_done()
+                    break
+
                 # Verbindung aufbauen, falls nicht verbunden
                 if not connected:
                     try:
@@ -71,7 +76,13 @@ class SMTPMailer:
         with open("emailFooter.html", "r", encoding="utf-8") as f:
             footer = f.read()
         
-        greeting = f"<p>Hallo {self.db_manager.get_name_from_email(recipient)},</p><br>"
+        name = None
+        if self.db_manager is not None:
+            try:
+                name = self.db_manager.get_name_from_email(recipient)
+            except Exception as e:
+                print(f"Name zu {recipient} nicht ermittelbar: {e}")
+        greeting = f"<p>Hallo {name},</p><br>" if name else "<p>Hallo,</p><br>"
 
         full_html = greeting + text + footer
         msg.attach(MIMEText(full_html, "html"))
@@ -105,7 +116,7 @@ if __name__ == "__main__":
         SMTP_USER = file.readline().strip()
         SMTP_PASS = file.readline().strip()
 
-    mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS)
+    mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS, None)
 
     # Mehrere E-Mails versenden (asynchron)
     mailer.send_email("test1@t-auer.com", "Hallo, dies ist eine Nachricht.")

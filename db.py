@@ -24,8 +24,16 @@ from SMTPMailer import SMTPMailer
 ph = argon2.PasswordHasher()
 
 logger = get_logger("databaseManager", INFO)
-RESET_DATABASE = False
 SEND_ADMIN_REGISTRATION_EMAIL = False  # auf True setzen, um Benachrichtigungen an Orga-Adressen wieder zu aktivieren
+
+# Advisory-Lock-ID, damit mehrere Prozesse/Worker nie gleichzeitig migrieren.
+MIGRATION_LOCK_ID = 728_311_045
+
+MIGRATIONS_DIR = "./dbscripts/postgres/migrations/"
+
+# Wird am Ende des Moduls gesetzt. Die Vorbelegung verhindert einen NameError,
+# falls doch einmal frueher ein DatabaseManager gebaut wird.
+mailer = None
 
 
 def read_sql_file(filepath):
@@ -33,15 +41,58 @@ def read_sql_file(filepath):
         return file.read()
 
 
+def read_secret(env_name, filename, default=None):
+    """
+    Liest ein Secret bevorzugt aus einer Umgebungsvariable, sonst aus einer Datei.
+
+    So laeuft dieselbe Codebasis sowohl im Docker-Setup (alles ueber .env) als
+    auch in der alten Installation (Textdateien neben dem Code) ohne Aenderung.
+    """
+    value = os.environ.get(env_name)
+    if value:
+        return value.strip()
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.readline().strip()
+    except FileNotFoundError:
+        if default is not None:
+            return default
+        raise RuntimeError(
+            f"Weder Umgebungsvariable {env_name} noch Datei {filename} vorhanden. "
+            f"Siehe README.md, Abschnitt Konfiguration."
+        )
+
+
 _UNSET = object()
 
 class DatabaseManager:
-    TABLE_COUNT = 4
+    # Tabellen, ohne die die Anwendung nicht arbeiten kann. Fehlt eine davon,
+    # wird der Start abgebrochen - frueher wurde an dieser Stelle die komplette
+    # Datenbank geloescht und neu angelegt.
+    REQUIRED_TABLES = frozenset({
+        "admin", "stand", "genehmigungen", "questions", "status",
+        "email", "standquestions", "trusted_ids", "blacklistedcells",
+    })
     LOWEST_WEB_ACCESS_LEVEL = 0
 
-    def __init__(self):
-        self.CURRENT_DOMAIN = open("DOMAIN.txt", "r").readline().strip()
+    def __init__(self, verify_schema=True, auto_migrate=None):
+        """
+        Baut den Verbindungspool auf und prueft das Schema.
+
+        Parameters:
+        verify_schema (bool): Bei True wird beim Start geprueft, ob alle
+            Pflichttabellen vorhanden sind, und andernfalls abgebrochen.
+            Die Verwaltungsbefehle (init/migrate) setzen das auf False.
+        auto_migrate (bool|None): Bei None entscheidet HOFFEST_AUTO_MIGRATE
+            (Standard: an). Im Docker-Setup laeuft die Migration als eigener
+            Startschritt, dort steht die Variable auf 0.
+
+        Diese Funktion legt unter keinen Umstaenden Tabellen an und loescht
+        nichts. Erstinstallation laeuft ueber "python db.py init".
+        """
+        self.CURRENT_DOMAIN = read_secret("DOMAIN", "DOMAIN.txt", "https://hoffest.t-auer.com")
         self._lock = threading.RLock()
+        self._season_year_checked = None
         logger.debug("Initializing database manager")
 
         # Create a thread-safe connection pool (min 1, max 20 connections)
@@ -57,16 +108,32 @@ class DatabaseManager:
         self.conn = self.conn_pool.getconn()
         self.cursor = self.conn.cursor()
 
-        try:
-            if not self.check_database_integrity() or RESET_DATABASE:
-                self.init_tables()
+        if auto_migrate is None:
+            auto_migrate = os.environ.get("HOFFEST_AUTO_MIGRATE", "1") == "1"
 
-            self.do_migrations()
+        try:
+            if verify_schema and not self.get_all_tables():
+                raise RuntimeError(
+                    "Die Datenbank ist leer. Erstinstallation mit "
+                    "'python db.py init' ausfuehren (siehe README.md)."
+                )
+            if auto_migrate:
+                self.do_migrations()
+            if verify_schema:
+                self.check_database_integrity()
+                self.check_stand_id_consistency()
         except Exception as e:
-            logger.error(f"Error during initialization: {e}", exc_info=True)
+            logger.critical(f"Error during initialization: {e}", exc_info=True)
             if self.conn:
                 self.conn_pool.putconn(self.conn)
+                self.conn = None
             raise
+
+        # Der Mailer wird beim Import von db.py ohne DatabaseManager angelegt und
+        # haengt sich hier an die erste fertige Instanz. Frueher erzeugte er sich
+        # eine eigene Instanz - also einen zweiten Pool pro Prozess.
+        if mailer is not None and mailer.db_manager is None:
+            mailer.db_manager = self
 
     @contextmanager
     def get_db_connection(self):
@@ -137,61 +204,98 @@ class DatabaseManager:
         None
         """
         logger.debug("do_migrations is called")
-        try:
 
-            query = read_sql_file("./dbscripts/postgres/migrations/migration_001_init.sql")
+        # Session-weiter Advisory Lock: laeuft die Anwendung mit mehreren
+        # Prozessen, wartet der zweite hier, statt parallel DDL abzusetzen.
+        self.cursor.execute("SELECT pg_advisory_lock(%s)", (MIGRATION_LOCK_ID,))
+        self.conn.commit()
+        try:
+            query = read_sql_file(MIGRATIONS_DIR + "migration_001_init.sql")
             logger.debug(f"Executing SQL query: {query}")
             self.cursor.execute(query)
             self.conn.commit()
-            query = "SELECT migration_name FROM migrations;"
-            logger.debug(f"Executing SQL query: {query}")
 
-            self.cursor.execute(query)
+            self.cursor.execute("SELECT migration_name FROM migrations;")
             applied_migrations = {row[0] for row in self.cursor.fetchall()}
 
-
             migration_files = sorted(
-                f
-                for f in os.listdir("./dbscripts/postgres/migrations/")
-                if f.endswith(".sql")
+                f for f in os.listdir(MIGRATIONS_DIR) if f.endswith(".sql")
             )
 
             for migration_file in migration_files:
-                if migration_file not in applied_migrations:
-                    logger.info(f"Applying migration: {migration_file}")
-                    migration_query = read_sql_file(
-                        f"./dbscripts/postgres/migrations/{migration_file}"
-                    )
-                    logger.debug(f"Executing SQL query: {migration_query}")
+                if migration_file in applied_migrations:
+                    continue
+                logger.info(f"Applying migration: {migration_file}")
+                migration_query = read_sql_file(MIGRATIONS_DIR + migration_file)
+                try:
                     self.cursor.execute(migration_query)
                     self.conn.commit()
-                    logger.info(f"Migration {migration_file} applied successfully")
-        except Exception as e:
-            logger.critical(f"Error applying migrations: {e}")
-            logger.critical(traceback.format_exc())
-            self.conn.rollback()
+                except Exception:
+                    self.conn.rollback()
+                    logger.critical(f"Migration {migration_file} FEHLGESCHLAGEN:")
+                    logger.critical(traceback.format_exc())
+                    # Nicht weiterlaufen: ein halb migriertes Schema faellt sonst
+                    # erst Wochen spaeter an irgendeiner Query auf.
+                    raise RuntimeError(
+                        f"Migration {migration_file} fehlgeschlagen - siehe Log. "
+                        f"Die Anwendung wird nicht gestartet."
+                    )
+                logger.info(f"Migration {migration_file} applied successfully")
+        finally:
+            try:
+                self.cursor.execute("SELECT pg_advisory_unlock(%s)", (MIGRATION_LOCK_ID,))
+                self.conn.commit()
+            except Exception:
+                logger.error("Advisory Lock konnte nicht freigegeben werden", exc_info=True)
 
 
     def check_database_integrity(self):
         """
-        Checks the integrity of the database by comparing the number of tables with the expected count.
-
-        Parameters:
-        self (DatabaseManager): The instance of the DatabaseManager class.
+        Prueft, ob alle Pflichttabellen vorhanden sind.
 
         Returns:
-        bool: True if the database integrity check passes, False otherwise.
+        bool: True, wenn das Schema vollstaendig ist.
+
+        Raises:
+        RuntimeError: wenn Tabellen fehlen. Bewusst ein harter Abbruch - diese
+            Pruefung hat frueher bei zu wenigen Tabellen die Datenbank geloescht.
         """
         logger.debug("check_database_integrity is called")
-        logger.debug(f"Expected table count: {self.TABLE_COUNT}")
-        actual_table_count = len(self.get_all_tables())
-        if actual_table_count < self.TABLE_COUNT:
-            logger.critical("Database integrity check failed.")
-            logger.debug(f"Actual table count: {actual_table_count}")
-            return False
-        else:
-            logger.info("Database integrity check passed.")
+        existing = {row[0].lower() for row in self.get_all_tables()}
+        missing = sorted(self.REQUIRED_TABLES - existing)
+        if missing:
+            raise RuntimeError(
+                "Datenbankschema unvollstaendig, es fehlen folgende Tabellen: "
+                + ", ".join(missing)
+                + ". Bei einer Erstinstallation 'python db.py init' ausfuehren, "
+                  "sonst das Backup pruefen (README.md)."
+            )
+        logger.info("Database integrity check passed.")
         return True
+
+    def check_stand_id_consistency(self):
+        """
+        Warnt, wenn stand.id und stand.genehmigungs_id auseinandergelaufen sind.
+
+        Der Genehmigungsprozess adressiert beide Spalten gemischt und setzt
+        voraus, dass sie identisch sind. Reine Lesepruefung, aendert nichts.
+
+        Returns:
+        int: Anzahl der abweichenden Zeilen (0 = alles in Ordnung).
+        """
+        try:
+            self.cursor.execute("SELECT count(*) FROM stand WHERE id <> genehmigungs_id")
+            mismatched = self.cursor.fetchone()[0]
+        except Exception:
+            self.conn.rollback()
+            logger.error("Konsistenzpruefung stand.id/genehmigungs_id fehlgeschlagen", exc_info=True)
+            return 0
+        if mismatched:
+            logger.critical(
+                f"{mismatched} Stand-Zeile(n) haben id <> genehmigungs_id. "
+                f"Neue Genehmigungen fuer diese Staende schlagen fehl. Siehe README.md."
+            )
+        return mismatched
 
     def get_all_tables(self):
         """
@@ -211,23 +315,33 @@ class DatabaseManager:
         logger.debug(f"Table names retrieved: {tables}")
         return tables
 
-    def init_tables(self):
+    def init_tables(self, force=False):
         """
-        WARNING: This function wipes the whole database.
+        Legt das Grundschema an. Wird ausschliesslich ueber "python db.py init"
+        aufgerufen, nie beim normalen Start.
 
-        This function drops the existing database schema and recreates it by executing the SQL query from the initDB.sql file.
-        It then commits the changes and prints a success message.
+        Parameters:
+        force (bool): Bei True wird ein bestehendes Schema vorher geloescht.
+            Ohne force bricht die Funktion ab, sobald irgendeine Tabelle
+            existiert - damit kann eine gefuellte Datenbank nicht mehr
+            versehentlich ueberschrieben werden.
 
         Returns:
-        bool: True if the tables are successfully initiated, False otherwise.
-
-        Raises:
-        Exception: If an error occurs while executing the SQL query or committing the changes.
+        bool: True bei Erfolg, False wenn abgebrochen oder fehlgeschlagen.
         """
-        logger.debug("create_tables is called")
-        logger.debug("dropping existing tables in 3 seconds...\nPress strg+c to cancel")
+        logger.debug("init_tables is called")
 
-        self.drop_db()
+        existing = self.get_all_tables()
+        if existing and not force:
+            logger.error(
+                f"Datenbank enthaelt bereits {len(existing)} Tabellen - init abgebrochen. "
+                f"Zum bewussten Zuruecksetzen: python db.py init --force"
+            )
+            return False
+
+        if existing:
+            self.drop_db()
+
         query = read_sql_file("./dbInit.sql")
         logger.debug(f"executing SQL query: {query}")
         try:
@@ -334,9 +448,9 @@ class DatabaseManager:
 
     def drop_db(self):
         """
-        WARNING: This function wipes the whole database. Only run on critical errors.
-
-        Drops the public schema and recreates it. This is used to reset the database.
+        WARNUNG: Loescht die komplette Datenbank. Wird nur noch aus
+        init_tables(force=True) heraus aufgerufen, also nur ueber
+        "python db.py init --force".
 
         Parameters:
         None
@@ -345,12 +459,7 @@ class DatabaseManager:
         None
         """
         logger.debug("drop_db is called")
-        logger.warning(
-            "\nDropping database in 3 Seconds!!!\n\n!!! To cancel press CTRL+C !!!\n"
-        )
-        for i in range(3, 0, -1):
-            print(f"Reset in {i}...")
-            time.sleep(1)
+        logger.warning("DROP SCHEMA public CASCADE wird ausgefuehrt - alle Daten gehen verloren.")
         query = "DROP SCHEMA public CASCADE;CREATE SCHEMA public;"
         logger.debug(f"executing SQL query: {query}")
         self.cursor.execute(query)
@@ -360,6 +469,98 @@ class DatabaseManager:
 
 
     #########################################################
+
+    ARCHIVE_DIENSTE_SQL = """
+        INSERT INTO public.diensteplan_archive (jahr, snapshot)
+        SELECT %s, jsonb_build_object(
+            'config',      (SELECT to_jsonb(c) FROM public.diensteplan_config c WHERE c.id = 1),
+            'categories',  COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.sort_order, k.id)
+                                     FROM public.diensteplan_categories k), '[]'::jsonb),
+            'events',      COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.start_time, e.id)
+                                     FROM public.diensteplan_events e), '[]'::jsonb),
+            'assignments', COALESCE((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.id)
+                                     FROM public.diensteplan_assignments a), '[]'::jsonb)
+        )
+        ON CONFLICT (jahr) DO NOTHING
+    """
+
+    def ensure_current_season(self):
+        """
+        Fuehrt den Jahreswechsel durch, sobald das Kalenderjahr wechselt.
+
+        Beim Wechsel wird der komplette Diensteplan als JSON nach
+        diensteplan_archive gesichert, danach werden alle Anmeldungen und alle
+        frei angelegten Eintraege geloescht. Die Template-Struktur (Kategorien
+        und Shadow-Slots) bleibt stehen, das Datum wird geleert. Zusaetzlich
+        wird die Standanmeldung auf "gesperrt" gesetzt, damit die neue Saison
+        nicht ungewollt offen startet.
+
+        Die Staende selbst brauchen nichts: sie haengen an stand.jahr und
+        archivieren sich dadurch von allein.
+
+        Der eigentliche Wechsel laeuft unter einem Zeilen-Lock auf der
+        status-Zeile und passiert daher auch bei parallelen Requests genau
+        einmal. Aufrufer sind get_status_action() und get_dienste_state().
+        """
+        year = datetime.now().year
+        if self._season_year_checked == year:
+            return
+
+        with self.get_db_connection() as (conn, cursor):
+            try:
+                cursor.execute(
+                    "SELECT value FROM status WHERE action = 'season_year' FOR UPDATE"
+                )
+                row = cursor.fetchone()
+
+                if row is None:
+                    # Erster Lauf nach der Migration: Marker nur setzen.
+                    cursor.execute(
+                        "INSERT INTO status (action, value) VALUES ('season_year', %s) "
+                        "ON CONFLICT (action) DO NOTHING",
+                        (str(year),),
+                    )
+                    conn.commit()
+                    self._season_year_checked = year
+                    return
+
+                old_year = int(row[0]) if str(row[0]).strip().isdigit() else year
+                if old_year >= year:
+                    conn.rollback()
+                    self._season_year_checked = year
+                    return
+
+                logger.warning(
+                    f"Saisonwechsel {old_year} -> {year}: Diensteplan wird archiviert "
+                    f"und zurueckgesetzt, Anmeldung wird gesperrt."
+                )
+                cursor.execute(self.ARCHIVE_DIENSTE_SQL, (old_year,))
+                cursor.execute("DELETE FROM public.diensteplan_assignments")
+                deleted_assignments = cursor.rowcount
+                cursor.execute("DELETE FROM public.diensteplan_events WHERE is_shadow = false")
+                deleted_events = cursor.rowcount
+                cursor.execute("UPDATE public.diensteplan_config SET day_date = NULL WHERE id = 1")
+                # UPSERT statt UPDATE: fehlt die Zeile, wuerde ein reines UPDATE
+                # nichts tun und die Anmeldung bliebe offen.
+                cursor.execute(
+                    "INSERT INTO status (action, value) VALUES ('enabled', '0') "
+                    "ON CONFLICT (action) DO UPDATE SET value = '0'"
+                )
+                cursor.execute(
+                    "UPDATE status SET value = %s WHERE action = 'season_year'", (str(year),)
+                )
+                conn.commit()
+                logger.warning(
+                    f"Saisonwechsel abgeschlossen: {deleted_events} freie Eintraege und "
+                    f"{deleted_assignments} Anmeldungen entfernt, Archiv fuer {old_year} angelegt."
+                )
+                self._season_year_checked = year
+            except Exception as e:
+                conn.rollback()
+                # Bewusst kein Setzen von _season_year_checked: beim naechsten
+                # Aufruf wird es erneut versucht.
+                logger.error(f"Saisonwechsel fehlgeschlagen: {e}", exc_info=True)
+
     def get_questions(self):
         logger.debug("get_questions is called")
         query = "SELECT id, question FROM questions WHERE archiviert = false"
@@ -432,11 +633,41 @@ class DatabaseManager:
                 return False
 
     def update_stand_jahr(self, stand_id, jahr):
+        """
+        Setzt das Jahr eines Standes; jahr = 0 bedeutet "beständig".
+
+        Wird ein Stand auf beständig gestellt, bekommt er zusaetzlich eine
+        eigene adminAuth-Kennung. Sonst blockiert er die Kennung der Lehrkraft
+        fuer alle Folgejahre (UNIQUE(jahr, auth_id) greift bei jahr = 0 nicht
+        pro Saison) und die Lehrkraft haette ab dem naechsten Jahr zwei
+        Staende, von denen zufaellig einer angezeigt wird. Wer den Stand
+        eingereicht hat, spielt fuer beständige Staende keine Rolle mehr.
+
+        Parameters:
+        stand_id (int): ID des Standes.
+        jahr (int): Jahreszahl oder 0 fuer beständig.
+
+        Returns:
+        bool: True bei Erfolg.
+        """
         logger.debug(f"update_stand_jahr is called")
-        query = "UPDATE stand SET jahr = %s WHERE id = %s"
         with self._lock:
             try:
-                self.cursor.execute(query, (jahr, stand_id))
+                if int(jahr) == 0:
+                    self.cursor.execute(
+                        """UPDATE stand
+                           SET jahr = 0,
+                               auth_id = CASE
+                                   WHEN auth_id LIKE 'adminAuth%%' THEN auth_id
+                                   ELSE %s
+                               END
+                           WHERE id = %s""",
+                        ("adminAuth" + str(uuid.uuid4()), stand_id),
+                    )
+                else:
+                    self.cursor.execute(
+                        "UPDATE stand SET jahr = %s WHERE id = %s", (jahr, stand_id)
+                    )
                 self.conn.commit()
                 logger.info(f"Stand {stand_id} jahr updated to {jahr}")
                 return True
@@ -470,6 +701,12 @@ class DatabaseManager:
                     logger.info(f"ID {id} is not trusted")
             except Exception as e:
                 logger.error(f"Error checking ID: {e}")
+                # Ohne Rollback bleibt die geteilte Verbindung in "transaction
+                # aborted" haengen und jede Folgequery scheitert ebenfalls.
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
         return False
 
     def addNewStand(self, data, auth_id):
@@ -522,7 +759,8 @@ class DatabaseManager:
         if not email and reedit:
             with self._lock:
                 self.cursor.execute(
-                    "SELECT email FROM stand WHERE auth_id = %s AND (jahr = %s OR jahr = 0)",
+                    "SELECT email FROM stand WHERE auth_id = %s AND (jahr = %s OR jahr = 0) "
+                    "ORDER BY jahr DESC LIMIT 1",
                     (auth_id, datetime.now().year)
                 )
                 row = self.cursor.fetchone()
@@ -573,7 +811,13 @@ class DatabaseManager:
                         self.conn.commit()
                 if reedit:
                     data["email"] = self.get_email_from_stand_id(last_id)
-                self.create_new_genehmigungs_entry(last_id, data["email"], reedit)
+                # Ohne genehmigungen-Zeile faellt der Stand aus allen Listen
+                # (ueberall INNER JOIN) - dann darf das Frontend keinen Erfolg melden.
+                if not self.create_new_genehmigungs_entry(last_id, data.get("email"), reedit):
+                    logger.error(
+                        f"Genehmigungseintrag fuer Stand {last_id} konnte nicht angelegt werden"
+                    )
+                    return False
                 return True
             except Exception as e:
                 logger.error(f"Error adding stand: {e}")
@@ -695,6 +939,36 @@ class DatabaseManager:
                 self.conn.rollback()
                 return None
 
+    @staticmethod
+    def _clean_row(row, quote_fix_index=1):
+        """
+        Bereitet eine Stand-Zeile fuer die Ausgabe ans Frontend auf.
+
+        NULL und ARRAY_AGG-Leerergebnisse ([None]) werden zu "". Die Ersetzung
+        von ' durch " passiert ausschliesslich an quote_fix_index - dort steht
+        ort_spezifikation, das im Browser als JSON geparst wird. Frueher lief
+        die Ersetzung ueber alle Spalten und hat Apostrophe in Namen und
+        Beschreibungen zerstoert.
+
+        Parameters:
+        row (sequence): Ergebniszeile aus der Datenbank.
+        quote_fix_index (int): Spaltenindex von ort_spezifikation.
+
+        Returns:
+        list: aufbereitete Werte.
+        """
+        cleaned = []
+        for index, item in enumerate(row):
+            if item is None:
+                cleaned.append("")
+            elif isinstance(item, list) and item == [None]:
+                cleaned.append("")
+            elif isinstance(item, str) and index == quote_fix_index:
+                cleaned.append(item.replace("'", '"'))
+            else:
+                cleaned.append(item)
+        return cleaned
+
     def get_submitted_data_from_id(self, id, year=None):
         """
         Retrieves the submitted data for a given user ID from the database.
@@ -714,7 +988,8 @@ class DatabaseManager:
                     LEFT join standQuestions AS sq ON sq.stand_id = s.id
                     join genehmigungen AS g on g.id = s.genehmigungs_id
                     WHERE s.auth_id = %s AND (s.jahr = %s OR s.jahr = 0)
-                    GROUP BY s.id, g.genehmigt, g.kommentar;"""
+                    GROUP BY s.id, s.jahr, g.genehmigt, g.kommentar
+                    ORDER BY s.jahr DESC, s.id DESC;"""
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(id,)}")
         with self._lock:
@@ -724,25 +999,7 @@ class DatabaseManager:
                 if result == []:
                     logger.debug(f"No results found")
                     return None
-                data = [
-                    (
-                        item.replace("'", '"')
-                        if isinstance(item, str)
-                        else (
-                            ""
-                            if (item == None)
-                            else (
-                                ""
-                                if item
-                                == [
-                                    None,
-                                ]
-                                else item
-                            )
-                        )
-                    )
-                    for item in result[0]
-                ]
+                data = self._clean_row(result[0])
                 logger.info(f"Data 7 retrieved successfully")
                 return data
             except Exception as e:
@@ -777,20 +1034,7 @@ class DatabaseManager:
             try:
                 self.cursor.execute(query, params)
                 rows = self.cursor.fetchall()
-                result = []
-                for row in rows:
-                    data = [
-                        (
-                            item.replace("'", '"')
-                            if isinstance(item, str)
-                            else (
-                                "" if item is None
-                                else ("" if item == [None] else item)
-                            )
-                        )
-                        for item in row
-                    ]
-                    result.append(data)
+                result = [self._clean_row(row) for row in rows]
                 logger.info(f"Data 6 retrieved successfully ({len(result)} rows)")
                 return result
             except Exception as e:
@@ -825,25 +1069,7 @@ class DatabaseManager:
                 if result == []:
                     logger.debug(f"No results found")
                     return None
-                data = [
-                    (
-                        item.replace("'", '"')
-                        if isinstance(item, str)
-                        else (
-                            ""
-                            if (item == None)
-                            else (
-                                ""
-                                if item
-                                == [
-                                    None,
-                                ]
-                                else item
-                            )
-                        )
-                    )
-                    for item in result[0]
-                ]
+                data = self._clean_row(result[0])
                 logger.info(f"Data 6 retrieved successfully")
                 return data
             except Exception as e:
@@ -929,10 +1155,16 @@ class DatabaseManager:
                 self.conn.rollback()
                 return None
 
-        if SEND_ADMIN_REGISTRATION_EMAIL:
-            for email in emails: # emails from all admins
-                mailer.send_email(email[0], email_text)
-        mailer.send_email(teacher_email, email_text_teacher)
+        # Ab hier ist der Datenbankteil erledigt; ein Mailproblem darf den
+        # Antrag nicht mehr scheitern lassen.
+        try:
+            if SEND_ADMIN_REGISTRATION_EMAIL:
+                for email in emails:  # emails from all admins
+                    mailer.send_email(email[0], email_text)
+            if teacher_email:
+                mailer.send_email(teacher_email, email_text_teacher)
+        except Exception as e:
+            logger.error(f"Error queueing confirmation mails: {e}", exc_info=True)
         return True
 
     def authenticateAdmin(self, username, password):
@@ -1084,6 +1316,7 @@ class DatabaseManager:
         str: The value of the action.
         """
         logger.debug(f"get_status_action is called")
+        self.ensure_current_season()
         query = "SELECT value FROM status WHERE action = %s"
         logger.debug(f"Executing SQL query: {query}")
         logger.debug(f"with data: {(action,)}")
@@ -1182,7 +1415,7 @@ class DatabaseManager:
         bool: True if the email text was successfully sent, False otherwise.
         """
         logger.debug(f"broadcast_text is called")
-        query = "SELECT email FROM stand WHERE jahr = %s OR jahr = 0"
+        query = "SELECT DISTINCT email FROM stand WHERE (jahr = %s OR jahr = 0) AND email <> ''"
         logger.debug(f"Executing SQL query: {query}")
         with self._lock:
             try:
@@ -1192,16 +1425,20 @@ class DatabaseManager:
                 logger.error(f"Error broadcasting email text: {e}")
                 self.conn.rollback()
                 return False
-        try:
-            for email in result:
-                authID = self.get_auth_id_from_email(email[0])
+        sent, failed = 0, 0
+        for email in result:
+            try:
+                # get_auth_id_from_email kann None liefern; frueher hat das den
+                # gesamten restlichen Verteiler verschluckt.
+                authID = self.get_auth_id_from_email(email[0]) or ""
                 dynamic_email_text = email_text.replace("|authID|", authID)
                 mailer.send_email(email[0], dynamic_email_text)
-            logger.info(f"Email text broadcasted successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error broadcasting email text: {e}")
-            return False
+                sent += 1
+            except Exception as e:
+                failed += 1
+                logger.error(f"Rundmail an {email[0]} fehlgeschlagen: {e}", exc_info=True)
+        logger.info(f"Rundmail: {sent} eingereiht, {failed} fehlgeschlagen")
+        return failed == 0
 
     def get_auth_id_from_email(self, email):
         """
@@ -1390,6 +1627,11 @@ class DatabaseManager:
         with self._lock:
             try:
                 self.cursor.execute(query, (ip_address,))
+                # Alte Eintraege verfallen ohnehin (15-Minuten-Fenster) und
+                # wuerden die Tabelle sonst unbegrenzt wachsen lassen.
+                self.cursor.execute(
+                    "DELETE FROM login_attempts WHERE last_attempt < NOW() - INTERVAL '7 days'"
+                )
                 self.conn.commit()
             except Exception as e:
                 logger.error(f"Error registering failed login: {e}")
@@ -1409,6 +1651,10 @@ class DatabaseManager:
                 row = self.cursor.fetchone()
             except Exception as e:
                 logger.error(f"Error checking IP block: {e}")
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
                 return False
 
         if not row:
@@ -1598,6 +1844,7 @@ class DatabaseManager:
             oder None bei Fehler.
         """
         logger.debug("get_dienste_state is called")
+        self.ensure_current_season()
         with self.get_db_connection() as (conn, cursor):
             try:
                 cursor.execute("""
@@ -1795,37 +2042,41 @@ class DatabaseManager:
                 return {"ok": False, "error": "Internal error", "status": 500}
 
 
-    def delete_dienste_assignment(self, event_id, index):
+    def delete_dienste_assignment(self, event_id, assignment_id):
         """
-        Entfernt eine Assignment per Index aus einem Event.
-        Index ist 0-basiert in ORDER BY created_at, id.
+        Entfernt genau eine Anmeldung ueber ihre Datenbank-ID.
+
+        Die ID wird vom Frontend aus get_dienste_state() uebernommen. Der
+        frueher benutzte Listenindex war bei parallelen Aenderungen nicht
+        stabil und hat fremde Eintraege geloescht.
+
         Parameters:
-        event_id (str): ID des Events.
-        index (int): 0-basierter Index in der Assignment-Liste.
+        event_id (str): ID des Events, zu dem die Anmeldung gehoeren muss.
+        assignment_id (int): Datenbank-ID der Anmeldung.
+
         Returns:
         dict: {'ok': True} bei Erfolg, sonst Fehler-dict.
         """
-        logger.debug(f"delete_dienste_assignment called: {event_id}/{index}")
-        if index < 0:
-            return {"ok": False, "error": "Index ungültig", "status": 400}
+        logger.debug(f"delete_dienste_assignment called: {event_id}/id={assignment_id}")
+        try:
+            assignment_id = int(assignment_id)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "ID ungültig", "status": 400}
 
         with self.get_db_connection() as (conn, cursor):
             try:
+                # event_id bleibt in der Bedingung, damit eine ID nicht aus
+                # einem fremden Event geloescht werden kann.
                 cursor.execute("""
                     DELETE FROM public.diensteplan_assignments
-                    WHERE id = (
-                        SELECT id FROM public.diensteplan_assignments
-                        WHERE event_id = %s
-                        ORDER BY created_at, id
-                        OFFSET %s LIMIT 1
-                    )
+                    WHERE id = %s AND event_id = %s
                     RETURNING id
-                """, (event_id, index))
+                """, (assignment_id, event_id))
                 deleted = cursor.fetchone()
                 conn.commit()
                 if deleted is None:
                     return {"ok": False, "error": "Assignment nicht gefunden", "status": 404}
-                logger.info(f"Assignment idx {index} of event {event_id} deleted (id={deleted[0]})")
+                logger.info(f"Assignment {assignment_id} of event {event_id} deleted")
                 return {"ok": True}
             except Exception as e:
                 logger.error(f"Error deleting dienste assignment: {e}", exc_info=True)
@@ -1999,20 +2250,86 @@ class DatabaseManager:
 
 
 
-with open("./credentials.txt", "r") as file:
-        SMTP_USER = file.readline().strip()
-        SMTP_PASS = file.readline().strip()
-mailer = SMTPMailer("smtp.strato.com", 587, SMTP_USER, SMTP_PASS, DatabaseManager())
+def _read_smtp_credentials():
+    """
+    SMTP-Zugang aus SMTP_USER/SMTP_PASS oder aus credentials.txt (Zeile 1 und 2).
+    """
+    user = os.environ.get("SMTP_USER")
+    password = os.environ.get("SMTP_PASS")
+    if user and password:
+        return user.strip(), password.strip()
+    try:
+        with open("./credentials.txt", "r", encoding="utf-8") as file:
+            return file.readline().strip(), file.readline().strip()
+    except FileNotFoundError:
+        raise RuntimeError(
+            "Weder SMTP_USER/SMTP_PASS noch credentials.txt vorhanden. Siehe README.md."
+        )
 
 
-# db_manager = DatabaseManager()
-# db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
-# db_manager.add_question("Strom und geräte?")
-# db_manager.add_question("Lebensmittel?")
-# print(db_manager.get_submitted_data_from_id("bypass"))
+SMTP_USER, SMTP_PASS = _read_smtp_credentials()
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.strato.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+
+# db_manager wird bewusst NICHT hier erzeugt: der Mailer bekommt seine Instanz
+# von der ersten DatabaseManager-Instanz zugewiesen (siehe __init__). Frueher
+# stand hier DatabaseManager(), was pro Prozess einen zweiten Verbindungspool
+# und einen zweiten Migrationslauf bedeutet hat.
+mailer = SMTPMailer(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, None)
+
+
+def _cli():
+    """
+    Verwaltungsbefehle:
+
+        python db.py migrate            ausstehende Migrationen anwenden
+        python db.py init               Grundschema anlegen (nur wenn DB leer)
+        python db.py init --if-empty    wie init, aber ohne Fehler wenn schon da
+        python db.py init --force       bestehendes Schema loeschen und neu anlegen
+        python db.py check              Schema und Konsistenz pruefen
+    """
+    import sys
+
+    args = sys.argv[1:]
+    command = args[0] if args else "help"
+
+    if command == "migrate":
+        db = DatabaseManager(verify_schema=False, auto_migrate=False)
+        db.do_migrations()
+        print("Migrationen angewendet.")
+        return 0
+
+    if command == "init":
+        force = "--force" in args
+        if_empty = "--if-empty" in args
+        db = DatabaseManager(verify_schema=False, auto_migrate=False)
+        if if_empty and db.get_all_tables():
+            print("Datenbank enthaelt bereits Tabellen - init uebersprungen.")
+            return 0
+        if force:
+            confirm = os.environ.get("HOFFEST_CONFIRM_WIPE")
+            if confirm != "yes":
+                print(
+                    "init --force loescht ALLE Daten.\n"
+                    "Zum Bestaetigen HOFFEST_CONFIRM_WIPE=yes setzen."
+                )
+                return 1
+        if not db.init_tables(force=force):
+            return 1
+        db.do_migrations()
+        print("Grundschema angelegt und migriert.")
+        return 0
+
+    if command == "check":
+        db = DatabaseManager(verify_schema=False, auto_migrate=False)
+        db.check_database_integrity()
+        mismatched = db.check_stand_id_consistency()
+        print(f"Schema vollstaendig. Abweichende stand-Zeilen: {mismatched}")
+        return 0
+
+    print(_cli.__doc__)
+    return 1
+
+
 if __name__ == "__main__":
-    db_manager = DatabaseManager()
-    db_manager.init_tables()
-    # db_manager.add_admin_account("Admin", "1234", "testAdmin@t-auer.com")
-    # db_manager.add_question("Strom und geräte?")
-    # db_manager.add_question("Lebensmittel?")
+    raise SystemExit(_cli())
