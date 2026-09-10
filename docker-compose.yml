@@ -38,7 +38,9 @@ services:
       # Logs bleiben ausserhalb des Containers lesbar.
       - ./logs:/app/logs
     ports:
-      - "127.0.0.1:8000:8000"
+      # Standard: nur lokal erreichbar (Reverse Proxy auf demselben Host).
+      # Fuer direkten Zugriff aus dem Netz in der .env APP_BIND=0.0.0.0:8000 setzen.
+      - "${APP_BIND:-127.0.0.1:8000}:8000"
     depends_on:
       db:
         condition: service_healthy

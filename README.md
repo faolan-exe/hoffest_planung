@@ -53,8 +53,8 @@ nano .env                 # siehe Konfiguration weiter unten
 Schlüssel erzeugen:
 
 ```bash
-python3 -c "import secrets; print(secrets.token_hex(32))"   # → FLASK_SECRET_KEY
-python3 -c "import secrets; print(secrets.token_hex(32))"   # → POSTGRES_PASSWORD
+openssl rand -hex 16   # → FLASK_SECRET_KEY
+openssl rand -hex 16  # → POSTGRES_PASSWORD
 ```
 
 `AUTH_SECRET` **nicht** neu erzeugen, wenn eine bestehende Installation
@@ -63,13 +63,20 @@ python3 -c "import secrets; print(secrets.token_hex(32))"   # → POSTGRES_PASSW
 Starten:
 
 ```bash
-docker compose up -d --build
-docker compose logs -f app
+docker compose up -d --build && docker compose logs -f app
 ```
 
 Der Container legt beim ersten Start das Schema an und wendet alle Migrationen
-an. Danach läuft die Anwendung auf `127.0.0.1:8000`; davor gehört ein Reverse
-Proxy (nginx, Caddy, Apache) mit TLS für die öffentliche Domain.
+an. Danach läuft die Anwendung auf `127.0.0.1:8000`. Für die öffentliche
+Domain läuft davor ein Reverse Proxy (nginx, Caddy, Apache) mit TLS; für den
+direkten Zugriff siehe [Erreichbarkeit einstellen](#erreichbarkeit-einstellen).
+
+### Erreichbarkeit einstellen
+
+Standartmäßig ist der Webserver auf Host 0.0.0.0:8000 und somit aus dem gesamten Netzwerk erreichbar.
+
+Der Datenbank-Port ist fest auf `127.0.0.1:5432` gebunden und nicht über die
+`.env` änderbar. Für Zugriff von außen einen SSH-Tunnel benutzen.
 
 Erster Admin-Zugang: Benutzer `Admin`, Passwort `1234` — **sofort im
 Adminbereich unter Einstellungen ändern.**
