@@ -17,3 +17,4 @@ __pycache__/
 
 # Datenbank-Dumps (duerfen nicht ins oeffentliche Repo)
 eventdb_*.sql
+alt-server.sql.gz
