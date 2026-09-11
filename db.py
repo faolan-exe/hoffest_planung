@@ -1443,14 +1443,25 @@ class DatabaseManager:
     def get_auth_id_from_email(self, email):
         """
         gets the auth_id for a given email address.
+
+        Nur Staende der laufenden Saison (aktuelles Jahr oder beständig)
+        kommen in Frage; frueher konnte Postgres hier die Kennung eines
+        Vorjahres-Standes liefern, sodass der |authID|-Link der Rundmail auf
+        ein Archiv zeigte. ORDER BY jahr DESC bevorzugt ausserdem den Stand
+        des aktuellen Jahres gegenueber einem beständigen, dessen auth_id
+        seit update_stand_jahr() nur noch eine adminAuth-Kennung ist.
         """
         logger.debug(f"get_auth_id_from_email is called")
-        query = "SELECT auth_id FROM stand WHERE email = %s"
+        query = (
+            "SELECT auth_id FROM stand WHERE email = %s AND (jahr = %s OR jahr = 0) "
+            "ORDER BY jahr DESC LIMIT 1"
+        )
+        values = (email, datetime.now().year)
         logger.debug(f"Executing SQL query: {query}")
-        logger.debug(f"with data: {(email,)}")
+        logger.debug(f"with data: {values}")
         with self._lock:
             try:
-                self.cursor.execute(query, (email,))
+                self.cursor.execute(query, values)
                 result = self.cursor.fetchone()
                 if result == None:
                     logger.debug(f"No results found")
